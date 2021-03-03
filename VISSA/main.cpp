@@ -20,10 +20,10 @@ int main()
 	
 	Camera tCamera(glm::vec3(0.0f, 0.0f, 300.0f));
 	// this is part of a quick and dirty solution to find the non-global camera in callback functions with a fixed signature. There are better and more sophisticated ways to do this.
-	Window::GLFWwindowLookUpTable[0].m_pAssociatedCamera = &tCamera;
+	Window::GLFWwindowLookUpTuple.m_pAssociatedCamera = &tCamera;
 
 	// timing
-	float fDeltaTime = 0.0f;	// time between current frame and last frame
+	float fDeltaTime = 0.0f;
 	float fLastFrame = 0.0f;
 
 	glAssert();
@@ -34,21 +34,20 @@ int main()
 	{
 		// per-frame time logic
 		// --------------------
-		float fCurrentFrame = glfwGetTime();
+		float fCurrentFrame = static_cast<float>(glfwGetTime()); // float is good enough 
 		fDeltaTime = fCurrentFrame - fLastFrame;
 		fLastFrame = fCurrentFrame;
 
 		// input
 		// -----
-		Window::ProcessInput(tMainWindow.m_pGLFWwindow, fDeltaTime);
+		glfwPollEvents();	// ask GLFW what kind of input happened
+		Window::ProcessInput(tMainWindow.m_pGLFWwindow, fDeltaTime); // process inputs accordingly
 
 		// render
-		tRenderer.RenderFrame(tCamera, tMainWindow);		
+		tRenderer.RenderFrame(tCamera, tMainWindow);
 
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		// -------------------------------------------------------------------------------
+		// glfw: swap buffers
 		glfwSwapBuffers(tMainWindow.m_pGLFWwindow);
-		glfwPollEvents();
 	}
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.

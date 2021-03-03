@@ -13,6 +13,10 @@
 #include "Window.h"
 #include "GeometricPrimitiveData.h"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -157,7 +161,16 @@ void Renderer::FreeGPUResources()
 	glDeleteTextures(2, &m_uiTexture2);
 }
 
-void Renderer::RenderFrame(const Camera& rCamera, const Window& rWindow)
+void Renderer::RenderFrame(const Camera & rCamera, Window & rWindow)
+{
+	glClearColor(rWindow.m_vec4fClearColor[0], rWindow.m_vec4fClearColor[1], rWindow.m_vec4fClearColor[2], rWindow.m_vec4fClearColor[3]);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	Render3DScene(rCamera, rWindow);
+	RenderGUI(rWindow);
+}
+
+void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 {
 	glAssert();
 
@@ -169,11 +182,6 @@ void Renderer::RenderFrame(const Camera& rCamera, const Window& rWindow)
 	m_tTextureShader.setInt("texture2", 1);
 
 	glAssert();
-
-	// render
-	// ------
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// bind textures on corresponding texture units
 	glActiveTexture(GL_TEXTURE0);
@@ -203,4 +211,38 @@ void Renderer::RenderFrame(const Camera& rCamera, const Window& rWindow)
 	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 	glAssert();
+}
+
+void Renderer::RenderGUI(Window& rWindow)
+{
+	// Start the Dear ImGui frame
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+	{
+		static float f = 0.0f;
+		static int counter = 0;
+
+		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+		ImGui::Checkbox("Capture Mouse", &rWindow.m_bMouseCaptured);				// Edit bools storing our window open/close state
+
+		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::ColorEdit3("clear color", rWindow.m_vec4fClearColor); // Edit 3 floats representing a color
+
+		if (ImGui::Button("Toggle Mouse"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+			rWindow.SetMouseCaptureMode(!rWindow.m_bMouseCaptured);
+		ImGui::SameLine();
+		ImGui::Text("counter = %d", counter);
+
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::End();
+	}
+
+	// Rendering
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

@@ -16,6 +16,12 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{a2e174e4-4274-428c-abb8-923fd5857935}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Dear ImGui">
+      <UniqueIdentifier>{ea151dc6-96c4-43b7-a2af-c485028800ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Dear ImGui">
+      <UniqueIdentifier>{03cf6fa0-f65d-4ef3-b292-f52d5a9397d5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="generalGL.cpp">
@@ -38,6 +44,24 @@
     </ClCompile>
     <ClCompile Include="GeometricPrimitiveData.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui.cpp">
+      <Filter>Source Files\Dear ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_draw.cpp">
+      <Filter>Source Files\Dear ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_glfw.cpp">
+      <Filter>Source Files\Dear ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_opengl3.cpp">
+      <Filter>Source Files\Dear ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_tables.cpp">
+      <Filter>Source Files\Dear ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_widgets.cpp">
+      <Filter>Source Files\Dear ImGui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -64,6 +88,30 @@
     </ClInclude>
     <ClInclude Include="System.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_truetype.h">
+      <Filter>Header Files\Dear ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_textedit.h">
+      <Filter>Header Files\Dear ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_rectpack.h">
+      <Filter>Header Files\Dear ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_internal.h">
+      <Filter>Header Files\Dear ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3.h">
+      <Filter>Header Files\Dear ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_glfw.h">
+      <Filter>Header Files\Dear ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui.h">
+      <Filter>Header Files\Dear ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imconfig.h">
+      <Filter>Header Files\Dear ImGui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

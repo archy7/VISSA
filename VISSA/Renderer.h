@@ -40,5 +40,7 @@ public:
 	void FreeGPUResources();
 
 	// Work
-	void RenderFrame(const Camera& rCamera, const Window& rWindow);
+	void RenderFrame(const Camera& rCamera, Window& rWindow);
+	void Render3DScene(const Camera& rCamera, const Window& rWindow);
+	void RenderGUI(Window& rWindow);
 };
