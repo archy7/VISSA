@@ -19,7 +19,7 @@ Window::Window():
 	m_fLastYOfMouse(m_iWindowHeight / 2.0f),
 	m_iDiscreteKeysStates(),
 	m_bFirstMouse(true),
-	m_bMouseCaptured(false),
+	m_bMouseCaptured(true),
 	m_bMenuActive(false),
 	m_bIsInitialized(false)
 {
@@ -50,6 +50,8 @@ void Window::InitWindow()
 	glfwSetFramebufferSizeCallback(m_pGLFWwindow, ResizeWindowCallback);
 	glfwSetCursorPosCallback(m_pGLFWwindow, MouseMoveCallBack);
 	glfwSetScrollCallback(m_pGLFWwindow, ScrollCallBack);
+
+	SetMouseCaptureMode(m_bMouseCaptured);
 
 	
 
