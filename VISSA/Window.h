@@ -30,7 +30,7 @@ struct Window {
 
 	// Callbacks
 	static void ResizeWindowCallback(GLFWwindow* pWindow, int fNewWidth, int fNewHeight);
-	static void ScrollCallBack(GLFWwindow* pWindow, double fXOffset, double fYOffset);
+	static void MouseScrollCallBack(GLFWwindow* pWindow, double fXOffset, double fYOffset);
 	static void MouseMoveCallBack(GLFWwindow* pWindow, double fXPosition, double fYPosition);
 	static void MouseClickCallBack(GLFWwindow* pWindow, int iButton, int iAction, int iModifiers);
 	static void GLFWErrorCallBack(int iError, const char* sDescription);

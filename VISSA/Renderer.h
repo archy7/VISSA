@@ -34,6 +34,7 @@ public:
 	// Members
 	Shader m_tColorShader, m_tTextureShader;
 
+	GLuint m_uiCameraProjectionUBO;
 	GLuint m_uiTexturedCubeVBO, m_uiTexturedCubeVAO, m_uiTexturedCubeEBO;
 	GLuint m_uiColoredCubeVBO, m_uiColoredCubeVAO, m_uiColoredCubeEBO;
 	GLuint m_uiTexturedPlaneVBO, m_uiTexturedPlaneVAO, m_uiTexturedPlaneEBO;
@@ -42,6 +43,7 @@ public:
 
 	GLuint m_uiTexture1, m_uiTexture2;
 
+	float m_fOrthLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop;
 	float m_fNearPlane, m_fFarPlane;
 
 	// Init/Loads/Frees
@@ -51,6 +53,7 @@ private:
 	void LoadShaders();
 	void LoadTextures();
 	void LoadPrimitivesToGPU();
+	void InitUniformBuffers();
 	void SetInitialOpenGLState();
 	void FreeGPUResources();
 public:

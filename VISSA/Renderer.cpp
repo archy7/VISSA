@@ -33,6 +33,10 @@ struct TriangularFace {
 };
 
 Renderer::Renderer() :
+	m_fOrthLeft(0.0f),
+	m_fOrthoRight(1280.0f),
+	m_fOrthoBottom(0.0f),
+	m_fOrthoTop(720.0f),
 	m_fNearPlane(0.1f),
 	m_fFarPlane(1000.0f)
 {
@@ -49,6 +53,8 @@ void Renderer::InitRenderer()
 	LoadShaders();
 	glAssert();
 	LoadTextures();
+	glAssert();
+	InitUniformBuffers();
 	glAssert();
 	LoadPrimitivesToGPU();
 	glAssert();
@@ -426,6 +432,19 @@ void Renderer::LoadPrimitivesToGPU()
 	
 }
 
+void Renderer::InitUniformBuffers()
+{
+	assert(m_tColorShader.IsInitialized() && m_tTextureShader.IsInitialized()); // need constructed shaders to link
+
+	GLuint& rCameraProjectionUBO = m_uiCameraProjectionUBO;
+	glGenBuffers(1, &rCameraProjectionUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, rCameraProjectionUBO);
+	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_DYNAMIC_DRAW);	// dynamic draw because the camera matrix will change every frame
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	// defining the range of the buffer, which is 2 mat4s
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, rCameraProjectionUBO, 0, 2 * sizeof(glm::mat4));
+}
+
 void Renderer::SetInitialOpenGLState()
 {
 	// configure global opengl state
@@ -477,6 +496,19 @@ void Renderer::RenderFrame(const Camera & rCamera, Window & rWindow)
 
 void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 {
+	// start by updating the uniform buffer containing the camera and projection matrices
+	glBindBuffer(GL_UNIFORM_BUFFER, m_uiCameraProjectionUBO);
+		// camera
+		glm::mat4 mat4Camera = rCamera.GetViewMatrix();
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(mat4Camera), glm::value_ptr(mat4Camera));
+		// projection
+		// NOTE: current world space transformations do not work with ortho matrix as defined below
+		// glm::mat4 projection = glm::ortho(m_fOrthLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop, m_fNearPlane, m_fFarPlane);
+		glm::mat4 mat4Projection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
+		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4Projection), glm::value_ptr(mat4Projection));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	
+
 	// textured cube
 	{
 		glAssert();
@@ -501,15 +533,8 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(0.0f, -150.0f, 0.0f));
+		//world = glm::translate(world, glm::vec3(150.0f, 150.0f, 0.0f));
 		m_tTextureShader.setMat4("world", world);
-
-		// camera/view transformation
-		glm::mat4 view = rCamera.GetViewMatrix();
-		m_tTextureShader.setMat4("view", view);
-
-		// pass projection matrix to shader (note that in this case it could change every frame)
-		glm::mat4 projection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
-		m_tTextureShader.setMat4("projection", projection);
 
 		glAssert();
 
@@ -532,14 +557,6 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(0.0f, 150.0f, 0.0f));
 		m_tColorShader.setMat4("world", world);
-
-		// camera/view transformation
-		glm::mat4 view = rCamera.GetViewMatrix();
-		m_tColorShader.setMat4("view", view);
-
-		// pass projection matrix to shader (note that in this case it could change every frame)
-		glm::mat4 projection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
-		m_tColorShader.setMat4("projection", projection);
 
 		// pass color
 		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
@@ -580,14 +597,6 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		world = glm::translate(world, glm::vec3(-150.0f, -100.0f, 0.0f));
 		m_tTextureShader.setMat4("world", world);
 
-		// camera/view transformation
-		glm::mat4 view = rCamera.GetViewMatrix();
-		m_tTextureShader.setMat4("view", view);
-
-		// pass projection matrix to shader (note that in this case it could change every frame)
-		glm::mat4 projection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
-		m_tTextureShader.setMat4("projection", projection);
-
 		glAssert();
 
 		// render cube
@@ -609,14 +618,6 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 0.0f));
 		m_tColorShader.setMat4("world", world);
-
-		// camera/view transformation
-		glm::mat4 view = rCamera.GetViewMatrix();
-		m_tColorShader.setMat4("view", view);
-
-		// pass projection matrix to shader (note that in this case it could change every frame)
-		glm::mat4 projection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
-		m_tColorShader.setMat4("projection", projection);
 
 		// pass color
 		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
@@ -657,14 +658,6 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		world = glm::translate(world, glm::vec3(-150.0f, 0.0f, 0.0f));
 		m_tTextureShader.setMat4("world", world);
 
-		// camera/view transformation
-		glm::mat4 view = rCamera.GetViewMatrix();
-		m_tTextureShader.setMat4("view", view);
-
-		// pass projection matrix to shader (note that in this case it could change every frame)
-		glm::mat4 projection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
-		m_tTextureShader.setMat4("projection", projection);
-
 		glAssert();
 
 		// render cube
@@ -686,14 +679,6 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 150.0f));
 		m_tColorShader.setMat4("world", world);
-
-		// camera/view transformation
-		glm::mat4 view = rCamera.GetViewMatrix();
-		m_tColorShader.setMat4("view", view);
-
-		// pass projection matrix to shader (note that in this case it could change every frame)
-		glm::mat4 projection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
-		m_tColorShader.setMat4("projection", projection);
 
 		// pass color
 		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);

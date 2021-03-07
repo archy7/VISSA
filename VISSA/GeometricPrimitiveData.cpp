@@ -114,3 +114,8 @@ GLuint Primitives::Plane::ColoredIndexData[] = {
 
 GLuint Primitives::Sphere::NumberOfTrianglesInSphere;
 GLfloat Primitives::Sphere::SphereDefaultRadius = 50.0f;	// have to scale a unit sphere by 50 to achieve a diameter of 100cm. VISSA defines 1 unit = 1cm
+
+GLfloat Primitives::Line::ColoredLineVertexData[] = {
+	0.0f, 0.0f, 0.0f,
+	0.0f, 1.0f, 0.0f
+};

@@ -68,4 +68,8 @@ namespace Primitives {
 		static GLfloat SphereDefaultRadius;
 	};
 
+	struct Line {
+		static GLfloat ColoredLineVertexData[6];
+	};
+
 }

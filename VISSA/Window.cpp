@@ -49,7 +49,7 @@ void Window::InitWindow()
 	glViewport(0, 0, m_iWindowWidth, m_iWindowHeight);
 	glfwSetFramebufferSizeCallback(m_pGLFWwindow, ResizeWindowCallback);
 	glfwSetCursorPosCallback(m_pGLFWwindow, MouseMoveCallBack);
-	glfwSetScrollCallback(m_pGLFWwindow, ScrollCallBack);
+	glfwSetScrollCallback(m_pGLFWwindow, MouseScrollCallBack);
 
 	SetMouseCaptureMode(m_bMouseCaptured);
 
@@ -176,12 +176,13 @@ void Window::ResizeWindowCallback(GLFWwindow* pWindow, int iNewWidth, int iNewHe
 	glViewport(0, 0, iNewWidth, iNewHeight);
 }
 
-void Window::ScrollCallBack(GLFWwindow* pWindow, double fXOffset, double fYOffset)
+void Window::MouseScrollCallBack(GLFWwindow* pWindow, double fXOffset, double fYOffset)
 {
 	Camera* pAssociatedCamera = GetCameraForGLFWwindow(pWindow);
 	assert(pAssociatedCamera);
 
-	pAssociatedCamera->ProcessMouseScroll(fYOffset);
+	// scrolling = zooming and disabled for now
+	// pAssociatedCamera->ProcessMouseScroll(fYOffset);
 }
 
 void Window::MouseMoveCallBack(GLFWwindow* pWindow, double fXPosition, double fYPosition)
