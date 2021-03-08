@@ -2,12 +2,11 @@
 
 #include "generalGL.h"
 
-#include <vector>
-
 #include "Shader.h"
 
 class Camera;
 struct Window;
+class GUI;
 
 struct TriangularFace;
 
@@ -32,22 +31,29 @@ private:
 	};
 public:
 	// Members
+	/////////////////////////////////////////
+	//////////////OPENGL/////////////////////
+	/////////////////////////////////////////
+	// shader handles
 	Shader m_tColorShader, m_tTextureShader;
-
+	// Buffer Handles
 	GLuint m_uiCameraProjectionUBO;
 	GLuint m_uiTexturedCubeVBO, m_uiTexturedCubeVAO, m_uiTexturedCubeEBO;
 	GLuint m_uiColoredCubeVBO, m_uiColoredCubeVAO, m_uiColoredCubeEBO;
 	GLuint m_uiTexturedPlaneVBO, m_uiTexturedPlaneVAO, m_uiTexturedPlaneEBO;
 	GLuint m_uiColoredPlaneVBO, m_uiColoredPlaneVAO, m_uiColoredPlaneEBO;
 	GLuint m_uiTexturedSphereVBO, m_uiTexturedSphereVAO;// m_uiTexturedSphereEBO;
-
+	// Texture Handles
 	GLuint m_uiTexture1, m_uiTexture2;
-
-	float m_fOrthLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop;
+	// View space information
+	float m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop;
 	float m_fNearPlane, m_fFarPlane;
+	glm::vec4 m_vec4fClearColor;
 
 	// Init/Loads/Frees
 	void InitRenderer();
+	// Work
+	void RenderFrame(const Camera& rCamera, Window& rWindow, GUI& rGUI);
 private:
 	SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
 	void LoadShaders();
@@ -56,11 +62,5 @@ private:
 	void InitUniformBuffers();
 	void SetInitialOpenGLState();
 	void FreeGPUResources();
-public:
-	
-
-	// Work
-	void RenderFrame(const Camera& rCamera, Window& rWindow);
 	void Render3DScene(const Camera& rCamera, const Window& rWindow);
-	void RenderGUI(Window& rWindow);
 };

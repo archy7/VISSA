@@ -63,6 +63,9 @@
     <ClCompile Include="imgui_widgets.cpp">
       <Filter>Source Files\Dear ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="GUI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="generalGL.h">
@@ -112,6 +115,9 @@
     </ClInclude>
     <ClInclude Include="imconfig.h">
       <Filter>Header Files\Dear ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="GUI.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

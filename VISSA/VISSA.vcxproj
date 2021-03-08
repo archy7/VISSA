@@ -23,6 +23,7 @@
     <ClCompile Include="generalGL.cpp" />
     <ClCompile Include="GeometricPrimitiveData.cpp" />
     <ClCompile Include="glad.c" />
+    <ClCompile Include="GUI.cpp" />
     <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_draw.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
@@ -37,6 +38,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="generalGL.h" />
     <ClInclude Include="GeometricPrimitiveData.h" />
+    <ClInclude Include="GUI.h" />
     <ClInclude Include="imconfig.h" />
     <ClInclude Include="imgui.h" />
     <ClInclude Include="imgui_impl_glfw.h" />

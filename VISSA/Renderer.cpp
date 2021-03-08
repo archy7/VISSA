@@ -11,6 +11,7 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "Window.h"
+#include "GUI.h"
 #include "GeometricPrimitiveData.h"
 
 #include "imgui.h"
@@ -33,12 +34,14 @@ struct TriangularFace {
 };
 
 Renderer::Renderer() :
-	m_fOrthLeft(0.0f),
+	// projection members
+	m_fOrthoLeft(0.0f),
 	m_fOrthoRight(1280.0f),
 	m_fOrthoBottom(0.0f),
 	m_fOrthoTop(720.0f),
 	m_fNearPlane(0.1f),
-	m_fFarPlane(1000.0f)
+	m_fFarPlane(1000.0f),
+	m_vec4fClearColor(0.3f, 0.3f, 0.3f, 1.0f) // a light grey tone
 {
 	
 }
@@ -459,7 +462,7 @@ void Renderer::SetInitialOpenGLState()
 
 void Renderer::FreeGPUResources()
 {
-	// Buffers and Vertey Arrays
+	// Vertex Buffers and Vertey Arrays
 	glDeleteVertexArrays(1, &m_uiTexturedCubeVAO);
 	glDeleteBuffers(1, &m_uiTexturedCubeVBO);
 	glDeleteBuffers(1, &m_uiTexturedCubeEBO);
@@ -480,18 +483,21 @@ void Renderer::FreeGPUResources()
 	glDeleteBuffers(1, &m_uiTexturedSphereVBO);
 	//glDeleteBuffers(1, &m_uiTexturedSphereEBO);
 
+	// Uniform Buffers
+	glDeleteBuffers(1, &m_uiCameraProjectionUBO);
+
 	// Textures
 	glDeleteTextures(1, &m_uiTexture1);
 	glDeleteTextures(2, &m_uiTexture2);
 }
 
-void Renderer::RenderFrame(const Camera & rCamera, Window & rWindow)
+void Renderer::RenderFrame(const Camera & rCamera, Window & rWindow, GUI& rGUI)
 {
-	glClearColor(rWindow.m_vec4fClearColor[0], rWindow.m_vec4fClearColor[1], rWindow.m_vec4fClearColor[2], rWindow.m_vec4fClearColor[3]);
+	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	Render3DScene(rCamera, rWindow);
-	RenderGUI(rWindow);
+	rGUI.Render(rWindow);
 }
 
 void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
@@ -503,7 +509,7 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(mat4Camera), glm::value_ptr(mat4Camera));
 		// projection
 		// NOTE: current world space transformations do not work with ortho matrix as defined below
-		// glm::mat4 projection = glm::ortho(m_fOrthLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop, m_fNearPlane, m_fFarPlane);
+		// glm::mat4 projection = glm::ortho(m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop, m_fNearPlane, m_fFarPlane);
 		glm::mat4 mat4Projection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
 		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4Projection), glm::value_ptr(mat4Projection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -533,7 +539,6 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(0.0f, -150.0f, 0.0f));
-		//world = glm::translate(world, glm::vec3(150.0f, 150.0f, 0.0f));
 		m_tTextureShader.setMat4("world", world);
 
 		glAssert();
@@ -694,38 +699,4 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 
 		glAssert();
 	}
-}
-
-void Renderer::RenderGUI(Window& rWindow)
-{
-	// Start the Dear ImGui frame
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-
-	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-	{
-		static float f = 0.0f;
-		static int counter = 0;
-
-		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-		ImGui::Checkbox("Capture Mouse", &rWindow.m_bMouseCaptured);				// Edit bools storing our window open/close state
-
-		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::ColorEdit3("clear color", rWindow.m_vec4fClearColor); // Edit 3 floats representing a color
-
-		if (ImGui::Button("Toggle Mouse"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-			rWindow.SetMouseCaptureMode(!rWindow.m_bMouseCaptured);
-		ImGui::SameLine();
-		ImGui::Text("counter = %d", counter);
-
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		ImGui::End();
-	}
-
-	// Rendering
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

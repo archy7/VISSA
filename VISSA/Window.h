@@ -4,6 +4,7 @@
 
 struct GLFWWindowAndOjbectTuple;
 class Camera;
+class GUI;
 
 struct Window {
 	Window();
@@ -11,21 +12,18 @@ struct Window {
 
 	GLFWwindow* m_pGLFWwindow;
 	int32_t m_iWindowWidth, m_iWindowHeight;
-	float m_vec4fClearColor[4];
 	float m_fLastXOfMouse, m_fLastYOfMouse;
 	int m_iDiscreteKeysStates[GLFW_KEY_LAST];
 	bool m_bFirstMouse;
 	bool m_bMouseCaptured;
-	bool m_bMenuActive;
 	bool m_bIsInitialized;
 
 	void InitWindow();
-	void InitGUI();
 	void ReInitializationSequence();
 	void CleanUpSequence();
 	void RecreateWindow();
 	int WindowShouldClose();
-	void SetMouseCaptureMode(bool bIsCaptured);
+	void SetMouseCaptured(bool bIsCaptured);
 	bool IsDiscreteKeyReady(int iKey);
 
 	// Callbacks
@@ -37,9 +35,10 @@ struct Window {
 
 
 	// Globals
-	static void ProcessInput(GLFWwindow* pWindow, float fDeltaTime);
+	static void ProcessKeyboardInput(GLFWwindow* pWindow, float fDeltaTime);
 	static Window* GetWindowForGLFWwindow(GLFWwindow* pGivenWindow);
 	static Camera* GetCameraForGLFWwindow(GLFWwindow* pGivenWindow);
+	static GUI* GetGUIForGLFWwindow(GLFWwindow* pGivenWindow);
 
 	static GLFWWindowAndOjbectTuple GLFWwindowLookUpTuple;
 };
@@ -48,4 +47,5 @@ struct GLFWWindowAndOjbectTuple {
 	GLFWwindow* m_pGLFWWindow = nullptr;
 	Window* m_pAssociatedWindowObject = nullptr;
 	Camera* m_pAssociatedCamera = nullptr;
+	GUI* m_pAssociatedGUI = nullptr;
 };

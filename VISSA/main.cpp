@@ -9,6 +9,7 @@
 #include "Camera.h"
 #include "Window.h"
 #include "Renderer.h"
+#include "GUI.h"
 
 int main()
 {
@@ -21,6 +22,11 @@ int main()
 	Camera tCamera(glm::vec3(0.0f, 0.0f, 400.0f));
 	// this is part of a quick and dirty solution to find the non-global camera in callback functions with a fixed signature. There are better and more sophisticated ways to do this.
 	Window::GLFWwindowLookUpTuple.m_pAssociatedCamera = &tCamera;
+
+	GUI tGUI;
+	tGUI.InitForWindow(tMainWindow);
+	// this is part of a quick and dirty solution to find the non-global camera in callback functions with a fixed signature. There are better and more sophisticated ways to do this.
+	Window::GLFWwindowLookUpTuple.m_pAssociatedGUI = &tGUI;
 
 	// timing
 	float fDeltaTime = 0.0f;
@@ -41,10 +47,10 @@ int main()
 		// input
 		// -----
 		glfwPollEvents();	// ask GLFW what kind of input happened
-		Window::ProcessInput(tMainWindow.m_pGLFWwindow, fDeltaTime); // process inputs accordingly
+		Window::ProcessKeyboardInput(tMainWindow.m_pGLFWwindow, fDeltaTime); // process inputs accordingly
 
 		// render
-		tRenderer.RenderFrame(tCamera, tMainWindow);
+		tRenderer.RenderFrame(tCamera, tMainWindow, tGUI);
 
 		// glfw: swap buffers
 		glfwSwapBuffers(tMainWindow.m_pGLFWwindow);

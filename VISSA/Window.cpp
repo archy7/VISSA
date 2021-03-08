@@ -3,10 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "Camera.h"
-
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+#include "GUI.h"
 
 GLFWWindowAndOjbectTuple Window::GLFWwindowLookUpTuple;
 
@@ -14,19 +11,14 @@ Window::Window():
 	m_pGLFWwindow(nullptr),
 	m_iWindowWidth(1280),
 	m_iWindowHeight(720),
-	m_vec4fClearColor(),
 	m_fLastXOfMouse(m_iWindowWidth/ 2.0f),
 	m_fLastYOfMouse(m_iWindowHeight / 2.0f),
 	m_iDiscreteKeysStates(),
 	m_bFirstMouse(true),
-	m_bMouseCaptured(true),
-	m_bMenuActive(false),
+	m_bMouseCaptured(false),
 	m_bIsInitialized(false)
 {
-	m_vec4fClearColor[0] = 0.3f; // red;
-	m_vec4fClearColor[1] = 0.3f; // green;
-	m_vec4fClearColor[2] = 0.3f; // blue;
-	m_vec4fClearColor[3] = 1.0f; // alpha;
+	
 }
 
 Window::~Window()
@@ -44,16 +36,12 @@ void Window::InitWindow()
 		assert(!"Failed to initialize GLAD");
 	}
 
-	InitGUI();
-
 	glViewport(0, 0, m_iWindowWidth, m_iWindowHeight);
 	glfwSetFramebufferSizeCallback(m_pGLFWwindow, ResizeWindowCallback);
 	glfwSetCursorPosCallback(m_pGLFWwindow, MouseMoveCallBack);
 	glfwSetScrollCallback(m_pGLFWwindow, MouseScrollCallBack);
 
-	SetMouseCaptureMode(m_bMouseCaptured);
-
-	
+	SetMouseCaptured(m_bMouseCaptured);	
 
 	// populate the lookup tuple
 	Window::GLFWwindowLookUpTuple.m_pGLFWWindow = m_pGLFWwindow;
@@ -61,23 +49,6 @@ void Window::InitWindow()
 
 	// mark as ready
 	m_bIsInitialized = true;
-}
-
-void Window::InitGUI()
-{
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-	// Setup Dear ImGui style
-	ImGui::StyleColorsDark();
-	//ImGui::StyleColorsClassic();
-
-	// Setup Platform/Renderer backends
-	ImGui_ImplGlfw_InitForOpenGL(m_pGLFWwindow, true);
-	ImGui_ImplOpenGL3_Init("#version 430");
 }
 
 void Window::CleanUpSequence()
@@ -91,7 +62,7 @@ inline void Window::ReInitializationSequence()
 	assert(!"TODO: Window::ReInit()");
 }
 
-void Window::ProcessInput(GLFWwindow * pWindow, float fDeltaTime)
+void Window::ProcessKeyboardInput(GLFWwindow * pWindow, float fDeltaTime)
 {
 	/*
 		only reacting to key presses that do not concern the UI.
@@ -100,22 +71,21 @@ void Window::ProcessInput(GLFWwindow * pWindow, float fDeltaTime)
 	{
 		Window* pAssociatedWindow = GetWindowForGLFWwindow(pWindow);
 		assert(pAssociatedWindow);
+		GUI* pAssociatedGUI = GetGUIForGLFWwindow(pWindow);
+		assert(pAssociatedGUI);
 
 		/*
 			generally avaiable inputs
 		*/
 		{
-			if (glfwGetKey(pWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-				glfwSetWindowShouldClose(pWindow, true);
-
 			// discrete, non-continuous inputs
 			{	
-				int iCurrentKey = GLFW_KEY_P;
-				
+				int iCurrentKey = GLFW_KEY_ESCAPE;
+
 				if (pAssociatedWindow->IsDiscreteKeyReady(iCurrentKey))
 				{
-					pAssociatedWindow->m_bMenuActive = !pAssociatedWindow->m_bMenuActive;		// flip the menu active flag
-					pAssociatedWindow->SetMouseCaptureMode(!pAssociatedWindow->m_bMenuActive);	// mouse is captured when menu active and vice versa
+					pAssociatedGUI->ToggleMenuState();
+					pAssociatedWindow->SetMouseCaptured(!pAssociatedGUI->IsMenuActive());	// mouse is captured when menu active and vice versa
 				}
 			}
 		}
@@ -123,7 +93,7 @@ void Window::ProcessInput(GLFWwindow * pWindow, float fDeltaTime)
 		/*
 			inputs that are only available when the menu is not active and the scene is running
 		*/
-		if (!pAssociatedWindow->m_bMenuActive)
+		if (!pAssociatedGUI->IsMenuActive())
 		{
 			/*
 				inputs that are only available when the mouse is captured/the camera controlled
@@ -166,6 +136,14 @@ Camera * Window::GetCameraForGLFWwindow(GLFWwindow * pGivenWindow)
 	return GLFWwindowLookUpTuple.m_pAssociatedCamera;
 }
 
+GUI * Window::GetGUIForGLFWwindow(GLFWwindow * pGivenWindow)
+{
+	assert(pGivenWindow);
+	assert(pGivenWindow == GLFWwindowLookUpTuple.m_pGLFWWindow);
+	// quick, dirty, gets the job done. Can be expanded though.
+	return GLFWwindowLookUpTuple.m_pAssociatedGUI;
+}
+
 void Window::ResizeWindowCallback(GLFWwindow* pWindow, int iNewWidth, int iNewHeight)
 {
 	Window* pAssociatedWindow = GetWindowForGLFWwindow(pWindow);
@@ -194,11 +172,13 @@ void Window::MouseMoveCallBack(GLFWwindow* pWindow, double fXPosition, double fY
 	{
 		Window* pAssociatedWindow = GetWindowForGLFWwindow(pWindow);
 		assert(pAssociatedWindow);
+		GUI* pAssociatedGUI = GetGUIForGLFWwindow(pWindow);
+		assert(pAssociatedGUI);
 
 		/*
 			inputs that are available only when the scene is active
 		*/
-		if (!pAssociatedWindow->m_bMenuActive)
+		if (!pAssociatedGUI->IsMenuActive())
 		{
 			if (pAssociatedWindow->m_bMouseCaptured) // Control the camera only when mouse is captured
 			{
@@ -237,8 +217,10 @@ void Window::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 	{
 		Window* pAssociatedWindow = GetWindowForGLFWwindow(pWindow);
 		assert(pAssociatedWindow);
+		GUI* pAssociatedGUI = GetGUIForGLFWwindow(pWindow);
+		assert(pAssociatedGUI);
 
-		if(!pAssociatedWindow->m_bMenuActive) // scene only reacting to clicks when the menu is not active
+		if(!pAssociatedGUI->IsMenuActive()) // scene only reacting to clicks when the menu is not active
 		{ 
 			if (pAssociatedWindow->m_bMouseCaptured)	// reacting to clicks made while the camera is active
 			{
@@ -289,7 +271,7 @@ int Window::WindowShouldClose()
 	return glfwWindowShouldClose(m_pGLFWwindow);
 }
 
-void Window::SetMouseCaptureMode(bool bIsCaptured)
+void Window::SetMouseCaptured(bool bIsCaptured)
 {
 	m_bMouseCaptured = bIsCaptured;
 	if(m_bMouseCaptured)
