@@ -66,6 +66,9 @@
     <ClCompile Include="GUI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="generalGL.h">
@@ -119,6 +122,9 @@
     <ClInclude Include="GUI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\Color.frag">
@@ -131,6 +137,12 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="resources\shaders\FlatTexture.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="resources\shaders\MaskedColor.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="resources\shaders\MaskedColor.vs">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

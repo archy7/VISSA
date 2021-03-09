@@ -167,8 +167,8 @@ void GUI::ConditionallyRenderQuitConfirmation(Window & rWindow)
 		if (ImGui::Button("YES", ImVec2(120, 0)))
 		{
 			glfwSetWindowShouldClose(rWindow.m_pGLFWwindow, true);
-
 		}
+		ImGui::SetItemDefaultFocus();
 		ImGui::SameLine();
 		if (ImGui::Button("CANCEL", ImVec2(120, 0)))
 		{

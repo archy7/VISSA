@@ -35,7 +35,7 @@ public:
 	//////////////OPENGL/////////////////////
 	/////////////////////////////////////////
 	// shader handles
-	Shader m_tColorShader, m_tTextureShader;
+	Shader m_tColorShader, rCurrentShader, m_tMaskedColorShader;
 	// Buffer Handles
 	GLuint m_uiCameraProjectionUBO;
 	GLuint m_uiTexturedCubeVBO, m_uiTexturedCubeVAO, m_uiTexturedCubeEBO;
@@ -43,8 +43,9 @@ public:
 	GLuint m_uiTexturedPlaneVBO, m_uiTexturedPlaneVAO, m_uiTexturedPlaneEBO;
 	GLuint m_uiColoredPlaneVBO, m_uiColoredPlaneVAO, m_uiColoredPlaneEBO;
 	GLuint m_uiTexturedSphereVBO, m_uiTexturedSphereVAO;// m_uiTexturedSphereEBO;
+	GLuint m_uiGridPlaneVBO, m_uiGridPlaneVAO, m_uiGridPlaneEBO;
 	// Texture Handles
-	GLuint m_uiTexture1, m_uiTexture2;
+	GLuint m_uiTexture1, m_uiTexture2, m_uiGridMaskTexture;
 	// View space information
 	float m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop;
 	float m_fNearPlane, m_fFarPlane;
@@ -58,9 +59,12 @@ private:
 	SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
 	void LoadShaders();
 	void LoadTextures();
+	GLuint LoadTextureFromFile(const char* sPath);
 	void LoadPrimitivesToGPU();
 	void InitUniformBuffers();
-	void SetInitialOpenGLState();
-	void FreeGPUResources();
+	void SetInitialOpenGLState(); 
 	void Render3DScene(const Camera& rCamera, const Window& rWindow);
+	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow);	// scene components that are omnipresent, like the uniform grid
+	void FreeGPUResources();
+	
 };

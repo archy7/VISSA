@@ -40,7 +40,7 @@ Renderer::Renderer() :
 	m_fOrthoBottom(0.0f),
 	m_fOrthoTop(720.0f),
 	m_fNearPlane(0.1f),
-	m_fFarPlane(1000.0f),
+	m_fFarPlane(10000.0f),
 	m_vec4fClearColor(0.3f, 0.3f, 0.3f, 1.0f) // a light grey tone
 {
 	
@@ -247,63 +247,58 @@ void Renderer::LoadShaders()
 
 	// A texture shader
 	Shader tTextureShader("resources/shaders/FlatTexture.vs", "resources/shaders/FlatTexture.frag");
-	m_tTextureShader = tTextureShader;
-	assert(m_tTextureShader.IsInitialized());
+	rCurrentShader = tTextureShader;
+	assert(rCurrentShader.IsInitialized());
+
+	// A masked color shader
+	Shader tMaskedColorShader("resources/shaders/MaskedColor.vs", "resources/shaders/MaskedColor.frag");
+	m_tMaskedColorShader = tMaskedColorShader;
+	assert(m_tMaskedColorShader.IsInitialized());
 }
 
 void Renderer::LoadTextures()
 {
-	// texture 1
-	// ---------
-	GLuint& rTextureUnit1 = m_uiTexture1;
-	glGenTextures(1, &rTextureUnit1);
-	glBindTexture(GL_TEXTURE_2D, rTextureUnit1);
-	// set the texture wrapping parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// set texture filtering parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// load image, create texture and generate mipmaps
-	int width, height, nrChannels;
 	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-	unsigned char *data = stbi_load("resources/textures/container.jpg", &width, &height, &nrChannels, 0);
+	m_uiTexture1 = LoadTextureFromFile("resources/textures/container.jpg");
+	m_uiTexture2 = LoadTextureFromFile("resources/textures/awesomeface.png");
+	m_uiGridMaskTexture = LoadTextureFromFile("resources/textures/grid_mask_transparent.png");
+}
+
+GLuint Renderer::LoadTextureFromFile(const char * sPath)
+{
+	unsigned int uiTextureID;
+	glGenTextures(1, &uiTextureID);
+
+	int iTextureWidth, iTextureHeight, iNumberChannels;
+	unsigned char *data = stbi_load(sPath, &iTextureWidth, &iTextureHeight, &iNumberChannels, 0);
 	if (data)
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		GLenum eFormat;
+		if (iNumberChannels == 1)
+			eFormat = GL_RED;
+		else if (iNumberChannels == 3)
+			eFormat = GL_RGB;
+		else if (iNumberChannels == 4)
+			eFormat = GL_RGBA;
+
+		glBindTexture(GL_TEXTURE_2D, uiTextureID);
+		glTexImage2D(GL_TEXTURE_2D, 0, eFormat, iTextureWidth, iTextureHeight, 0, eFormat, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
 	}
 	else
 	{
-		std::cout << "Failed to load texture" << std::endl;
+		std::cout << "Texture failed to load at path: " << sPath << std::endl;
+		stbi_image_free(data);
 	}
-	stbi_image_free(data);
 
-
-	// texture 2
-	// ---------
-	GLuint& rTextureUnit2 = m_uiTexture2;
-	glGenTextures(1, &rTextureUnit2);
-	glBindTexture(GL_TEXTURE_2D, rTextureUnit2);
-	// set the texture wrapping parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// set texture filtering parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// load image, create texture and generate mipmaps
-	data = stbi_load("resources/textures/awesomeface.png", &width, &height, &nrChannels, 0);
-	if (data)
-	{
-		// note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(data);
+	return uiTextureID;
 }
 
 void Renderer::LoadPrimitivesToGPU()
@@ -433,11 +428,37 @@ void Renderer::LoadPrimitivesToGPU()
 		delete[] tResult.m_pTriangleData;
 	}
 	
+
+	// plane for uniform grid display
+	{
+		GLuint &rGridPlaneVBO = m_uiGridPlaneVBO, &rGridPlaneVAO = m_uiGridPlaneVAO, &rGridPlaneEBO = m_uiGridPlaneEBO;
+		glGenVertexArrays(1, &rGridPlaneVAO);
+		glGenBuffers(1, &rGridPlaneVBO);
+		glGenBuffers(1, &rGridPlaneEBO);
+
+		glBindVertexArray(rGridPlaneVAO);
+
+		glBindBuffer(GL_ARRAY_BUFFER, rGridPlaneVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Specials::GridPlane::VertexData), Primitives::Specials::GridPlane::VertexData, GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rGridPlaneEBO); // index data is equal to that of a normal plane
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::TexturedIndexData), Primitives::Plane::TexturedIndexData, GL_STATIC_DRAW);
+
+		// position attribute
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
+		// normals attribute
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(1);
+		// texture coord attribute
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+	}
 }
 
 void Renderer::InitUniformBuffers()
 {
-	assert(m_tColorShader.IsInitialized() && m_tTextureShader.IsInitialized()); // need constructed shaders to link
+	assert(m_tColorShader.IsInitialized() && rCurrentShader.IsInitialized()); // need constructed shaders to link
 
 	GLuint& rCameraProjectionUBO = m_uiCameraProjectionUBO;
 	glGenBuffers(1, &rCameraProjectionUBO);
@@ -455,6 +476,11 @@ void Renderer::SetInitialOpenGLState()
 
 	glEnable(GL_CULL_FACE);
 	//glCullFace(GL_BACK);
+
+	glEnable(GL_MULTISAMPLE);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glLineWidth(2.0f);
 	glEnable(GL_LINE_SMOOTH);
@@ -488,7 +514,8 @@ void Renderer::FreeGPUResources()
 
 	// Textures
 	glDeleteTextures(1, &m_uiTexture1);
-	glDeleteTextures(2, &m_uiTexture2);
+	glDeleteTextures(1, &m_uiTexture2);
+	glDeleteTextures(1, &m_uiGridMaskTexture);
 }
 
 void Renderer::RenderFrame(const Camera & rCamera, Window & rWindow, GUI& rGUI)
@@ -514,6 +541,8 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4Projection), glm::value_ptr(mat4Projection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	
+	
+
 
 	// textured cube
 	{
@@ -521,10 +550,10 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 
 		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
 		// -------------------------------------------------------------------------------------------
-		m_tTextureShader.use();
+		rCurrentShader.use();
 		glAssert();
-		m_tTextureShader.setInt("texture1", 0);
-		m_tTextureShader.setInt("texture2", 1);
+		rCurrentShader.setInt("texture1", 0);
+		rCurrentShader.setInt("texture2", 1);
 
 		glAssert();
 
@@ -539,7 +568,7 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(0.0f, -150.0f, 0.0f));
-		m_tTextureShader.setMat4("world", world);
+		rCurrentShader.setMat4("world", world);
 
 		glAssert();
 
@@ -582,10 +611,10 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 
 		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
 		// -------------------------------------------------------------------------------------------
-		m_tTextureShader.use();
+		rCurrentShader.use();
 		glAssert();
-		m_tTextureShader.setInt("texture1", 0);
-		m_tTextureShader.setInt("texture2", 1);
+		rCurrentShader.setInt("texture1", 0);
+		rCurrentShader.setInt("texture2", 1);
 
 		glAssert();
 
@@ -600,7 +629,7 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(-150.0f, -100.0f, 0.0f));
-		m_tTextureShader.setMat4("world", world);
+		rCurrentShader.setMat4("world", world);
 
 		glAssert();
 
@@ -643,10 +672,10 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 
 		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
 		// -------------------------------------------------------------------------------------------
-		m_tTextureShader.use();
+		rCurrentShader.use();
 		glAssert();
-		m_tTextureShader.setInt("texture1", 0);
-		m_tTextureShader.setInt("texture2", 1);
+		rCurrentShader.setInt("texture1", 0);
+		rCurrentShader.setInt("texture2", 1);
 
 		glAssert();
 
@@ -661,7 +690,7 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(-150.0f, 0.0f, 0.0f));
-		m_tTextureShader.setMat4("world", world);
+		rCurrentShader.setMat4("world", world);
 
 		glAssert();
 
@@ -696,6 +725,68 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+
+		glAssert();
+	}
+
+	Render3DSceneConstants(rCamera, rWindow);
+}
+
+void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWindow)
+{
+	// uniform grid
+	{
+		glAssert();
+
+		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
+		// -------------------------------------------------------------------------------------------
+		Shader& rCurrentShader = m_tMaskedColorShader;
+		rCurrentShader.use();
+		glAssert();
+		rCurrentShader.setInt("transparencyMask", 0);
+
+		glAssert();
+
+		// bind textures on corresponding texture units
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_uiGridMaskTexture);
+
+		glAssert();
+
+		glDisable(GL_CULL_FACE);
+
+		glBindVertexArray(m_uiGridPlaneVAO);
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 mat4WorldYPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		rCurrentShader.setMat4("world", mat4WorldYPlane);
+
+		// pass color
+		glm::vec4 vec4GridColorY(0.0f, 1.0f, 1.0f, 1.0f); // cyan as of now
+		rCurrentShader.setVec4("color", vec4GridColorY);
+		
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 mat4WorldXPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		mat4WorldXPlane = glm::rotate(mat4WorldXPlane, glm::pi<float>() * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
+		rCurrentShader.setMat4("world", mat4WorldXPlane);
+
+		glm::vec4 vec4GridColorX(1.0f, 1.0f, 0.0f, 1.0f);
+		rCurrentShader.setVec4("color", vec4GridColorX);
+
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+		glm::mat4 mat4WorldZPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		mat4WorldZPlane = glm::rotate(mat4WorldZPlane, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f));
+		rCurrentShader.setMat4("world", mat4WorldZPlane);
+
+		glm::vec4 vec4GridColorZ(1.0f, 0.0f, 1.0f, 1.0f);
+		rCurrentShader.setVec4("color", vec4GridColorZ);
+
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+		glEnable(GL_CULL_FACE);
 
 		glAssert();
 	}

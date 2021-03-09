@@ -19,7 +19,7 @@ int main()
 	Renderer tRenderer;
 	tRenderer.InitRenderer();
 	
-	Camera tCamera(glm::vec3(0.0f, 0.0f, 400.0f));
+	Camera tCamera(glm::vec3(0.0f, 100.0f, 400.0f));
 	// this is part of a quick and dirty solution to find the non-global camera in callback functions with a fixed signature. There are better and more sophisticated ways to do this.
 	Window::GLFWwindowLookUpTuple.m_pAssociatedCamera = &tCamera;
 

@@ -2,6 +2,8 @@
 
 #include "glad/glad.h"
 
+#include "glm/glm.hpp"
+
 namespace Primitives {
 	/*
 		For VISSA, 1 unit in OpenGL = 1cm, thus 100.0f = 1m.
@@ -66,10 +68,20 @@ namespace Primitives {
 		*/
 		static GLuint NumberOfTrianglesInSphere;
 		static GLfloat SphereDefaultRadius;
+
+		// members
+		glm::vec3 m_vec3Position;
+		float m_fRadius;
 	};
 
 	struct Line {
 		static GLfloat ColoredLineVertexData[6];
 	};
+
+	namespace Specials {
+		struct GridPlane {
+			static GLfloat VertexData[32];	// 8 floats/Vertex, 4 vertices/face = 32 floats
+		};
+	}
 
 }

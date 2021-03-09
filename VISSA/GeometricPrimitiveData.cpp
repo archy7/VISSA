@@ -86,10 +86,10 @@ GLuint Primitives::Cube::ColoredIndexData[] = {
 GLfloat Primitives::Plane::TexturedVertexData[] = {
 
 	//position				normals					texcoords
-	-50.0f,	0.0f, 50.0f,	0.0f, 1.0f, 0.0f,		0.0f, 0.0f,	// LEFT FRONT
-	50.0f, 0.0f, 50.0f,		0.0f, 1.0f, 0.0f,		1.0f, 0.0f,	// RIGHT FRONT
-	-50.0f,	0.0f, -50.0f,	0.0f, 1.0f, 0.0f,		0.0f, 1.0f,	// LEFT BACK
-	50.0f, 0.0f, -50.0f,	0.0f, 1.0f, 0.0f,		1.0f, 1.0f,	// RIGHT BACK
+	-50.0f,	0.0f, 50.0f,	0.0f, 1.0f, 0.0f,		0.0f, 0.0f,	// left front
+	50.0f, 0.0f, 50.0f,		0.0f, 1.0f, 0.0f,		1.0f, 0.0f,	// right front
+	-50.0f,	0.0f, -50.0f,	0.0f, 1.0f, 0.0f,		0.0f, 1.0f,	// left back
+	50.0f, 0.0f, -50.0f,	0.0f, 1.0f, 0.0f,		1.0f, 1.0f,	// right back
 };
 
 GLuint Primitives::Plane::TexturedIndexData[] = {
@@ -118,4 +118,12 @@ GLfloat Primitives::Sphere::SphereDefaultRadius = 50.0f;	// have to scale a unit
 GLfloat Primitives::Line::ColoredLineVertexData[] = {
 	0.0f, 0.0f, 0.0f,
 	0.0f, 1.0f, 0.0f
+};
+
+GLfloat Primitives::Specials::GridPlane::VertexData[] = {
+	// Position						// Normals				// Texture Coordinates
+	-5000.0f,	0.0f, 5000.0f,		0.0f, 1.0f, 0.0f,		0.0f, 0.0f,	// left front
+	5000.0f, 0.0f, 5000.0f,			0.0f, 1.0f, 0.0f,		100.0f, 0.0f,	// right front
+	-5000.0f,	0.0f, -5000.0f,		0.0f, 1.0f, 0.0f,		0.0f, 100.0f,	// left back
+	5000.0f, 0.0f, -5000.0f,		0.0f, 1.0f, 0.0f,		100.0f, 100.0f,	// right back
 };
