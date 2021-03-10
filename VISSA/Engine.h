@@ -15,6 +15,7 @@
 #include "Scene.h"
 
 class Engine {
+	friend GUI;
 public:
 	Engine();
 	~Engine();

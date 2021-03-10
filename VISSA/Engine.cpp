@@ -52,8 +52,11 @@ void Engine::MainLoop()
 		glfwPollEvents();	// ask GLFW what kind of input happened
 		ProcessKeyboardInput();
 
-		// render
-		m_tRenderer.RenderFrame(m_tCamera, m_tWindow, m_tGUI, m_tScene);
+		// rendering
+		// 3D
+		m_tRenderer.RenderScene(m_tCamera, m_tWindow, m_tScene);
+		// GUI
+		m_tGUI.Render(*this);
 
 		// glfw: swap buffers
 		glfwSwapBuffers(m_tWindow.m_pGLFWwindow);

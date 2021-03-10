@@ -21,15 +21,19 @@ public:
 		{
 			glm::vec3 m_vec3Position;
 			glm::vec3 m_vec3Scale;
-			glm::vec4 m_vec4Rotation;
+			struct Rotation {
+				glm::vec3 m_vec3Vector;
+				float m_fAngle;
+			} m_tRotation;
+			
 		} m_tTransform;
 	};
+
+	std::vector<SceneObject> m_vecObjects;
 
 	void LoadScene1();
 	void LoadScene2();
 
 private:
-	std::vector<SceneObject> m_vecObjects;
-
 	void ClearPreviousScene();
 };

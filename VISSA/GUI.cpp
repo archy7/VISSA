@@ -1,6 +1,7 @@
 #include "GUI.h"
 
 #include "Window.h"
+#include "Engine.h"
 
 #include <stdio.h>
 
@@ -40,7 +41,7 @@ bool GUI::IsMenuActive() const
 	return m_bShowMainMenu;
 }
 
-void GUI::Render(Window& rWindow)
+void GUI::Render(Engine& rEngine)
 {
 	// Start the Dear ImGui frame
 	ImGui_ImplOpenGL3_NewFrame();
@@ -48,10 +49,10 @@ void GUI::Render(Window& rWindow)
 	ImGui::NewFrame();
 
 	if (m_bShowSimulationControlPanel)
-		RenderSimControlPanel(rWindow);
+		RenderSimControlPanel(rEngine);
 
 	if (m_bShowMainMenu)
-		RenderMainMenu(rWindow);
+		RenderMainMenu(rEngine);
 
 
 
@@ -60,7 +61,7 @@ void GUI::Render(Window& rWindow)
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void GUI::RenderMainMenu(Window & rWindow)
+void GUI::RenderMainMenu(Engine& rEngine)
 {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 
@@ -99,16 +100,16 @@ void GUI::RenderMainMenu(Window & rWindow)
 	}
 
 	// Conditions are internally handled by the GUI library and set to true by the above ::OpenPopup() commands
-	ConditionallyRenderQuitConfirmation(rWindow);
-	ConditionallyRenderOptions(rWindow);
-	ConditionallyRenderVisualizationSelectionMenu(rWindow);
+	ConditionallyRenderVisualizationSelectionMenu(rEngine);
+	ConditionallyRenderQuitConfirmation(rEngine);
+	ConditionallyRenderOptions(rEngine);
 
 	ImGui::EndChild();
 
 	ImGui::End();
 }
 
-void GUI::RenderSimControlPanel(Window & rWindow)
+void GUI::RenderSimControlPanel(Engine& rEngine)
 {
 	// configure window
 	ImVec2 simControlWindowSize(400, 100);
@@ -155,7 +156,7 @@ void GUI::RenderSimControlPanel(Window & rWindow)
 	ImGui::End();
 }
 
-void GUI::ConditionallyRenderQuitConfirmation(Window & rWindow)
+void GUI::ConditionallyRenderQuitConfirmation(Engine& rEngine)
 {
 	// Always center this window when appearing
 	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -166,7 +167,7 @@ void GUI::ConditionallyRenderQuitConfirmation(Window & rWindow)
 		ImGui::Text("Are you sure?");
 		if (ImGui::Button("YES", ImVec2(120, 0)))
 		{
-			glfwSetWindowShouldClose(rWindow.m_pGLFWwindow, true);
+			glfwSetWindowShouldClose(rEngine.m_tWindow.m_pGLFWwindow, true);
 		}
 		ImGui::SetItemDefaultFocus();
 		ImGui::SameLine();
@@ -178,7 +179,7 @@ void GUI::ConditionallyRenderQuitConfirmation(Window & rWindow)
 	}
 }
 
-void GUI::ConditionallyRenderVisualizationSelectionMenu(Window & rWindow)
+void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 {
 	// Always center this window when appearing
 	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -186,6 +187,14 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Window & rWindow)
 
 	if (ImGui::BeginPopupModal("VISUALIZATIONS", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
+		if (ImGui::Button("VISUALIZATION 1", ImVec2(120, 0)))
+		{
+			rEngine.m_tScene.LoadScene1();	// really bad implementation
+			ImGui::CloseCurrentPopup();
+			ToggleMenuState();
+			rEngine.m_tWindow.SetMouseCaptured(true);
+		}
+
 		if (ImGui::Button("BACK", ImVec2(120, 0)))
 		{
 			ImGui::CloseCurrentPopup();
@@ -194,7 +203,7 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Window & rWindow)
 	}
 }
 
-void GUI::ConditionallyRenderOptions(Window & rWindow)
+void GUI::ConditionallyRenderOptions(Engine& rEngine)
 {
 	// Always center this window when appearing
 	ImVec2 center = ImGui::GetMainViewport()->GetCenter();

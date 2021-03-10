@@ -4,6 +4,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
+class Engine;
 struct Window;
 
 class GUI {
@@ -14,12 +15,12 @@ public:
 	void ToggleMenuState();
 	bool IsMenuActive() const;
 
-	void Render(Window& rWindow);
-	void RenderMainMenu(Window& rWindow);
-	void RenderSimControlPanel(Window& rWindow);
-	void ConditionallyRenderQuitConfirmation(Window& rWindow);
-	void ConditionallyRenderVisualizationSelectionMenu(Window& rWindow);
-	void ConditionallyRenderOptions(Window& rWindow);
+	void Render(Engine& rEngine);
+	void RenderMainMenu(Engine& rEngine);
+	void RenderSimControlPanel(Engine& rEngine);
+	void ConditionallyRenderQuitConfirmation(Engine& rEngine);
+	void ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine);
+	void ConditionallyRenderOptions(Engine& rEngine);
 private:
 
 	bool m_bShowMainMenu;

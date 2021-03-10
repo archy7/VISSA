@@ -13,6 +13,7 @@
 #include "Window.h"
 #include "GUI.h"
 #include "GeometricPrimitiveData.h"
+#include "Scene.h"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -247,8 +248,8 @@ void Renderer::LoadShaders()
 
 	// A texture shader
 	Shader tTextureShader("resources/shaders/FlatTexture.vs", "resources/shaders/FlatTexture.frag");
-	rCurrentShader = tTextureShader;
-	assert(rCurrentShader.IsInitialized());
+	m_tTextureShader = tTextureShader;
+	assert(m_tTextureShader.IsInitialized());
 
 	// A masked color shader
 	Shader tMaskedColorShader("resources/shaders/MaskedColor.vs", "resources/shaders/MaskedColor.frag");
@@ -458,7 +459,7 @@ void Renderer::LoadPrimitivesToGPU()
 
 void Renderer::InitUniformBuffers()
 {
-	assert(m_tColorShader.IsInitialized() && rCurrentShader.IsInitialized()); // need constructed shaders to link
+	assert(m_tColorShader.IsInitialized() && m_tTextureShader.IsInitialized()); // need constructed shaders to link
 
 	GLuint& rCameraProjectionUBO = m_uiCameraProjectionUBO;
 	glGenBuffers(1, &rCameraProjectionUBO);
@@ -518,13 +519,12 @@ void Renderer::FreeGPUResources()
 	glDeleteTextures(1, &m_uiGridMaskTexture);
 }
 
-void Renderer::RenderFrame(const Camera & rCamera, Window & rWindow, GUI& rGUI, const Scene& rScene)
+void Renderer::RenderScene(const Camera & rCamera, Window & rWindow, const Scene& rScene)
 {
 	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	Render3DScene(rCamera, rWindow, rScene);
-	rGUI.Render(rWindow);
 }
 
 void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const Scene& rScene)
@@ -541,8 +541,9 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const
 		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4Projection), glm::value_ptr(mat4Projection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	
+	//RenderRealObjectsOLD(rCamera, rWindow, rScene);
 	RenderRealObjects(rCamera, rWindow, rScene);
-	RenderDataStructureObjects(rCamera, rWindow);
+	//RenderDataStructureObjects(rCamera, rWindow);
 	//Render3DSceneConstants(rCamera, rWindow);
 }
 
@@ -606,7 +607,51 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 	}
 }
 
-void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow, const Scene& rScene)
+void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow, const Scene & rScene)
+{
+	glAssert();
+	m_tTextureShader.use();
+	glAssert();
+	m_tTextureShader.setInt("texture1", 0);
+	m_tTextureShader.setInt("texture2", 1);
+
+	// bind textures on corresponding texture units
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
+
+	for (const Scene::SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
+	{
+		const Scene::SceneObject::Transform& rCurrentTransform = rCurrentSceneObject.m_tTransform;
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
+		// translation
+		world = glm::translate(world, rCurrentTransform.m_vec3Position);
+		// scale
+		world = glm::scale(world, rCurrentTransform.m_vec3Scale);
+		// rotation
+		world = glm::rotate(world, rCurrentTransform.m_tRotation.m_fAngle, rCurrentTransform.m_tRotation.m_vec3Vector);
+
+		m_tTextureShader.setMat4("world", world);
+
+		glAssert();
+
+		// render
+		if (rCurrentSceneObject.m_eType == Scene::SceneObject::eType::CUBE) {
+			glBindVertexArray(m_uiTexturedCubeVAO);
+			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		}
+		else
+		{
+			glBindVertexArray(m_uiTexturedSphereVAO);
+			glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
+		}
+	}
+}
+
+void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWindow, const Scene& rScene)
 {
 	// textured cube
 	{
@@ -614,10 +659,10 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 
 		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
 		// -------------------------------------------------------------------------------------------
-		rCurrentShader.use();
+		m_tTextureShader.use();
 		glAssert();
-		rCurrentShader.setInt("texture1", 0);
-		rCurrentShader.setInt("texture2", 1);
+		m_tTextureShader.setInt("texture1", 0);
+		m_tTextureShader.setInt("texture2", 1);
 
 		glAssert();
 
@@ -632,7 +677,7 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(0.0f, -150.0f, 0.0f));
-		rCurrentShader.setMat4("world", world);
+		m_tTextureShader.setMat4("world", world);
 
 		glAssert();
 
@@ -649,10 +694,10 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 
 		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
 		// -------------------------------------------------------------------------------------------
-		rCurrentShader.use();
+		m_tTextureShader.use();
 		glAssert();
-		rCurrentShader.setInt("texture1", 0);
-		rCurrentShader.setInt("texture2", 1);
+		m_tTextureShader.setInt("texture1", 0);
+		m_tTextureShader.setInt("texture2", 1);
 
 		glAssert();
 
@@ -667,7 +712,7 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(-150.0f, -100.0f, 0.0f));
-		rCurrentShader.setMat4("world", world);
+		m_tTextureShader.setMat4("world", world);
 
 		glAssert();
 
@@ -684,10 +729,10 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 
 		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
 		// -------------------------------------------------------------------------------------------
-		rCurrentShader.use();
+		m_tTextureShader.use();
 		glAssert();
-		rCurrentShader.setInt("texture1", 0);
-		rCurrentShader.setInt("texture2", 1);
+		m_tTextureShader.setInt("texture1", 0);
+		m_tTextureShader.setInt("texture2", 1);
 
 		glAssert();
 
@@ -702,7 +747,7 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		world = glm::translate(world, glm::vec3(-150.0f, 0.0f, 0.0f));
-		rCurrentShader.setMat4("world", world);
+		m_tTextureShader.setMat4("world", world);
 
 		glAssert();
 

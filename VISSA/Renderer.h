@@ -36,7 +36,7 @@ public:
 	//////////////OPENGL/////////////////////
 	/////////////////////////////////////////
 	// shader handles
-	Shader m_tColorShader, rCurrentShader, m_tMaskedColorShader;
+	Shader m_tColorShader, m_tTextureShader, m_tMaskedColorShader;
 	// Buffer Handles
 	GLuint m_uiCameraProjectionUBO;
 	GLuint m_uiTexturedCubeVBO, m_uiTexturedCubeVAO, m_uiTexturedCubeEBO;
@@ -55,7 +55,7 @@ public:
 	// Init/Loads/Frees
 	void InitRenderer();
 	// Work
-	void RenderFrame(const Camera& rCamera, Window& rWindow, GUI& rGUI, const Scene& rScene);
+	void RenderScene(const Camera& rCamera, Window& rWindow, const Scene& rScene);
 private:
 	SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
 	void LoadShaders();
@@ -67,7 +67,7 @@ private:
 	void Render3DScene(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
 	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow);	// scene components that are omnipresent, like a uniform grid or a cross hair
 	void RenderRealObjects(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
+	void RenderRealObjectsOLD(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
 	void RenderDataStructureObjects(const Camera& rCamera, const Window& rWindow);
 	void FreeGPUResources();
-	
 };
