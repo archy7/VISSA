@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Engine.cpp" />
     <ClCompile Include="generalGL.cpp" />
     <ClCompile Include="GeometricPrimitiveData.cpp" />
     <ClCompile Include="glad.c" />
@@ -37,6 +38,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Engine.h" />
     <ClInclude Include="generalGL.h" />
     <ClInclude Include="GeometricPrimitiveData.h" />
     <ClInclude Include="GUI.h" />

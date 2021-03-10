@@ -518,16 +518,16 @@ void Renderer::FreeGPUResources()
 	glDeleteTextures(1, &m_uiGridMaskTexture);
 }
 
-void Renderer::RenderFrame(const Camera & rCamera, Window & rWindow, GUI& rGUI)
+void Renderer::RenderFrame(const Camera & rCamera, Window & rWindow, GUI& rGUI, const Scene& rScene)
 {
 	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	Render3DScene(rCamera, rWindow);
+	Render3DScene(rCamera, rWindow, rScene);
 	rGUI.Render(rWindow);
 }
 
-void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
+void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const Scene& rScene)
 {
 	// start by updating the uniform buffer containing the camera and projection matrices
 	glBindBuffer(GL_UNIFORM_BUFFER, m_uiCameraProjectionUBO);
@@ -541,195 +541,9 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow)
 		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4Projection), glm::value_ptr(mat4Projection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	
-	
-
-
-	// textured cube
-	{
-		glAssert();
-
-		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-		// -------------------------------------------------------------------------------------------
-		rCurrentShader.use();
-		glAssert();
-		rCurrentShader.setInt("texture1", 0);
-		rCurrentShader.setInt("texture2", 1);
-
-		glAssert();
-
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(0.0f, -150.0f, 0.0f));
-		rCurrentShader.setMat4("world", world);
-
-		glAssert();
-
-		// render cube
-		glBindVertexArray(m_uiTexturedCubeVAO);
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glAssert();
-	}
-
-	// colored line cube
-	{
-		glAssert();
-
-		m_tColorShader.use();
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(0.0f, 150.0f, 0.0f));
-		m_tColorShader.setMat4("world", world);
-
-		// pass color
-		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
-		m_tColorShader.setVec4("color", vec4FullGreenColor);
-
-		glAssert();
-
-		// render the colored lined cube with GL_LINE_STRIP
-		glBindVertexArray(m_uiColoredCubeVAO);
-		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::ColoredIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glAssert();
-	}
-
-	// textured plane
-	{
-		glAssert();
-
-		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-		// -------------------------------------------------------------------------------------------
-		rCurrentShader.use();
-		glAssert();
-		rCurrentShader.setInt("texture1", 0);
-		rCurrentShader.setInt("texture2", 1);
-
-		glAssert();
-
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(-150.0f, -100.0f, 0.0f));
-		rCurrentShader.setMat4("world", world);
-
-		glAssert();
-
-		// render cube
-		glBindVertexArray(m_uiTexturedPlaneVAO);
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glAssert();
-	}
-
-	// colored line plane
-	{
-		glAssert();
-
-		m_tColorShader.use();
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 0.0f));
-		m_tColorShader.setMat4("world", world);
-
-		// pass color
-		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
-		m_tColorShader.setVec4("color", vec4FullGreenColor);
-
-		glAssert();
-
-		// render the colored lined cube with GL_LINE_STRIP
-		glBindVertexArray(m_uiColoredPlaneVAO);
-		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Plane::ColoredIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glAssert();
-	}
-
-	// a textured sphere
-	{
-		glAssert();
-
-		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-		// -------------------------------------------------------------------------------------------
-		rCurrentShader.use();
-		glAssert();
-		rCurrentShader.setInt("texture1", 0);
-		rCurrentShader.setInt("texture2", 1);
-
-		glAssert();
-
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(-150.0f, 0.0f, 0.0f));
-		rCurrentShader.setMat4("world", world);
-
-		glAssert();
-
-		// render cube
-		glBindVertexArray(m_uiTexturedSphereVAO);
-		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
-
-		glAssert();
-	}
-
-	// colored line sphere
-	{
-		glAssert();
-
-		m_tColorShader.use();
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 150.0f));
-		m_tColorShader.setMat4("world", world);
-
-		// pass color
-		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
-		m_tColorShader.setVec4("color", vec4FullGreenColor);
-
-		glAssert();
-
-		// render the colored lined cube with GL_LINE_STRIP
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-
-		glAssert();
-	}
-
-	Render3DSceneConstants(rCamera, rWindow);
+	RenderRealObjects(rCamera, rWindow, rScene);
+	RenderDataStructureObjects(rCamera, rWindow);
+	//Render3DSceneConstants(rCamera, rWindow);
 }
 
 void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWindow)
@@ -787,6 +601,198 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		glEnable(GL_CULL_FACE);
+
+		glAssert();
+	}
+}
+
+void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow, const Scene& rScene)
+{
+	// textured cube
+	{
+		glAssert();
+
+		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
+		// -------------------------------------------------------------------------------------------
+		rCurrentShader.use();
+		glAssert();
+		rCurrentShader.setInt("texture1", 0);
+		rCurrentShader.setInt("texture2", 1);
+
+		glAssert();
+
+		// bind textures on corresponding texture units
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
+
+		glAssert();
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		world = glm::translate(world, glm::vec3(0.0f, -150.0f, 0.0f));
+		rCurrentShader.setMat4("world", world);
+
+		glAssert();
+
+		// render cube
+		glBindVertexArray(m_uiTexturedCubeVAO);
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+		glAssert();
+	}
+
+	// textured plane
+	{
+		glAssert();
+
+		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
+		// -------------------------------------------------------------------------------------------
+		rCurrentShader.use();
+		glAssert();
+		rCurrentShader.setInt("texture1", 0);
+		rCurrentShader.setInt("texture2", 1);
+
+		glAssert();
+
+		// bind textures on corresponding texture units
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
+
+		glAssert();
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		world = glm::translate(world, glm::vec3(-150.0f, -100.0f, 0.0f));
+		rCurrentShader.setMat4("world", world);
+
+		glAssert();
+
+		// render cube
+		glBindVertexArray(m_uiTexturedPlaneVAO);
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+		glAssert();
+	}
+
+	// a textured sphere
+	{
+		glAssert();
+
+		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
+		// -------------------------------------------------------------------------------------------
+		rCurrentShader.use();
+		glAssert();
+		rCurrentShader.setInt("texture1", 0);
+		rCurrentShader.setInt("texture2", 1);
+
+		glAssert();
+
+		// bind textures on corresponding texture units
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
+
+		glAssert();
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		world = glm::translate(world, glm::vec3(-150.0f, 0.0f, 0.0f));
+		rCurrentShader.setMat4("world", world);
+
+		glAssert();
+
+		// render cube
+		glBindVertexArray(m_uiTexturedSphereVAO);
+		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
+
+		glAssert();
+	}
+}
+
+void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window & rWindow)
+{
+	// colored line cube
+	{
+		glAssert();
+
+		m_tColorShader.use();
+
+		glAssert();
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		world = glm::translate(world, glm::vec3(0.0f, 150.0f, 0.0f));
+		m_tColorShader.setMat4("world", world);
+
+		// pass color
+		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
+		m_tColorShader.setVec4("color", vec4FullGreenColor);
+
+		glAssert();
+
+		// render the colored lined cube with GL_LINE_STRIP
+		glBindVertexArray(m_uiColoredCubeVAO);
+		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::ColoredIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+		glAssert();
+	}
+
+	// colored line plane
+	{
+		glAssert();
+
+		m_tColorShader.use();
+
+		glAssert();
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 0.0f));
+		m_tColorShader.setMat4("world", world);
+
+		// pass color
+		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
+		m_tColorShader.setVec4("color", vec4FullGreenColor);
+
+		glAssert();
+
+		// render the colored lined cube with GL_LINE_STRIP
+		glBindVertexArray(m_uiColoredPlaneVAO);
+		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Plane::ColoredIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+		glAssert();
+	}
+
+	// colored line sphere
+	{
+		glAssert();
+
+		m_tColorShader.use();
+
+		glAssert();
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 150.0f));
+		m_tColorShader.setMat4("world", world);
+
+		// pass color
+		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
+		m_tColorShader.setVec4("color", vec4FullGreenColor);
+
+		glAssert();
+
+		// render the colored lined cube with GL_LINE_STRIP
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glBindVertexArray(m_uiTexturedSphereVAO);
+		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
 
 		glAssert();
 	}

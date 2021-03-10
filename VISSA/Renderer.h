@@ -7,6 +7,7 @@
 class Camera;
 struct Window;
 class GUI;
+class Scene;
 
 struct TriangularFace;
 
@@ -54,7 +55,7 @@ public:
 	// Init/Loads/Frees
 	void InitRenderer();
 	// Work
-	void RenderFrame(const Camera& rCamera, Window& rWindow, GUI& rGUI);
+	void RenderFrame(const Camera& rCamera, Window& rWindow, GUI& rGUI, const Scene& rScene);
 private:
 	SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
 	void LoadShaders();
@@ -62,9 +63,11 @@ private:
 	GLuint LoadTextureFromFile(const char* sPath);
 	void LoadPrimitivesToGPU();
 	void InitUniformBuffers();
-	void SetInitialOpenGLState(); 
-	void Render3DScene(const Camera& rCamera, const Window& rWindow);
-	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow);	// scene components that are omnipresent, like the uniform grid
+	void SetInitialOpenGLState();
+	void Render3DScene(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
+	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow);	// scene components that are omnipresent, like a uniform grid or a cross hair
+	void RenderRealObjects(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
+	void RenderDataStructureObjects(const Camera& rCamera, const Window& rWindow);
 	void FreeGPUResources();
 	
 };

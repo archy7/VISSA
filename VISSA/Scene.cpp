@@ -10,34 +10,71 @@ void Scene::LoadScene1()
 
 	ClearPreviousScene();
 
-	std::vector<glm::vec3> vecNewSpherePositions;
-	std::vector<float> vecNewSphereRadii;
-
-	vecNewSpherePositions.reserve(100);
-	vecNewSphereRadii.reserve(100);
+	std::vector<glm::vec3> vecNewObjectsPositions;
+	std::vector<glm::vec3> vecNewObjectsScales;
+	std::vector<glm::vec4> vecNewObjectsRotations;
+	
+	vecNewObjectsPositions.reserve(100);
+	vecNewObjectsScales.reserve(100);
+	vecNewObjectsRotations.reserve(100);
 
 	// make new positions
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
-	vecNewSpherePositions.push_back(glm::vec3(0.0f, 150.0f, 100.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(0.0f, 150.0f, 0.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(100.0f, -150.0f, 0.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(200.0f, 250.0f, -100.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(75.0f, 250.0f, 100.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(50.0f, 300.0f, 100.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(0.0f, 500.0f, -100.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(300.0f, -300.0f, 300.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(-300.0f, 250.0f, 500.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(-100.0f, 500.0f, -300.0f));
+	vecNewObjectsPositions.push_back(glm::vec3(-200.0f, 125.0f, -500.0f));
 
+	// make new scales
+	vecNewObjectsScales.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+	vecNewObjectsScales.push_back(glm::vec3(2.0f, 2.0f, 2.0f));
+	vecNewObjectsScales.push_back(glm::vec3(0.5f, 0.5f, 0.5f));
+	vecNewObjectsScales.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+	vecNewObjectsScales.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+	vecNewObjectsScales.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+	vecNewObjectsScales.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+	vecNewObjectsScales.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+	vecNewObjectsScales.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+	vecNewObjectsScales.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
 
-	assert(vecNewSpherePositions.size() == vecNewSphereRadii.size());
+	// make new rotations
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+	vecNewObjectsRotations.push_back(glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
 
-	// add spheres to the scene
-	Sphere tNewSphere;
-	tNewSphere.m_vec3Position = glm::vec3(0.0f, 150.0f, 100.0f);
-	float fNewSpherePosition;
+	assert(vecNewObjectsPositions.size() == vecNewObjectsScales.size() == vecNewObjectsRotations.size());
+
+	//for (int iCurrentNewObject = 0; iCurrentNewObject < vecNewObjectsPositions.size(); iCurrentNewObject++)
+	for (int iCurrentNewObject = 0; iCurrentNewObject < 1; iCurrentNewObject++)
+	{
+		SceneObject tNewObject;
+		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[iCurrentNewObject];
+		tNewObject.m_tTransform.m_vec4Rotation = vecNewObjectsRotations[iCurrentNewObject];
+		tNewObject.m_tTransform.m_vec3Scale = vecNewObjectsScales[iCurrentNewObject];
+		tNewObject.m_eType = SceneObject::eType::CUBE;
+
+		m_vecObjects.push_back(tNewObject);
+	}
+}
+
+void Scene::LoadScene2()
+{
+	assert(!"nope");
 }
 
 void Scene::ClearPreviousScene()
 {
-
+	m_vecObjects.clear();
 }
