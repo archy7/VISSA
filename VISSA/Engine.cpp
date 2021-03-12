@@ -36,6 +36,8 @@ void Engine::InitEngine()
 	m_tGUI.InitForWindow(m_tWindow);
 	// scene is alreay ready (but empty)
 
+	m_tCDSystem.m_tTestAABB = CollisionDetection::MakeAABBFromVertexData(Primitives::Cube::TexturedVertexData, sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLfloat));
+
 	Engine::sm_pEngine = this;	// globally accesible pointer for callback functions
 }
 

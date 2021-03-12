@@ -60,14 +60,13 @@ void Scene::LoadScene1()
 	assert(vecNewObjectsPositions.size() == vecNewObjectsScales.size());
 	assert(vecNewObjectsScales.size() == vecNewObjectsRotations.size());
 
-	//for (int iCurrentNewObject = 0; iCurrentNewObject < vecNewObjectsPositions.size(); iCurrentNewObject++)
-	for (int iCurrentNewObject = 0; iCurrentNewObject < 1; iCurrentNewObject++)
+	for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
 	{
 		SceneObject tNewObject;
-		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[iCurrentNewObject];
-		tNewObject.m_tTransform.m_tRotation = vecNewObjectsRotations[iCurrentNewObject];
-		tNewObject.m_tTransform.m_vec3Scale = vecNewObjectsScales[iCurrentNewObject];
-		tNewObject.m_eType = SceneObject::eType::SPHERE;
+		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[uiCurrentNewObject];
+		tNewObject.m_tTransform.m_tRotation = vecNewObjectsRotations[uiCurrentNewObject];
+		tNewObject.m_tTransform.m_vec3Scale = vecNewObjectsScales[uiCurrentNewObject];
+		tNewObject.m_eType = (uiCurrentNewObject %2 == 0) ? SceneObject::eType::SPHERE : SceneObject::eType::CUBE;
 
 		m_vecObjects.push_back(tNewObject);
 	}

@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CollisionDetection.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="generalGL.cpp" />
     <ClCompile Include="GeometricPrimitiveData.cpp" />
@@ -38,6 +39,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CollisionDetection.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="generalGL.h" />
     <ClInclude Include="GeometricPrimitiveData.h" />

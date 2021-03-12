@@ -16,18 +16,21 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{a2e174e4-4274-428c-abb8-923fd5857935}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Dear ImGui">
+    <Filter Include="Header Files\Libraries">
+      <UniqueIdentifier>{449f4308-6f61-49bc-8c49-de7dbd1a41c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Libraries\Dear ImGui">
       <UniqueIdentifier>{ea151dc6-96c4-43b7-a2af-c485028800ec}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Dear ImGui">
+    <Filter Include="Source Files\Libraries">
+      <UniqueIdentifier>{c77e7722-af22-4c4f-8aff-2cf38168351b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Libraries\Dear ImGui">
       <UniqueIdentifier>{03cf6fa0-f65d-4ef3-b292-f52d5a9397d5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="generalGL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="glad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
@@ -46,22 +49,22 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="imgui.cpp">
-      <Filter>Source Files\Dear ImGui</Filter>
+      <Filter>Source Files\Libraries\Dear ImGui</Filter>
     </ClCompile>
     <ClCompile Include="imgui_draw.cpp">
-      <Filter>Source Files\Dear ImGui</Filter>
+      <Filter>Source Files\Libraries\Dear ImGui</Filter>
     </ClCompile>
     <ClCompile Include="imgui_impl_glfw.cpp">
-      <Filter>Source Files\Dear ImGui</Filter>
+      <Filter>Source Files\Libraries\Dear ImGui</Filter>
     </ClCompile>
     <ClCompile Include="imgui_impl_opengl3.cpp">
-      <Filter>Source Files\Dear ImGui</Filter>
+      <Filter>Source Files\Libraries\Dear ImGui</Filter>
     </ClCompile>
     <ClCompile Include="imgui_tables.cpp">
-      <Filter>Source Files\Dear ImGui</Filter>
+      <Filter>Source Files\Libraries\Dear ImGui</Filter>
     </ClCompile>
     <ClCompile Include="imgui_widgets.cpp">
-      <Filter>Source Files\Dear ImGui</Filter>
+      <Filter>Source Files\Libraries\Dear ImGui</Filter>
     </ClCompile>
     <ClCompile Include="GUI.cpp">
       <Filter>Source Files</Filter>
@@ -70,6 +73,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="glad.c">
+      <Filter>Source Files\Libraries</Filter>
+    </ClCompile>
+    <ClCompile Include="CollisionDetection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -92,35 +101,32 @@
     <ClInclude Include="GeometricPrimitiveData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stb_image.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="System.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="imstb_truetype.h">
-      <Filter>Header Files\Dear ImGui</Filter>
+      <Filter>Header Files\Libraries\Dear ImGui</Filter>
     </ClInclude>
     <ClInclude Include="imstb_textedit.h">
-      <Filter>Header Files\Dear ImGui</Filter>
+      <Filter>Header Files\Libraries\Dear ImGui</Filter>
     </ClInclude>
     <ClInclude Include="imstb_rectpack.h">
-      <Filter>Header Files\Dear ImGui</Filter>
+      <Filter>Header Files\Libraries\Dear ImGui</Filter>
     </ClInclude>
     <ClInclude Include="imgui_internal.h">
-      <Filter>Header Files\Dear ImGui</Filter>
+      <Filter>Header Files\Libraries\Dear ImGui</Filter>
     </ClInclude>
     <ClInclude Include="imgui_impl_opengl3.h">
-      <Filter>Header Files\Dear ImGui</Filter>
+      <Filter>Header Files\Libraries\Dear ImGui</Filter>
     </ClInclude>
     <ClInclude Include="imgui_impl_glfw.h">
-      <Filter>Header Files\Dear ImGui</Filter>
+      <Filter>Header Files\Libraries\Dear ImGui</Filter>
     </ClInclude>
     <ClInclude Include="imgui.h">
-      <Filter>Header Files\Dear ImGui</Filter>
+      <Filter>Header Files\Libraries\Dear ImGui</Filter>
     </ClInclude>
     <ClInclude Include="imconfig.h">
-      <Filter>Header Files\Dear ImGui</Filter>
+      <Filter>Header Files\Libraries\Dear ImGui</Filter>
     </ClInclude>
     <ClInclude Include="GUI.h">
       <Filter>Header Files</Filter>
@@ -129,6 +135,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Engine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Header Files\Libraries</Filter>
+    </ClInclude>
+    <ClInclude Include="CollisionDetection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

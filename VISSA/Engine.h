@@ -13,6 +13,7 @@
 #include "Renderer.h"
 #include "GUI.h"
 #include "Scene.h"
+#include "CollisionDetection.h"
 
 class Engine {
 	friend GUI;
@@ -41,7 +42,8 @@ private:
 	Renderer m_tRenderer;
 	Camera m_tCamera;
 	GUI m_tGUI;
-	Scene m_tScene;	
+	Scene m_tScene;
+	CollisionDetection::CollisionDetectionSystem m_tCDSystem;
 	int m_iDiscreteKeysStates[GLFW_KEY_LAST];
 	float m_fDeltaTime, m_fLastFrame, m_fCurrentFrame;
 
