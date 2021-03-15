@@ -314,10 +314,10 @@ void Renderer::LoadPrimitivesToGPU()
 		glBindVertexArray(rTexturedCubeVAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, rTexturedCubeVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Cube::TexturedVertexData), Primitives::Cube::TexturedVertexData, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Cube::VertexData), Primitives::Cube::VertexData, GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rTexturedCubeEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Cube::TexturedIndexData), Primitives::Cube::TexturedIndexData, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Cube::IndexData), Primitives::Cube::IndexData, GL_STATIC_DRAW);
 
 		// position attribute
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -340,10 +340,10 @@ void Renderer::LoadPrimitivesToGPU()
 		glBindVertexArray(rColoredCubeVAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, rColoredCubeVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Cube::ColoredVertexData), Primitives::Cube::ColoredVertexData, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Cube::SimpleVertexData), Primitives::Cube::SimpleVertexData, GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rColoredCubeEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Cube::ColoredIndexData), Primitives::Cube::ColoredIndexData, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Cube::SimpleIndexData), Primitives::Cube::SimpleIndexData, GL_STATIC_DRAW);
 
 		// position attribute
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
@@ -360,10 +360,10 @@ void Renderer::LoadPrimitivesToGPU()
 		glBindVertexArray(rTexturedPlaneVAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, rTexturedPlaneVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Plane::TexturedVertexData), Primitives::Plane::TexturedVertexData, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Plane::VertexData), Primitives::Plane::VertexData, GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rTexturedPlaneEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::TexturedIndexData), Primitives::Plane::TexturedIndexData, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::IndexData), Primitives::Plane::IndexData, GL_STATIC_DRAW);
 
 		// position attribute
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -386,10 +386,10 @@ void Renderer::LoadPrimitivesToGPU()
 		glBindVertexArray(rColoredPlaneVAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, rColoredPlaneVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Plane::ColoredVertexData), Primitives::Plane::ColoredVertexData, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Plane::SimpleVertexData), Primitives::Plane::SimpleVertexData, GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rColoredPlaneEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::ColoredIndexData), Primitives::Plane::ColoredIndexData, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::SimpleIndexData), Primitives::Plane::SimpleIndexData, GL_STATIC_DRAW);
 
 		// position attribute
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
@@ -414,7 +414,7 @@ void Renderer::LoadPrimitivesToGPU()
 		glBufferData(GL_ARRAY_BUFFER, Primitives::Sphere::NumberOfTrianglesInSphere * sizeof(TriangularFace), tResult.m_pTriangleData, GL_STATIC_DRAW);
 
 		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rTexturedSphereEBO);
-		//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::TexturedIndexData), Primitives::Plane::TexturedIndexData, GL_STATIC_DRAW);
+		//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::IndexData), Primitives::Plane::IndexData, GL_STATIC_DRAW);
 
 		// position attribute
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -426,7 +426,8 @@ void Renderer::LoadPrimitivesToGPU()
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 		glEnableVertexAttribArray(2);
 
-		delete[] tResult.m_pTriangleData;
+		//delete[] tResult.m_pTriangleData;
+		Primitives::Sphere::VertexData = &tResult.m_pTriangleData->vertex1.vec3Position.x;//reinterpret_cast<GLfloat*>(tResult.m_pTriangleData);
 	}
 	
 
@@ -443,7 +444,7 @@ void Renderer::LoadPrimitivesToGPU()
 		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Specials::GridPlane::VertexData), Primitives::Specials::GridPlane::VertexData, GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rGridPlaneEBO); // index data is equal to that of a normal plane
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::TexturedIndexData), Primitives::Plane::TexturedIndexData, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::IndexData), Primitives::Plane::IndexData, GL_STATIC_DRAW);
 
 		// position attribute
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -581,7 +582,7 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 		glm::vec4 vec4GridColorY(0.0f, 1.0f, 1.0f, 1.0f); // cyan as of now
 		rCurrentShader.setVec4("color", vec4GridColorY);
 		
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 mat4WorldXPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
@@ -591,7 +592,7 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 		glm::vec4 vec4GridColorX(1.0f, 1.0f, 0.0f, 1.0f);
 		rCurrentShader.setVec4("color", vec4GridColorX);
 
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		glm::mat4 mat4WorldZPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		mat4WorldZPlane = glm::rotate(mat4WorldZPlane, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -600,7 +601,7 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 		glm::vec4 vec4GridColorZ(1.0f, 0.0f, 1.0f, 1.0f);
 		rCurrentShader.setVec4("color", vec4GridColorZ);
 
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		glEnable(GL_CULL_FACE);
 
@@ -642,7 +643,7 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 		// render
 		if (rCurrentSceneObject.m_eType == Scene::SceneObject::eType::CUBE) {
 			glBindVertexArray(m_uiTexturedCubeVAO);
-			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 		}
 		else
 		{
@@ -684,7 +685,7 @@ void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWind
 
 		// render cube
 		glBindVertexArray(m_uiTexturedCubeVAO);
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		glAssert();
 	}
@@ -719,7 +720,7 @@ void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWind
 
 		// render cube
 		glBindVertexArray(m_uiTexturedPlaneVAO);
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::TexturedIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		glAssert();
 	}
@@ -783,7 +784,7 @@ void Renderer::RenderDataStructureObjectsOLD(const Camera & rCamera, const Windo
 
 		// render the colored lined cube with GL_LINE_STRIP
 		glBindVertexArray(m_uiColoredCubeVAO);
-		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::ColoredIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		glAssert();
 	}
@@ -809,7 +810,7 @@ void Renderer::RenderDataStructureObjectsOLD(const Camera & rCamera, const Windo
 
 		// render the colored lined cube with GL_LINE_STRIP
 		glBindVertexArray(m_uiColoredPlaneVAO);
-		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Plane::ColoredIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Plane::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		glAssert();
 	}
@@ -870,9 +871,9 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 
 		glAssert();
 
-		// render the colored lined cube with GL_LINE_STRIP
+		// render the object appropriately
 		glBindVertexArray(m_uiColoredCubeVAO);
-		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::ColoredIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		glAssert();
 	}

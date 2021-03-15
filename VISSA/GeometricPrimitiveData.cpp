@@ -1,6 +1,6 @@
 #include "GeometricPrimitiveData.h"
 
-GLfloat Primitives::Cube::TexturedVertexData[] = {
+GLfloat Primitives::Cube::VertexData[] = {
 
 	//position					normals					texcoords
 
@@ -36,7 +36,7 @@ GLfloat Primitives::Cube::TexturedVertexData[] = {
 	50.0f, -50.0f, 50.0f,		0.0f, -1.0f, 0.0f,		1.0f, 0.0f	//top right		23
 };
 
-GLuint Primitives::Cube::TexturedIndexData[] = {
+GLuint Primitives::Cube::IndexData[] = {
 
 	// Front Face
 	0,1,2,
@@ -58,7 +58,7 @@ GLuint Primitives::Cube::TexturedIndexData[] = {
 	22,21,23
 };
 
-GLfloat Primitives::Cube::ColoredVertexData[] = {
+GLfloat Primitives::Cube::SimpleVertexData[] = {
 
 	//position				
 
@@ -74,7 +74,7 @@ GLfloat Primitives::Cube::ColoredVertexData[] = {
 	50.0f, 50.0f, -50.0f,		// TOP RIGHT		7
 };
 
-GLuint Primitives::Cube::ColoredIndexData[] = {
+GLuint Primitives::Cube::SimpleIndexData[] = {
 	0, 1, 3, 2, 0,	// draws front face
 	4,				// moves strip to back face
 	5, 1, 5,		// next vertex of back face, connecting to the front face and back
@@ -83,7 +83,7 @@ GLuint Primitives::Cube::ColoredIndexData[] = {
 	4				// last vertex of back face
 };
 
-GLfloat Primitives::Plane::TexturedVertexData[] = {
+GLfloat Primitives::Plane::VertexData[] = {
 
 	//position				normals					texcoords
 	-50.0f,	0.0f, 50.0f,	0.0f, 1.0f, 0.0f,		0.0f, 0.0f,	// left front
@@ -92,14 +92,14 @@ GLfloat Primitives::Plane::TexturedVertexData[] = {
 	50.0f, 0.0f, -50.0f,	0.0f, 1.0f, 0.0f,		1.0f, 1.0f,	// right back
 };
 
-GLuint Primitives::Plane::TexturedIndexData[] = {
+GLuint Primitives::Plane::IndexData[] = {
 
 	// Front Face
 	0,1,2,
 	2,1,3
 };
 
-GLfloat Primitives::Plane::ColoredVertexData[] = {
+GLfloat Primitives::Plane::SimpleVertexData[] = {
 
 	//position				
 	-50.0f,	0.0f, 50.0f,	// LEFT FRONT
@@ -108,10 +108,11 @@ GLfloat Primitives::Plane::ColoredVertexData[] = {
 	-50.0f,	0.0f, -50.0f	// LEFT BACK
 };
 
-GLuint Primitives::Plane::ColoredIndexData[] = {
+GLuint Primitives::Plane::SimpleIndexData[] = {
 	0, 1, 2, 3, 0
 };
 
+GLfloat* Primitives::Sphere::VertexData = nullptr;
 GLuint Primitives::Sphere::NumberOfTrianglesInSphere;
 GLfloat Primitives::Sphere::SphereDefaultRadius = 50.0f;	// have to scale a unit sphere by 50 to achieve a diameter of 100cm. VISSA defines 1 unit = 1cm
 

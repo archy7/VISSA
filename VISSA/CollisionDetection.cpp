@@ -17,11 +17,15 @@ void CollisionDetection::ConstructBoundingVolumesForScene(Scene& rScene)
 	{
 		if (rCurrentSceneObject.m_eType == Scene::SceneObject::eType::CUBE)
 		{
-			rCurrentSceneObject.m_LocalSpaceAABB = ConstructAABBFromVertexData(Primitives::Cube::TexturedVertexData, sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLfloat));
+			rCurrentSceneObject.m_LocalSpaceAABB = ConstructAABBFromVertexData(Primitives::Cube::VertexData, sizeof(Primitives::Cube::IndexData) / sizeof(GLfloat));
+		}
+		else if(rCurrentSceneObject.m_eType == Scene::SceneObject::eType::SPHERE)
+		{
+			rCurrentSceneObject.m_LocalSpaceAABB = ConstructAABBFromVertexData(Primitives::Sphere::VertexData, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
 		}
 		else
 		{
-			//ConstructAABBFromVertexData(Primitives::Sphere::TexturedVertexData, sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLfloat));
+			assert(!"nothing here!");
 		}
 	}
 }
@@ -40,9 +44,19 @@ void CollisionDetection::UpdateBoundingVolumesForScene(Scene & rScene)
 			// with the transform matrix done, its time to construct the new AABB based on the current transform
 			rCurrentSceneObject.m_WorldSpaceAABB = UpdateAABBFromAABB(rCurrentSceneObject.m_LocalSpaceAABB, mat4Rotation, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
 		}
+		else if (rCurrentSceneObject.m_eType == Scene::SceneObject::eType::SPHERE)
+		{
+			const Scene::SceneObject::Transform& rCurrentObjectTransform = rCurrentSceneObject.m_tTransform;
+
+			glm::mat4 mat4Rotation = glm::mat4(1.0f); // identity 						
+			mat4Rotation = glm::rotate(mat4Rotation, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Vector);
+
+			// with the transform matrix done, its time to construct the new AABB based on the current transform
+			rCurrentSceneObject.m_WorldSpaceAABB = UpdateAABBFromAABB(rCurrentSceneObject.m_LocalSpaceAABB, mat4Rotation, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
+		}
 		else
 		{
-			//ConstructAABBFromVertexData(Primitives::Sphere::TexturedVertexData, sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLfloat));
+			assert(!"nothing here");
 		}
 	}
 }

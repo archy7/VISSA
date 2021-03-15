@@ -61,7 +61,7 @@ void Scene::LoadScene1()
 	assert(vecNewObjectsScales.size() == vecNewObjectsRotations.size());
 
 	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
-	for (int uiCurrentNewObject = 0; uiCurrentNewObject < 1; uiCurrentNewObject++)
+	for (int uiCurrentNewObject = 0; uiCurrentNewObject < 2; uiCurrentNewObject++)
 	{
 		SceneObject tNewObject;
 		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[uiCurrentNewObject];

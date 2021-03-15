@@ -20,22 +20,22 @@ namespace Primitives {
 		/*
 			Vertex Data for a cube with 1m³ volume
 		*/
-		static GLfloat TexturedVertexData[192];	// 8 floats/Vertex, 4 vertices/face, 6 faces = 192 floats
+		static GLfloat VertexData[192];	// 8 floats/Vertex, 4 vertices/face, 6 faces = 192 floats
 
 		/*
 			Index Data for a textured cube, using GL_TRIANGLES
 		*/
-		static GLuint TexturedIndexData[36];	// 6 indices/face, 6 faces
+		static GLuint IndexData[36];	// 6 indices/face, 6 faces
 
 		/*
 			Vertex Data for a colored cube with 1m³ volume
 		*/
-		static GLfloat ColoredVertexData[24];	// 3 floats/vertex, 8 vertices
+		static GLfloat SimpleVertexData[24];	// 3 floats/vertex, 8 vertices
 
 		/*
 			Index Data for a colored cube, using GL_LINE_STRIP
 		*/
-		static GLuint ColoredIndexData[16];		// see data
+		static GLuint SimpleIndexData[16];		// see data
 	};
 	
 	struct Plane {
@@ -43,22 +43,22 @@ namespace Primitives {
 			Vertex Data for a plane with and area of 1m²
 			By default, the plane lies flat and is faces upward
 		*/
-		static GLfloat TexturedVertexData[32];	// 8 floats/Vertex, 4 vertices/face = 32 floats
+		static GLfloat VertexData[32];	// 8 floats/Vertex, 4 vertices/face = 32 floats
 
 		/*
 			Index Data for a textured plane, using GL_TRIANGLES
 		*/
-		static GLuint TexturedIndexData[6];	// 6 indices/face
+		static GLuint IndexData[6];	// 6 indices/face
 
 		/*
 			Vertex Data for a colored cube with 1m³ volume
 		*/
-		static GLfloat ColoredVertexData[12];	// 3 floats/vertex, 4 vertices
+		static GLfloat SimpleVertexData[12];	// 3 floats/vertex, 4 vertices
 
 		/*
 			Index Data for a colored cube, using GL_LINE_STRIP
 		*/
-		static GLuint ColoredIndexData[16];		// see data
+		static GLuint SimpleIndexData[16];		// see data
 	};
 
 	struct Sphere {
@@ -66,12 +66,13 @@ namespace Primitives {
 			vertex data of spheres not manually defined.
 			Data is generated on the fly befor being sent to the GPU
 		*/
+		static GLfloat* VertexData;
+
 		static GLuint NumberOfTrianglesInSphere;
 		static GLfloat SphereDefaultRadius;
 
-		// members
-		glm::vec3 m_vec3Position;
-		float m_fRadius;
+		
+		
 	};
 
 	struct Line {
