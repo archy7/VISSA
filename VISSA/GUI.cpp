@@ -190,9 +190,12 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 		if (ImGui::Button("VISUALIZATION 1", ImVec2(120, 0)))
 		{
 			rEngine.m_tScene.LoadScene1();	// really bad implementation
-			ImGui::CloseCurrentPopup();
-			ToggleMenuState();
+			CollisionDetection::ConstructBoundingVolumesForScene(rEngine.m_tScene);
+			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tScene);
 			rEngine.m_tWindow.SetMouseCaptured(true);
+			ToggleMenuState();
+			m_bShowSimulationControlPanel = true;			
+			ImGui::CloseCurrentPopup();
 		}
 
 		if (ImGui::Button("BACK", ImVec2(120, 0)))

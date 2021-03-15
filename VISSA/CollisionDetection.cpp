@@ -3,9 +3,51 @@
 #include <limits>
 #include <algorithm>
 
+#include "Scene.h"
+#include "GeometricPrimitiveData.h"
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 using namespace CollisionDetection;	// ok here since we are in a translation unit devoted to the CollisionDetection namespace
 
-AABB CollisionDetection::MakeAABBFromVertexData(float * pVertices, size_t uiNumberOfVertices)
+void CollisionDetection::ConstructBoundingVolumesForScene(Scene& rScene)
+{
+	for (Scene::SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
+	{
+		if (rCurrentSceneObject.m_eType == Scene::SceneObject::eType::CUBE)
+		{
+			rCurrentSceneObject.m_LocalSpaceAABB = ConstructAABBFromVertexData(Primitives::Cube::TexturedVertexData, sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLfloat));
+		}
+		else
+		{
+			//ConstructAABBFromVertexData(Primitives::Sphere::TexturedVertexData, sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLfloat));
+		}
+	}
+}
+
+void CollisionDetection::UpdateBoundingVolumesForScene(Scene & rScene)
+{
+	for (Scene::SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
+	{
+		if (rCurrentSceneObject.m_eType == Scene::SceneObject::eType::CUBE)
+		{
+			const Scene::SceneObject::Transform& rCurrentObjectTransform = rCurrentSceneObject.m_tTransform;
+
+			glm::mat4 mat4Rotation = glm::mat4(1.0f); // identity 						
+			mat4Rotation = glm::rotate(mat4Rotation, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Vector);
+
+			// with the transform matrix done, its time to construct the new AABB based on the current transform
+			rCurrentSceneObject.m_WorldSpaceAABB = UpdateAABBFromAABB(rCurrentSceneObject.m_LocalSpaceAABB, mat4Rotation, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
+		}
+		else
+		{
+			//ConstructAABBFromVertexData(Primitives::Sphere::TexturedVertexData, sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLfloat));
+		}
+	}
+}
+
+AABB CollisionDetection::ConstructAABBFromVertexData(float * pVertices, size_t uiNumberOfVertices)
 {	
 	AABB tResult;
 
@@ -46,6 +88,25 @@ AABB CollisionDetection::MakeAABBFromVertexData(float * pVertices, size_t uiNumb
 
 	tResult.m_vec3Center = glm::vec3(0.0f, 0.0f, 0.0f);		// local space center / pivot point. assumed to be 0,0,0. This is true for all of VISSAs objects
 	tResult.m_vec3Radius = glm::vec3(fHalfWidthX, fHalfWidthY, fHalfWidthZ);
+
+	return tResult;
+}
+
+AABB CollisionDetection::UpdateAABBFromAABB(const AABB& rOldAABB, const glm::mat4& mat4Rotation, const glm::vec3& rTranslation, const glm::vec3& rScale)
+{
+	AABB tResult;
+	
+	for (int i = 0; i < 3; i++) // for every axis of the new AABB
+	{
+		tResult.m_vec3Center[i] = rTranslation[i];	// we assume the translation
+		tResult.m_vec3Radius[i] = 0.0f;				// and start with a radius of 0
+		for (int j = 0; j < 3; j++)		// for every axis of the old AABB
+		{
+			tResult.m_vec3Center[i] += mat4Rotation[i][j] * rOldAABB.m_vec3Center[j];				// we adjust the center. This only has an effect, when the old AABBs center was not {0,0,0}, like somewhere in world-space.	When the old AABBs centre point was in 0,0,0 local space, this will do nothing.
+			tResult.m_vec3Radius[i] += std::abs(mat4Rotation[i][j]) * rOldAABB.m_vec3Radius[j];		// we continuosly increase the radius, starting at 0. For every axis of the old, rotated old AABB (j), we add its impact to the radius of the axis of the new AABB (i)
+		}
+		tResult.m_vec3Radius[i] *= rScale[i]; // we scale the current axis of the new AABB
+	}
 
 	return tResult;
 }

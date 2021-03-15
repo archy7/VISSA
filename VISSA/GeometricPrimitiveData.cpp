@@ -8,7 +8,7 @@ GLfloat Primitives::Cube::TexturedVertexData[] = {
 	-50.0f, -50.0f, 50.0f,		0.0f, 0.0f, 1.0f,		0.0f, 0.0f,	//bottom left	0
 	50.0f, -50.0f,	50.0f,		0.0f, 0.0f, 1.0f,		1.0f, 0.0f, //bottom right	1
 	-50.0f,	50.0f, 50.0f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f, //top left		2
-	50.0f, 50.0f, 500.0f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f, //top right		3
+	50.0f, 50.0f, 50.0f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f, //top right		3
 	//FACE 2 - R
 	50.0f, -50.0f,	50.0f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f, //bottom left	4
 	50.0f, -50.0f,	-50.0f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f, //bottom right	5

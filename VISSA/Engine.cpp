@@ -35,8 +35,7 @@ void Engine::InitEngine()
 	// camera is already ready
 	m_tGUI.InitForWindow(m_tWindow);
 	// scene is alreay ready (but empty)
-
-	m_tCDSystem.m_tTestAABB = CollisionDetection::MakeAABBFromVertexData(Primitives::Cube::TexturedVertexData, sizeof(Primitives::Cube::TexturedIndexData) / sizeof(GLfloat));
+	// collision detection not called when scene is empty
 
 	Engine::sm_pEngine = this;	// globally accesible pointer for callback functions
 }

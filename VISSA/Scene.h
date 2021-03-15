@@ -3,6 +3,8 @@
 #include <vector>
 #include "GeometricPrimitiveData.h"
 
+#include "CollisionDetection.h"
+
 /*
 	This class needs the most reworking to be practically usable. instead of primitives, actual models should be saved here.
 	Also, it is common to have "structure of arrays" as opposed to "array of structs"
@@ -25,8 +27,11 @@ public:
 				glm::vec3 m_vec3Vector;
 				float m_fAngle;
 			} m_tRotation;
-			
+
 		} m_tTransform;
+
+		CollisionDetection::AABB m_LocalSpaceAABB;
+		CollisionDetection::AABB m_WorldSpaceAABB;
 	};
 
 	std::vector<SceneObject> m_vecObjects;

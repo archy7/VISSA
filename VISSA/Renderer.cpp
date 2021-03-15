@@ -543,7 +543,8 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const
 	
 	//RenderRealObjectsOLD(rCamera, rWindow, rScene);
 	RenderRealObjects(rCamera, rWindow, rScene);
-	//RenderDataStructureObjects(rCamera, rWindow);
+	//RenderDataStructureObjectsOLD(rCamera, rWindow);
+	RenderDataStructureObjects(rCamera, rWindow, rScene);
 	//Render3DSceneConstants(rCamera, rWindow);
 }
 
@@ -632,7 +633,7 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 		// scale
 		world = glm::scale(world, rCurrentTransform.m_vec3Scale);
 		// rotation
-		world = glm::rotate(world, rCurrentTransform.m_tRotation.m_fAngle, rCurrentTransform.m_tRotation.m_vec3Vector);
+		world = glm::rotate(world, glm::radians(rCurrentTransform.m_tRotation.m_fAngle), rCurrentTransform.m_tRotation.m_vec3Vector);
 
 		m_tTextureShader.setMat4("world", world);
 
@@ -759,7 +760,7 @@ void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWind
 	}
 }
 
-void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window & rWindow)
+void Renderer::RenderDataStructureObjectsOLD(const Camera & rCamera, const Window & rWindow)
 {
 	// colored line cube
 	{
@@ -838,6 +839,40 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+
+		glAssert();
+	}
+}
+
+void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window & rWindow, const Scene& rScene)
+{
+	Shader& rCurrentShader = m_tColorShader;
+	rCurrentShader.use();
+	glAssert();
+
+	// pass color
+	glm::vec4 vec4FullGreenColor(1.0f, 1.0f, 0.0f, 1.0f);
+	rCurrentShader.setVec4("color", vec4FullGreenColor);
+
+	for (const Scene::SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
+	{
+		const CollisionDetection::AABB& rCurrentAABB = rCurrentSceneObject.m_WorldSpaceAABB;
+		const CollisionDetection::AABB& rLocalSpaceAABB = rCurrentSceneObject.m_LocalSpaceAABB;
+
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
+		// translation
+		world = glm::translate(world, rCurrentAABB.m_vec3Center);
+		// scale
+		world = glm::scale(world, rCurrentAABB.m_vec3Radius / rLocalSpaceAABB.m_vec3Radius);
+
+		rCurrentShader.setMat4("world", world);
+
+		glAssert();
+
+		// render the colored lined cube with GL_LINE_STRIP
+		glBindVertexArray(m_uiColoredCubeVAO);
+		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::ColoredIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 
 		glAssert();
 	}

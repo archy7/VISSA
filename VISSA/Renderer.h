@@ -68,6 +68,7 @@ private:
 	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow);	// scene components that are omnipresent, like a uniform grid or a cross hair
 	void RenderRealObjects(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
 	void RenderRealObjectsOLD(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
-	void RenderDataStructureObjects(const Camera& rCamera, const Window& rWindow);
+	void RenderDataStructureObjectsOLD(const Camera& rCamera, const Window& rWindow);
+	void RenderDataStructureObjects(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
 	void FreeGPUResources();
 };
