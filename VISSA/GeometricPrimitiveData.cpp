@@ -114,7 +114,8 @@ GLuint Primitives::Plane::SimpleIndexData[] = {
 
 GLfloat* Primitives::Sphere::VertexData = nullptr;
 GLuint Primitives::Sphere::NumberOfTrianglesInSphere;
-GLfloat Primitives::Sphere::SphereDefaultRadius = 50.0f;	// have to scale a unit sphere by 50 to achieve a diameter of 100cm. VISSA defines 1 unit = 1cm
+GLfloat Primitives::Sphere::SphereDefaultRadius = 50.0f;	// VISSA defines 1 unit = 1cm. 
+//GLfloat Primitives::Sphere::SphereDefaultRadius = std::sqrt(7500);	// equivalent to: sqrt(50² + 50² + 50²) ~ 86,60. VISSA defines 1 unit = 1cm. This results in a radius that allows a cube to fit inside of it.
 
 GLfloat Primitives::Line::ColoredLineVertexData[] = {
 	0.0f, 0.0f, 0.0f,

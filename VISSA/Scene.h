@@ -1,9 +1,8 @@
 #pragma once
 
 #include <vector>
-#include "GeometricPrimitiveData.h"
 
-#include "CollisionDetection.h"
+#include "SceneObject.h"
 
 /*
 	This class needs the most reworking to be practically usable. instead of primitives, actual models should be saved here.
@@ -11,28 +10,7 @@
 */
 class Scene {
 public:
-	struct SceneObject {
-		enum eType {
-			UNDEFINED = 0,
-			SPHERE,
-			PLANE,
-			CUBE
-		} m_eType;
-
-		struct Transform
-		{
-			glm::vec3 m_vec3Position;
-			glm::vec3 m_vec3Scale;
-			struct Rotation {
-				glm::vec3 m_vec3Vector;
-				float m_fAngle;
-			} m_tRotation;
-
-		} m_tTransform;
-
-		CollisionDetection::AABB m_LocalSpaceAABB;
-		CollisionDetection::AABB m_WorldSpaceAABB;
-	};
+	
 
 	std::vector<SceneObject> m_vecObjects;
 

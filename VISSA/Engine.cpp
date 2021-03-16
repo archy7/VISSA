@@ -147,7 +147,7 @@ void Engine::MouseScrollCallBack(GLFWwindow* pWindow, double fXOffset, double fY
 	//pEngine->m_tCamera.ProcessMouseScroll(fYOffset);
 }
 
-void Engine::MouseMoveCallBack(GLFWwindow* pWindow, double fXPosition, double fYPosition)
+void Engine::MouseMoveCallBack(GLFWwindow* pWindow, double dXPosition, double dYPosition)
 {
 	/*
 		only reacting to mouse moving that does not concern the GUI
@@ -155,6 +155,8 @@ void Engine::MouseMoveCallBack(GLFWwindow* pWindow, double fXPosition, double fY
 	if (!ImGui::GetIO().WantCaptureMouse)
 	{
 		Engine* pEngine = GetGlobalEngine();
+		const float fXPosition = static_cast<float>(dXPosition);
+		const float fYPosition = static_cast<float>(dYPosition);
 
 		/*
 			inputs that are available only when the scene is active

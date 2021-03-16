@@ -43,7 +43,7 @@ private:
 	Camera m_tCamera;
 	GUI m_tGUI;
 	Scene m_tScene;
-	CollisionDetection::CollisionDetectionSystem m_tCDSystem;
+	//CollisionDetection::CollisionDetectionSystem m_tCDSystem;
 	int m_iDiscreteKeysStates[GLFW_KEY_LAST];
 	float m_fDeltaTime, m_fLastFrame, m_fCurrentFrame;
 

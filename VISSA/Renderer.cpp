@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "generalGL.h"
 #include "Shader.h"
@@ -260,8 +260,8 @@ void Renderer::LoadShaders()
 void Renderer::LoadTextures()
 {
 	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-	m_uiTexture1 = LoadTextureFromFile("resources/textures/container.jpg");
-	m_uiTexture2 = LoadTextureFromFile("resources/textures/awesomeface.png");
+	m_uiTexture1 = LoadTextureFromFile("resources/textures/cobblestone_floor_13_diff_1k.jpg");
+	m_uiTexture2 = LoadTextureFromFile("resources/textures/cobblestone_floor_13_diff_1k.png");
 	m_uiGridMaskTexture = LoadTextureFromFile("resources/textures/grid_mask_transparent.png");
 }
 
@@ -546,7 +546,7 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const
 	RenderRealObjects(rCamera, rWindow, rScene);
 	//RenderDataStructureObjectsOLD(rCamera, rWindow);
 	RenderDataStructureObjects(rCamera, rWindow, rScene);
-	//Render3DSceneConstants(rCamera, rWindow);
+	Render3DSceneConstants(rCamera, rWindow);
 }
 
 void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWindow)
@@ -623,25 +623,26 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
 
-	for (const Scene::SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
+	for (const SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
 	{
-		const Scene::SceneObject::Transform& rCurrentTransform = rCurrentSceneObject.m_tTransform;
+		const SceneObject::Transform& rCurrentTransform = rCurrentSceneObject.m_tTransform;
 
 		// calculate the model matrix for each object and pass it to shader before drawing
 		glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
 		// translation
 		world = glm::translate(world, rCurrentTransform.m_vec3Position);
-		// scale
-		world = glm::scale(world, rCurrentTransform.m_vec3Scale);
 		// rotation
 		world = glm::rotate(world, glm::radians(rCurrentTransform.m_tRotation.m_fAngle), rCurrentTransform.m_tRotation.m_vec3Vector);
+		// scale
+		world = glm::scale(world, rCurrentTransform.m_vec3Scale);
+		
 
 		m_tTextureShader.setMat4("world", world);
 
 		glAssert();
 
 		// render
-		if (rCurrentSceneObject.m_eType == Scene::SceneObject::eType::CUBE) {
+		if (rCurrentSceneObject.m_eType == SceneObject::eType::CUBE) {
 			glBindVertexArray(m_uiTexturedCubeVAO);
 			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 		}
@@ -851,30 +852,71 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 	rCurrentShader.use();
 	glAssert();
 
-	// pass color
-	glm::vec4 vec4FullGreenColor(1.0f, 1.0f, 0.0f, 1.0f);
-	rCurrentShader.setVec4("color", vec4FullGreenColor);
-
-	for (const Scene::SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
+	glDisable(GL_CULL_FACE);
+	
+	for (const SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
 	{
-		const CollisionDetection::AABB& rCurrentAABB = rCurrentSceneObject.m_WorldSpaceAABB;
-		const CollisionDetection::AABB& rLocalSpaceAABB = rCurrentSceneObject.m_LocalSpaceAABB;
+		// AABBs
+		RenderAABBOfSceneObject(rCurrentSceneObject, rCurrentShader);
 
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
-		// translation
-		world = glm::translate(world, rCurrentAABB.m_vec3Center);
-		// scale
-		world = glm::scale(world, rCurrentAABB.m_vec3Radius / rLocalSpaceAABB.m_vec3Radius);
-
-		rCurrentShader.setMat4("world", world);
-
-		glAssert();
-
-		// render the object appropriately
-		glBindVertexArray(m_uiColoredCubeVAO);
-		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glAssert();
+		// Bounding Spheres
+		RenderBoundingSphereOfSceneObject(rCurrentSceneObject, rCurrentShader);
 	}
+
+	glEnable(GL_CULL_FACE);
+}
+
+void Renderer::RenderAABBOfSceneObject(const SceneObject & rSceneObject, Shader & rShader)
+{
+	// the AABBs
+	const CollisionDetection::AABB& rRenderedAABB = rSceneObject.m_tWorldSpaceAABB;
+	const CollisionDetection::AABB& rLocalSpaceAABBReference = rSceneObject.m_tLocalSpaceAABB;
+
+	// calculate the model matrix for each object and pass it to shader before drawing
+	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
+	// translation
+	world = glm::translate(world, rRenderedAABB.m_vec3Center);
+	// scale
+	world = glm::scale(world, rRenderedAABB.m_vec3Radius / rLocalSpaceAABBReference.m_vec3Radius);
+
+	rShader.setMat4("world", world);
+
+	// yellow
+	glm::vec4 vec4RenderColor(1.0f, 1.0f, 0.0f, 1.0f);
+	rShader.setVec4("color", vec4RenderColor);
+
+	glAssert();
+
+	// render the object appropriately
+	glBindVertexArray(m_uiColoredCubeVAO);
+	glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+	glAssert();
+}
+
+void Renderer::RenderBoundingSphereOfSceneObject(const SceneObject & rSceneObject, Shader & rShader)
+{
+	const CollisionDetection::BoundingSphere& rRenderedBoundingSphere = rSceneObject.m_tWorldSpaceBoundingSphere;
+
+	// calculate the model matrix for each object and pass it to shader before drawing
+	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
+	// translation
+	world = glm::translate(world, rRenderedBoundingSphere.m_vec3Center);
+	// scale 
+	const float fScale = rRenderedBoundingSphere.m_fRadius / Primitives::Sphere::SphereDefaultRadius;
+	world = glm::scale(world, glm::vec3(fScale, fScale, fScale));
+
+	rShader.setMat4("world", world);
+
+	// blue
+	glm::vec4 vec4RenderColor(0.0f, 0.0f, 1.0f, 1.0f);
+	rShader.setVec4("color", vec4RenderColor);
+
+	glAssert();
+
+	// render
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glBindVertexArray(m_uiTexturedSphereVAO);
+	glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }

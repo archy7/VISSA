@@ -10,7 +10,7 @@ namespace Primitives {
 		The following primitive vertices are specified in forms of 1m.
 
 		Cube: 1m³
-		Sphere: 1m diameter
+		Sphere: tightly fits a cube like defined above.
 		Plane: 1m²
 
 		All primitives are axis aligned by default.

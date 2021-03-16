@@ -3,6 +3,7 @@
 #include "generalGL.h"
 
 #include "Shader.h"
+#include "Scene.h"
 
 class Camera;
 struct Window;
@@ -70,5 +71,7 @@ private:
 	void RenderRealObjectsOLD(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
 	void RenderDataStructureObjectsOLD(const Camera& rCamera, const Window& rWindow);
 	void RenderDataStructureObjects(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
+	void RenderAABBOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
+	void RenderBoundingSphereOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
 	void FreeGPUResources();
 };
