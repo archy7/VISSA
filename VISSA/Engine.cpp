@@ -7,7 +7,7 @@ Engine::Engine() :
 	m_tRenderer(),
 	m_tCamera(glm::vec3(0.0f, 100.0f, 400.0f)),
 	m_tGUI(),
-	m_tScene(),
+	m_tVisualization(),
 	m_iDiscreteKeysStates(),
 	m_fDeltaTime(0.0f),
 	m_fLastFrame(0.0f),
@@ -53,9 +53,12 @@ void Engine::MainLoop()
 		glfwPollEvents();	// ask GLFW what kind of input happened
 		ProcessKeyboardInput();
 
+		// update
+		m_tVisualization.Update(m_fDeltaTime);
+
 		// rendering
 		// 3D
-		m_tRenderer.RenderScene(m_tCamera, m_tWindow, m_tScene);
+		m_tRenderer.RenderScene(m_tCamera, m_tWindow, m_tVisualization);
 		// GUI
 		m_tGUI.Render(*this);
 
@@ -82,8 +85,9 @@ void Engine::ProcessKeyboardInput()
 
 				if (IsDiscreteKeyReady(iCurrentKey))
 				{
-					m_tGUI.ToggleMenuState();
-					m_tWindow.SetMouseCaptured(!m_tGUI.IsMenuActive());	// mouse is captured when menu active and vice versa
+					m_tGUI.ShowMenu(!m_tGUI.IsMenuActive());
+					m_tWindow.SetMouseCaptured(!m_tGUI.IsMenuActive());	// mouse is captured by window when menu active and vice versa
+					m_tGUI.SetCaptureMouse(m_tGUI.IsMenuActive());
 				}
 			}
 		}
@@ -93,6 +97,19 @@ void Engine::ProcessKeyboardInput()
 		*/
 		if (!m_tGUI.IsMenuActive())
 		{
+			/*
+				generally available inputs when the scene is running
+			*/
+			{
+				int iCurrentKey = GLFW_KEY_M;
+
+				if (IsDiscreteKeyReady(iCurrentKey))
+				{
+					m_tWindow.SetMouseCaptured(!m_tWindow.m_bMouseCaptured);	// toggle between captured mouse or a cursor
+					m_tGUI.SetCaptureMouse(!m_tGUI.IsMouseCaptured());			// toggle GUI behaviour
+				}
+			}
+
 			/*
 				inputs that are only available when the mouse is captured/the camera controlled
 			*/
@@ -182,6 +199,8 @@ void Engine::MouseMoveCallBack(GLFWwindow* pWindow, double dXPosition, double dY
 				Camera& rCamera = pEngine->m_tCamera;
 
 				rCamera.ProcessMouseMovement(xoffset, yoffset);
+
+
 			}
 			else	// reacting to mouse movement when the camera is not active
 			{

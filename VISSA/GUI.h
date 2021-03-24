@@ -12,8 +12,10 @@ public:
 	GUI();
 
 	void InitForWindow(Window& rWindow);
-	void ToggleMenuState();
+	void ShowMenu(bool bShowMenu);
 	bool IsMenuActive() const;
+	bool IsMouseCaptured() const;
+	void SetCaptureMouse(bool bIsCapturedNow);
 
 	void Render(Engine& rEngine);
 	void RenderMainMenu(Engine& rEngine);
@@ -25,4 +27,5 @@ private:
 
 	bool m_bShowMainMenu;
 	bool m_bShowSimulationControlPanel;
+	bool m_bCaptureMouse;
 };

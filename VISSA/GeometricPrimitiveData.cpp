@@ -83,6 +83,8 @@ GLuint Primitives::Cube::SimpleIndexData[] = {
 	4				// last vertex of back face
 };
 
+GLfloat Primitives::Cube::DefaultCubeHalfWidth = 50.0f;
+
 GLfloat Primitives::Plane::VertexData[] = {
 
 	//position				normals					texcoords

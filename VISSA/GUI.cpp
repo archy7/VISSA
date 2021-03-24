@@ -7,7 +7,8 @@
 
 GUI::GUI():
 	m_bShowMainMenu(true),
-	m_bShowSimulationControlPanel(false)
+	m_bShowSimulationControlPanel(false),
+	m_bCaptureMouse(true)
 {
 
 }
@@ -31,14 +32,24 @@ void GUI::InitForWindow(Window& rWindow)
 	ImGui_ImplOpenGL3_Init("#version 430");
 }
 
-void GUI::ToggleMenuState()
+void GUI::ShowMenu(bool bShowMenu)
 {
-	m_bShowMainMenu = !m_bShowMainMenu;
+	m_bShowMainMenu = bShowMenu;
 }
 
 bool GUI::IsMenuActive() const
 {
 	return m_bShowMainMenu;
+}
+
+bool GUI::IsMouseCaptured() const
+{
+	return m_bCaptureMouse;
+}
+
+void GUI::SetCaptureMouse(bool bIsCapturedNow)
+{
+	m_bCaptureMouse = bIsCapturedNow;
 }
 
 void GUI::Render(Engine& rEngine)
@@ -47,14 +58,13 @@ void GUI::Render(Engine& rEngine)
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+	//ImGui::CaptureMouseFromApp(m_bCaptureMouse);
 
 	if (m_bShowSimulationControlPanel)
 		RenderSimControlPanel(rEngine);
 
 	if (m_bShowMainMenu)
 		RenderMainMenu(rEngine);
-
-
 
 	// Rendering
 	ImGui::Render();
@@ -74,7 +84,7 @@ void GUI::RenderMainMenu(Engine& rEngine)
 	ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
 	ImGui::Begin("Main Menu Background", NULL, backgroundFlags);
 
-	ImGui::Text("TRANSPARENT MENU BACK GROUND");
+	//ImGui::Text("TRANSPARENT MENU BACK GROUND");
 
 	ImGuiWindowFlags menuFlags = 0;
 	ImVec2 mainMenuWindowSize(ImGui::GetWindowContentRegionWidth() * 0.2f, 400);
@@ -112,8 +122,8 @@ void GUI::RenderMainMenu(Engine& rEngine)
 void GUI::RenderSimControlPanel(Engine& rEngine)
 {
 	// configure window
-	ImVec2 simControlWindowSize(400, 100);
-	float fSimControlWindowPaddingBot = 50.0f;
+	ImVec2 simControlWindowSize(600, 100);
+	float fSimControlWindowPaddingBot = 500.0f;
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + main_viewport->Size.x * 0.5f - simControlWindowSize.x * 0.5f, main_viewport->WorkPos.y + main_viewport->Size.y - simControlWindowSize.y - fSimControlWindowPaddingBot), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(simControlWindowSize, ImGuiCond_FirstUseEver);
@@ -122,35 +132,30 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	window_flags |= ImGuiWindowFlags_NoMove;
 	window_flags |= ImGuiWindowFlags_NoResize;
 	window_flags |= ImGuiWindowFlags_NoCollapse;
-	//if (no_titlebar)        window_flags |= ImGuiWindowFlags_NoTitleBar;
-	//if (no_scrollbar)       window_flags |= ImGuiWindowFlags_NoScrollbar;
-	//if (!no_menu)           window_flags |= ImGuiWindowFlags_MenuBar;
-	//if (no_move)            window_flags |= ImGuiWindowFlags_NoMove;
-	//if (no_resize)          window_flags |= ImGuiWindowFlags_NoResize;
-	//if (no_collapse)        window_flags |= ImGuiWindowFlags_NoCollapse;
-	//if (no_nav)             window_flags |= ImGuiWindowFlags_NoNav;
-	//if (no_background)      window_flags |= ImGuiWindowFlags_NoBackground;
-	//if (no_bring_to_front)  window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
-	//if (no_close)           p_open = NULL; // Don't pass our bool* to Begin
+	if(m_bCaptureMouse == false)
+		window_flags |= ImGuiWindowFlags_NoMouseInputs;
+	
 	ImGui::Begin("Sim Controls", nullptr, window_flags);
 
 	if (ImGui::Button("RESET"))
-		fprintf(stdout, "RESET\n");
+		rEngine.m_tVisualization.Reset();
 	ImGui::SameLine();
 	if (ImGui::Button("PLAY"))
-		fprintf(stdout, "PLAY\n");
+		rEngine.m_tVisualization.Play();
 	ImGui::SameLine();
 	if (ImGui::Button("PAUSE"))
-		fprintf(stdout, "PAUSE\n");
+		rEngine.m_tVisualization.Pause();
 	ImGui::SameLine();
 	if (ImGui::Button("STEP"))
-		fprintf(stdout, "STEP\n");
+		rEngine.m_tVisualization.MoveToNextStep();
 	ImGui::SameLine();
-	if (ImGui::Button("REWIND"))
-		fprintf(stdout, "REWIND\n");
+	if (ImGui::Button("INVERT"))
+		rEngine.m_tVisualization.Invert();
 	ImGui::SameLine();
-	if (ImGui::Button("FAST FORWARD"))
-		fprintf(stdout, "FAST FORWARD\n");
+	if (ImGui::Button("FASTER"))
+		rEngine.m_tVisualization.IncreaseSpeed();
+	if (ImGui::Button("SLOWER"))
+		rEngine.m_tVisualization.DecreaseSpeed();
 	ImGui::SameLine();
 
 	ImGui::End();
@@ -189,12 +194,17 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 	{
 		if (ImGui::Button("VISUALIZATION 1", ImVec2(120, 0)))
 		{
-			rEngine.m_tScene.LoadScene1();	// really bad implementation
-			CollisionDetection::ConstructBoundingVolumesForScene(rEngine.m_tScene);
-			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tScene);
+			// CD relevant
+			rEngine.m_tVisualization.Load();	// really bad implementation
+			CollisionDetection::ConstructBoundingVolumesForScene(rEngine.m_tVisualization);
+			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
+			rEngine.m_tBVH = CollisionDetection::ConstructBVHForScene(rEngine.m_tVisualization);
+
+			// UI relevant
 			rEngine.m_tWindow.SetMouseCaptured(true);
-			ToggleMenuState();
-			m_bShowSimulationControlPanel = true;			
+			ShowMenu(false);
+			m_bShowSimulationControlPanel = true;		
+			m_bCaptureMouse = false;
 			ImGui::CloseCurrentPopup();
 		}
 

@@ -6,7 +6,7 @@
 
 const float Camera::fYawDefault = -90.0f;
 const float Camera::fPitchDefault = 0.0f;
-const float Camera::fSpeedDefault = 200.0f;
+const float Camera::fSpeedDefault = 500.0f;
 const float Camera::fSensitivityDefault = 0.1f;
 const float Camera::fZoomDefault = 45.0f;
 

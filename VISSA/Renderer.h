@@ -3,12 +3,13 @@
 #include "generalGL.h"
 
 #include "Shader.h"
-#include "Scene.h"
+#include "Visualization.h"
+#include "CollisionDetection.h"
 
 class Camera;
 struct Window;
 class GUI;
-class Scene;
+class Visualization;
 
 struct TriangularFace;
 
@@ -56,7 +57,7 @@ public:
 	// Init/Loads/Frees
 	void InitRenderer();
 	// Work
-	void RenderScene(const Camera& rCamera, Window& rWindow, const Scene& rScene);
+	void RenderScene(const Camera& rCamera, Window& rWindow, const Visualization& rScene);
 private:
 	SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
 	void LoadShaders();
@@ -65,13 +66,14 @@ private:
 	void LoadPrimitivesToGPU();
 	void InitUniformBuffers();
 	void SetInitialOpenGLState();
-	void Render3DScene(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
+	void Render3DScene(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow);	// scene components that are omnipresent, like a uniform grid or a cross hair
-	void RenderRealObjects(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
-	void RenderRealObjectsOLD(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
+	void RenderRealObjects(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
+	void RenderRealObjectsOLD(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void RenderDataStructureObjectsOLD(const Camera& rCamera, const Window& rWindow);
-	void RenderDataStructureObjects(const Camera& rCamera, const Window& rWindow, const Scene& rScene);
+	void RenderDataStructureObjects(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void RenderAABBOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
 	void RenderBoundingSphereOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
+	void RenderTreeNodeAABB(const CollisionDetection::TreeNodeAABBForRendering& rTreeNodeAABB, Shader& rShader);
 	void FreeGPUResources();
 };

@@ -13,7 +13,7 @@
 #include "Window.h"
 #include "GUI.h"
 #include "GeometricPrimitiveData.h"
-#include "Scene.h"
+#include "Visualization.h"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -520,7 +520,7 @@ void Renderer::FreeGPUResources()
 	glDeleteTextures(1, &m_uiGridMaskTexture);
 }
 
-void Renderer::RenderScene(const Camera & rCamera, Window & rWindow, const Scene& rScene)
+void Renderer::RenderScene(const Camera & rCamera, Window & rWindow, const Visualization& rScene)
 {
 	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -528,7 +528,7 @@ void Renderer::RenderScene(const Camera & rCamera, Window & rWindow, const Scene
 	Render3DScene(rCamera, rWindow, rScene);
 }
 
-void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const Scene& rScene)
+void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const Visualization& rScene)
 {
 	// start by updating the uniform buffer containing the camera and projection matrices
 	glBindBuffer(GL_UNIFORM_BUFFER, m_uiCameraProjectionUBO);
@@ -542,11 +542,11 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const
 		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4Projection), glm::value_ptr(mat4Projection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	
-	//RenderRealObjectsOLD(rCamera, rWindow, rScene);
+	//RenderRealObjectsOLD(rCamera, rWindow, rVisualization);
 	RenderRealObjects(rCamera, rWindow, rScene);
 	//RenderDataStructureObjectsOLD(rCamera, rWindow);
 	RenderDataStructureObjects(rCamera, rWindow, rScene);
-	Render3DSceneConstants(rCamera, rWindow);
+	//Render3DSceneConstants(rCamera, rWindow);
 }
 
 void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWindow)
@@ -609,7 +609,7 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 	}
 }
 
-void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow, const Scene & rScene)
+void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow, const Visualization & rScene)
 {
 	glAssert();
 	m_tTextureShader.use();
@@ -654,7 +654,7 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 	}
 }
 
-void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWindow, const Scene& rScene)
+void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWindow, const Visualization& rScene)
 {
 	// textured cube
 	{
@@ -846,7 +846,7 @@ void Renderer::RenderDataStructureObjectsOLD(const Camera & rCamera, const Windo
 	}
 }
 
-void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window & rWindow, const Scene& rScene)
+void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window & rWindow, const Visualization& rVisualization)
 {
 	Shader& rCurrentShader = m_tColorShader;
 	rCurrentShader.use();
@@ -854,13 +854,40 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 
 	glDisable(GL_CULL_FACE);
 	
-	for (const SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
+	// rendering the bounding volumes for each scene object
+	for (const SceneObject& rCurrentSceneObject : rVisualization.m_vecObjects)
 	{
 		// AABBs
+		// render colour yellow for AABBs
+		glm::vec4 vec4AABBRenderColor(1.0f, 1.0f, 0.0f, 1.0f);
+		rCurrentShader.setVec4("color", vec4AABBRenderColor);
 		RenderAABBOfSceneObject(rCurrentSceneObject, rCurrentShader);
 
 		// Bounding Spheres
-		RenderBoundingSphereOfSceneObject(rCurrentSceneObject, rCurrentShader);
+		// render colour blue for spheres
+		glm::vec4 vec4SphereRenderColor(0.0f, 0.0f, 1.0f, 1.0f);
+		rCurrentShader.setVec4("color", vec4SphereRenderColor);
+		//RenderBoundingSphereOfSceneObject(rCurrentSceneObject, rCurrentShader);
+	}
+
+
+	// rendering the AABBs of tree nodes in the BVH
+	int16_t iAlreadyRenderedConstructionSteps = 0;
+	for (const CollisionDetection::TreeNodeAABBForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForRendering)
+	{
+		bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
+		bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
+
+		bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
+		if (bShallRender)
+		{
+			// red
+			glm::vec4 vec4TreeNodeAABBRenderColor(1.0f, 0.0f, 0.0f, 1.0f);
+			rCurrentShader.setVec4("color", vec4TreeNodeAABBRenderColor);
+			RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
+		}			
+
+		iAlreadyRenderedConstructionSteps++;
 	}
 
 	glEnable(GL_CULL_FACE);
@@ -872,7 +899,7 @@ void Renderer::RenderAABBOfSceneObject(const SceneObject & rSceneObject, Shader 
 	const CollisionDetection::AABB& rRenderedAABB = rSceneObject.m_tWorldSpaceAABB;
 	const CollisionDetection::AABB& rLocalSpaceAABBReference = rSceneObject.m_tLocalSpaceAABB;
 
-	// calculate the model matrix for each object and pass it to shader before drawing
+	// calc world matrix
 	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
 	// translation
 	world = glm::translate(world, rRenderedAABB.m_vec3Center);
@@ -880,10 +907,6 @@ void Renderer::RenderAABBOfSceneObject(const SceneObject & rSceneObject, Shader 
 	world = glm::scale(world, rRenderedAABB.m_vec3Radius / rLocalSpaceAABBReference.m_vec3Radius);
 
 	rShader.setMat4("world", world);
-
-	// yellow
-	glm::vec4 vec4RenderColor(1.0f, 1.0f, 0.0f, 1.0f);
-	rShader.setVec4("color", vec4RenderColor);
 
 	glAssert();
 
@@ -898,7 +921,7 @@ void Renderer::RenderBoundingSphereOfSceneObject(const SceneObject & rSceneObjec
 {
 	const CollisionDetection::BoundingSphere& rRenderedBoundingSphere = rSceneObject.m_tWorldSpaceBoundingSphere;
 
-	// calculate the model matrix for each object and pass it to shader before drawing
+	// calc world matrix
 	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
 	// translation
 	world = glm::translate(world, rRenderedBoundingSphere.m_vec3Center);
@@ -908,10 +931,6 @@ void Renderer::RenderBoundingSphereOfSceneObject(const SceneObject & rSceneObjec
 
 	rShader.setMat4("world", world);
 
-	// blue
-	glm::vec4 vec4RenderColor(0.0f, 0.0f, 1.0f, 1.0f);
-	rShader.setVec4("color", vec4RenderColor);
-
 	glAssert();
 
 	// render
@@ -919,4 +938,28 @@ void Renderer::RenderBoundingSphereOfSceneObject(const SceneObject & rSceneObjec
 	glBindVertexArray(m_uiTexturedSphereVAO);
 	glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+void Renderer::RenderTreeNodeAABB(const CollisionDetection::TreeNodeAABBForRendering & rTreeNodeAABB, Shader & rShader)
+{
+	// the AABBs
+	const CollisionDetection::AABB& rRenderedAABB = rTreeNodeAABB.m_tAABBForRendering;
+
+	// calc world matrix
+	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
+	// translation
+	world = glm::translate(world, rRenderedAABB.m_vec3Center);
+	// scale
+	const float fDetaultCubeHalfWidth = Primitives::Cube::DefaultCubeHalfWidth;
+	world = glm::scale(world, rRenderedAABB.m_vec3Radius / glm::vec3(fDetaultCubeHalfWidth, fDetaultCubeHalfWidth, fDetaultCubeHalfWidth)); // scaling a "default" cube so it has the same extents as the current AABB
+
+	rShader.setMat4("world", world);
+
+	glAssert();
+
+	// render the object appropriately
+	glBindVertexArray(m_uiColoredCubeVAO);
+	glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+	glAssert();
 }

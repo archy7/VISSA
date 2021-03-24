@@ -3,7 +3,7 @@
 #include <limits>
 #include <algorithm>
 
-#include "Scene.h"
+#include "Visualization.h"
 #include "SceneObject.h"
 #include "GeometricPrimitiveData.h"
 
@@ -17,7 +17,50 @@ struct CollisionDetection::MostSeperatedPointsIndices{
 	size_t m_uiMaxVertexIndex;
 };
 
-void CollisionDetection::ConstructBoundingVolumesForScene(Scene& rScene)
+
+float CollisionDetection::AABB::CalcMinimumX() const
+{
+	assert(glm::length(m_vec3Radius) > 0.0f);
+
+	return m_vec3Center.x - m_vec3Radius.x;;
+}
+
+float CollisionDetection::AABB::CalcMinimumY() const
+{
+	assert(glm::length(m_vec3Radius) > 0.0f);
+
+	return m_vec3Center.y - m_vec3Radius.y;
+}
+
+float CollisionDetection::AABB::CalcMinimumZ() const
+{
+	assert(glm::length(m_vec3Radius) > 0.0f);
+
+	return m_vec3Center.z - m_vec3Radius.z;
+}
+
+float CollisionDetection::AABB::CalcMaximumX() const
+{
+	assert(glm::length(m_vec3Radius) > 0.0f);
+
+	return m_vec3Center.x + m_vec3Radius.x;
+}
+
+float CollisionDetection::AABB::CalcMaximumY() const
+{
+	assert(glm::length(m_vec3Radius) > 0.0f);
+
+	return m_vec3Center.y + m_vec3Radius.y;
+}
+
+float CollisionDetection::AABB::CalcMaximumZ() const
+{
+	assert(glm::length(m_vec3Radius) > 0.0f);
+
+	return m_vec3Center.z + m_vec3Radius.z;
+}
+
+void CollisionDetection::ConstructBoundingVolumesForScene(Visualization& rScene)
 {
 	for (SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
 	{
@@ -41,7 +84,7 @@ void CollisionDetection::ConstructBoundingVolumesForScene(Scene& rScene)
 	}
 }
 
-void CollisionDetection::UpdateBoundingVolumesForScene(Scene & rScene)
+void CollisionDetection::UpdateBoundingVolumesForScene(Visualization & rScene)
 {
 	for (SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
 	{
@@ -123,6 +166,8 @@ AABB CollisionDetection::ConstructAABBFromVertexData(float * pVertices, size_t u
 
 AABB CollisionDetection::UpdateAABBFromAABB(const AABB& rOldAABB, const glm::mat4& mat4Rotation, const glm::vec3& rTranslation, const glm::vec3& rScale)
 {
+	assert(glm::length(rOldAABB.m_vec3Radius) > 0.0f);	// make sure old AABB has already been constructed
+
 	AABB tResult;
 	
 	for (int i = 0; i < 3; i++) // for every axis of the new AABB
@@ -315,4 +360,277 @@ BoundingSphere CollisionDetection::UpdateBoundingSphere(const BoundingSphere & r
 	//tResult.m_fRadius = rLocalSpaceBoundingSphere.m_fRadius * fActualRadiusScalingFactor;
 
 	return tResult;
+}
+
+	//////////////////////////////////////////////////////////////
+	//////////////////////////BVH/////////////////////////////////
+	//////////////////////////////////////////////////////////////
+
+CollisionDetection::BoundingVolumeHierarchy CollisionDetection::ConstructBVHForScene(Visualization & rScene)
+{
+	assert(rScene.m_vecObjects.size() > 0);
+
+	BoundingVolumeHierarchy tResult;
+	tResult.m_pRootNode = new BVHTreeNode;
+	rScene.m_vecTreeAABBsForRendering.reserve(rScene.m_vecObjects.size());
+	
+	// the construction
+	TopDownBVTree(&(tResult.m_pRootNode), rScene.m_vecObjects.data(), rScene.m_vecObjects.size());
+
+	// first traversal to gather data for rendering. In theory, it is possible to traverse the tree every frame for BV rendering.
+	// But that is terrible, so data is fetched into a linear vector
+	TraverseTreeForAABBDataForRendering(tResult.m_pRootNode, rScene.m_vecTreeAABBsForRendering, 0u);
+
+	return tResult;
+}
+
+void CollisionDetection::TraverseTreeForAABBDataForRendering(BVHTreeNode* pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
+{
+	assert(pNode);
+
+	iTreeDepth++; // we are now one level deeper. depth of root node == 1 here
+
+	if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
+	{
+		// if it is a node, there was a partitioning step, which means there have to be two children
+		assert(pNode->m_pLeft);
+		assert(pNode->m_pRight);
+
+		// save relevant data for rendering
+		TreeNodeAABBForRendering tNewAABBForRendering;
+		tNewAABBForRendering.m_iTreeDepth = iTreeDepth;
+		tNewAABBForRendering.m_tAABBForRendering = pNode->m_tAABBForNode;
+		rvecAABBsForRendering.push_back(tNewAABBForRendering);
+
+		// traverse left ...
+		TraverseTreeForAABBDataForRendering(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
+		// ... then right
+		TraverseTreeForAABBDataForRendering(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
+	}
+
+	// Note: In this function we care for nodes, leaves are intentionally left out
+}
+
+void CollisionDetection::TopDownBVTree(BVHTreeNode ** pTree, SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+{
+	assert(pTree);
+	assert(pSceneObjects);
+	assert(uiNumSceneObjects > 0);
+
+	const uint8_t uiNumberOfObjectsPerLeaf = 1u;
+	BVHTreeNode* pNewNode = new BVHTreeNode;
+	*pTree = pNewNode;
+
+	if (uiNumSceneObjects <= uiNumberOfObjectsPerLeaf) // is a leaf
+	{
+		assert(uiNumSceneObjects == 1); // needs reconsideration for >1 objects per leaf
+		// bounding volumes for single objects is already done, no need to compute that here
+		pNewNode->m_uiNumOjbects = static_cast<uint8_t>(uiNumSceneObjects);
+		pNewNode->m_pObjects = pSceneObjects;
+	}
+	else // is a node
+	{
+		// create AABB bounding volume for the current set of objects
+		pNewNode->m_tAABBForNode = CreateAABBForMultipleObjects(pSceneObjects, uiNumSceneObjects);
+
+		// create Bounding Sphere volume for the current set of objects
+		//pNewNode->m_tBoundingSphereForNode = CreateBoundingSphereForMultipleSceneObjects(pSceneObjects, uiNumSceneObjects);
+
+		// partition current set into subsets IN PLACE!!!
+		size_t uiPartitioningIndex = PartitionSceneObjectsInPlace(pSceneObjects, uiNumSceneObjects);
+
+		// move on with "left" side
+		TopDownBVTree(&(pNewNode->m_pLeft), pSceneObjects, uiPartitioningIndex);
+
+		// move on with "right" side
+		TopDownBVTree(&(pNewNode->m_pRight), pSceneObjects + uiPartitioningIndex, uiNumSceneObjects - uiPartitioningIndex);
+	}
+}
+
+AABB CollisionDetection::CreateAABBForMultipleObjects(const SceneObject * pScenObjects, size_t uiNumSceneObjects)
+{
+	AABB tResult;
+
+	// initializing min values to max and vice versa for definitive overwriting for the first vertex
+	float fXMin = std::numeric_limits<float>::max();
+	float fXMax = std::numeric_limits<float>::min();
+	float fYMin = std::numeric_limits<float>::max();
+	float fYMax = std::numeric_limits<float>::min();
+	float fZMin = std::numeric_limits<float>::max();
+	float fZMax = std::numeric_limits<float>::min();
+
+	for (size_t uiCurrentSceneObjectIndex = 0u; uiCurrentSceneObjectIndex < uiNumSceneObjects; uiCurrentSceneObjectIndex++)
+	{
+		const SceneObject& rCurrentObject = pScenObjects[uiCurrentSceneObjectIndex];
+		assert(glm::length(rCurrentObject.m_tWorldSpaceAABB.m_vec3Radius) > 0.0f);	// make sure AABB of current object has already been constructed
+
+		// get extent of current AABB
+		const float fObjAABBXMin = rCurrentObject.m_tWorldSpaceAABB.CalcMinimumX();
+		const float fObjAABBYMin = rCurrentObject.m_tWorldSpaceAABB.CalcMinimumY();
+		const float fObjAABBZMin = rCurrentObject.m_tWorldSpaceAABB.CalcMinimumZ();
+		const float fObjAABBXMax = rCurrentObject.m_tWorldSpaceAABB.CalcMaximumX();
+		const float fObjAABBYMax = rCurrentObject.m_tWorldSpaceAABB.CalcMaximumY();
+		const float fObjAABBZMax = rCurrentObject.m_tWorldSpaceAABB.CalcMaximumZ();
+		
+		// update resulting bounding volume accordingly
+		fXMin = std::min<float>(fXMin, fObjAABBXMin);
+		fYMin = std::min<float>(fYMin, fObjAABBYMin);
+		fZMin = std::min<float>(fZMin, fObjAABBZMin);
+		fXMax = std::max<float>(fXMax, fObjAABBXMax);
+		fYMax = std::max<float>(fYMax, fObjAABBYMax);
+		fZMax = std::max<float>(fZMax, fObjAABBZMax);
+	}
+
+	// calculating AABB center
+	const float fCenterX = fXMin * 0.5f + fXMax * 0.5f;
+	const float fCenterY = fYMin * 0.5f + fYMax * 0.5f;
+	const float fCenterZ = fZMin * 0.5f + fZMax * 0.5f;
+	tResult.m_vec3Center = glm::vec3(fCenterX, fCenterY, fCenterZ);
+
+	// calculating AABB halfwidths
+	const float fXTotalExtent = fXMax - fXMin;
+	const float fYTotalExtent = fYMax - fYMin;
+	const float fZTotalExtent = fZMax - fZMin;
+	const float fHalfWidthX = fXTotalExtent * 0.5f;
+	const float fHalfWidthY = fYTotalExtent * 0.5f;
+	const float fHalfWidthZ = fZTotalExtent * 0.5f;
+
+	// calculating AABB halfwidths
+	tResult.m_vec3Radius = glm::vec3(fHalfWidthX, fHalfWidthY, fHalfWidthZ);
+
+	return tResult;
+}
+
+BoundingSphere CollisionDetection::CreateBoundingSphereForMultipleSceneObjects(const SceneObject * pScenObjects, size_t uiNumSceneObjects)
+{
+	assert(!"not done yet xD");
+
+	return BoundingSphere();
+}
+
+size_t CollisionDetection::PartitionSceneObjectsInPlace(SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+{
+	assert(pSceneObjects);
+	assert(uiNumSceneObjects > 0u);
+	/*
+		an explanation:
+		This function:
+		1. decides the splitting axis 
+		2. then the splitting point
+		3. then partitions the given scene objects
+	*/
+
+	// 1. Finding the splitting axis
+	// 1.1. Finding the axis with the longest extent
+
+	// initializing with values that will definitely be overwritten
+	float fXMaxExtent = std::numeric_limits<float>::min();
+	float fXMinExtent = std::numeric_limits<float>::max();
+	float fYMaxExtent = std::numeric_limits<float>::min();
+	float fYMinExtent = std::numeric_limits<float>::max();
+	float fZMaxExtent = std::numeric_limits<float>::min();
+	float fZMinExtent = std::numeric_limits<float>::max();
+
+	// finding min and max extents for every axis
+	for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+	{
+		const SceneObject& rCurrentSceneObject = pSceneObjects[uiCurrentSceneObject];
+
+		fXMaxExtent = std::max(fXMaxExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMaximumX());
+		fYMaxExtent = std::max(fYMaxExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMaximumY());
+		fZMaxExtent = std::max(fZMaxExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMaximumZ());
+
+		fXMinExtent = std::min(fXMinExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMinimumX());
+		fYMinExtent = std::min(fYMinExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMinimumY());
+		fZMinExtent = std::min(fZMinExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMinimumZ());
+	}
+
+	// Getting the longest extent of the 3 axes
+	const float fXTotalExtent = fXMaxExtent - fXMinExtent;
+	const float fYTotalExtent = fYMaxExtent - fYMinExtent;
+	const float fZTotalExtent = fZMaxExtent - fZMinExtent;
+
+	const int x = 0, y = 1, z = 2;
+	int iSplittingAxis = x;
+
+	if (fYTotalExtent > fXTotalExtent && fYTotalExtent > fZTotalExtent)
+		iSplittingAxis = y;
+
+	if (fZTotalExtent > fXTotalExtent && fZTotalExtent > fYTotalExtent)
+		iSplittingAxis = z;
+
+	// axis now stores the index of the longest axis in the 3 dimensional coordinate vector
+
+	// 2. Finding the splitting point on the axis
+	// done by using the object mean (mean of the object centroids)
+
+	float fObjectCentroidsMean = 0.0f;
+	const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
+
+	// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
+	for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+	{
+		const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center;
+		fObjectCentroidsMean += rCurrentSceneObjectCenter[iSplittingAxis] * fPreDivisionFactor;
+	}
+
+	// 3. partitioning the scene objects:
+	// this is not the cleanest/most efficient implementation for that
+	//std::vector<SceneObject*> vecLeftChildren;
+	//std::vector<SceneObject*> vecRightChildren;
+	//vecLeftChildren.reserve(uiNumSceneObjects);
+	//vecRightChildren.reserve(uiNumSceneObjects);
+
+	//for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+	//{
+	//	if (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iSplittingAxis] < fObjectCentroidsMean)
+	//	{
+	//		vecLeftChildren.push_back(pSceneObjects + uiCurrentSceneObject);
+	//	}
+	//	else // >=
+	//	{
+	//		vecRightChildren.push_back(pSceneObjects + uiCurrentSceneObject);
+	//	}
+	//}
+
+	//// the return value
+	//size_t uiPartitioningIndex = vecLeftChildren.size();
+
+	//// in place rearrangement
+	//memcpy(pSceneObjects, vecLeftChildren.data(), sizeof(SceneObject*) * vecLeftChildren.size());
+	//memcpy(pSceneObjects + vecLeftChildren.size(), vecRightChildren.data(), sizeof(SceneObject*) * vecRightChildren.size());
+
+	SceneObject* pCopiedArray = new SceneObject[uiNumSceneObjects];
+	
+	// two passes: one for determination of bucket sizes, the second for sorting into buckets
+	// first pass
+	const size_t uiNumBuckets = 2u;
+	size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
+	for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+	{
+		// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+		const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iSplittingAxis] >= fObjectCentroidsMean);
+		uiNumElementsPerBucket[uiBucketIndex]++;
+	}
+
+	assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
+
+	// second pass
+	size_t uiBucketInsertionIndices[uiNumBuckets];
+	uiBucketInsertionIndices[0u] = 0u;
+	uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
+
+	for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+	{
+		// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+		const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iSplittingAxis] >= fObjectCentroidsMean);
+		const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
+		pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
+	}
+
+	memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
+
+	const size_t uiPartitioningIndex = uiNumElementsPerBucket[0]; // number of left children = partitioning index
+
+	return uiPartitioningIndex;
 }

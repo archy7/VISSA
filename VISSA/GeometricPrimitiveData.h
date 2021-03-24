@@ -36,6 +36,8 @@ namespace Primitives {
 			Index Data for a colored cube, using GL_LINE_STRIP
 		*/
 		static GLuint SimpleIndexData[16];		// see data
+
+		static GLfloat DefaultCubeHalfWidth;
 	};
 	
 	struct Plane {
