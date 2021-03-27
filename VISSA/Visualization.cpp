@@ -12,12 +12,18 @@ Visualization::Visualization() :
 	m_iMaximumRenderedTreeDepth(),
 	m_iNumberStepsRendered(0),
 	m_ePresentationMode(DISCRETE),
+	m_eConstructionStrategy(TOPDOWN),
 	m_uiCurrentPlayBackSpeedIndex(0u),
 	m_iSimulationDirectionSign(0),
-	m_fAccumulatedTimeSinceLastUpdateStep(0.0f)
+	m_fAccumulatedTimeSinceLastUpdateStep(0.0f),
+	m_bRenderObjectAABBs(false),
+	m_bRenderObjectBoundingSpheres(false),
+	m_bRenderGridXPlane(false),
+	m_bRenderGridYPlane(false),
+	m_bRenderGridZPlane(false)
 {
 	InitPlaybackSpeeds();
-	Reset();
+	ResetSimulation();
 }
 
 void Visualization::Load()
@@ -104,13 +110,13 @@ void Visualization::Update(float fDeltaTime)
 		m_fAccumulatedTimeSinceLastUpdateStep += fPlaybackSpeedAdjustedDeltaTime;
 		if (m_fAccumulatedTimeSinceLastUpdateStep >= 1.0f)
 		{
-			MoveToNextStep();
+			MoveToNextSimulationStep();
 			m_fAccumulatedTimeSinceLastUpdateStep = 0.0f;
 		}
 	}
 }
 
-void Visualization::Reset()
+void Visualization::ResetSimulation()
 {
 	m_iNumberStepsRendered = 0;
 	m_iMaximumRenderedTreeDepth = 100;
@@ -119,44 +125,58 @@ void Visualization::Reset()
 	m_uiCurrentPlayBackSpeedIndex = 2u;
 }
 
-void Visualization::Play()
+void Visualization::PlaySimulation()
 {
 	m_ePresentationMode = CONTINUOUS;
 	m_fAccumulatedTimeSinceLastUpdateStep = 0.0f;
 }
 
-void Visualization::Pause()
+void Visualization::PauseSimulation()
 {
 	m_ePresentationMode = DISCRETE;
 }
 
-void Visualization::IncreaseSpeed()
+void Visualization::IncreaseSimulationSpeed()
 {
 	assert(m_uiCurrentPlayBackSpeedIndex <= 4u);
 	if (m_uiCurrentPlayBackSpeedIndex < 4u)
 		m_uiCurrentPlayBackSpeedIndex++;
 }
 
-void Visualization::DecreaseSpeed()
+void Visualization::DecreaseSimulationSpeed()
 {
 	assert(m_uiCurrentPlayBackSpeedIndex <= 4u);
 	if (m_uiCurrentPlayBackSpeedIndex > 0u)
 		m_uiCurrentPlayBackSpeedIndex--;
 }
 
-void Visualization::Invert()
+void Visualization::InvertSimulationProgression()
 {
 	m_iSimulationDirectionSign *= -1;
 }
 
-void Visualization::MoveToNextStep()
+void Visualization::MoveToNextSimulationStep()
 {
 	const int iNextNumberOfConstructionStepsRendered = m_iNumberStepsRendered + m_iSimulationDirectionSign;
 
 	// bounds checks
 	m_iNumberStepsRendered = std::max<int>(0, iNextNumberOfConstructionStepsRendered);
-	assert(m_vecTreeAABBsForRendering.size() <= std::numeric_limits<int>::max());	// make sure that number fits or chaos might ensue.
-	m_iNumberStepsRendered = std::min<int>(m_iNumberStepsRendered, static_cast<int>(m_vecTreeAABBsForRendering.size()));
+	assert(m_vecTreeAABBsForTopDownRendering.size() <= std::numeric_limits<int>::max());	// make sure that number fits or chaos might ensue.
+	m_iNumberStepsRendered = std::min<int>(m_iNumberStepsRendered, static_cast<int>(m_vecTreeAABBsForTopDownRendering.size()));
+}
+
+Visualization::eBVHConstructionStrategy Visualization::GetCurrenBVHConstructionStrategy() const
+{
+	return m_eConstructionStrategy;
+}
+
+void Visualization::SetNewBVHConstructionStrategy(eBVHConstructionStrategy eNewStrategy)
+{
+	if (m_eConstructionStrategy != eNewStrategy)
+	{
+		m_eConstructionStrategy = eNewStrategy;
+		ResetSimulation();
+	}
 }
 
 void Visualization::ClearPreviousVisualization()

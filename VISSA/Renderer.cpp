@@ -520,7 +520,7 @@ void Renderer::FreeGPUResources()
 	glDeleteTextures(1, &m_uiGridMaskTexture);
 }
 
-void Renderer::RenderScene(const Camera & rCamera, Window & rWindow, const Visualization& rScene)
+void Renderer::Render(const Camera & rCamera, Window & rWindow, const Visualization& rScene)
 {
 	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -542,14 +542,13 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const
 		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4Projection), glm::value_ptr(mat4Projection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	
-	//RenderRealObjectsOLD(rCamera, rWindow, rVisualization);
-	RenderRealObjects(rCamera, rWindow, rScene);
-	//RenderDataStructureObjectsOLD(rCamera, rWindow);
+	
+	RenderRealObjects(rCamera, rWindow, rScene);	
 	RenderDataStructureObjects(rCamera, rWindow, rScene);
-	//Render3DSceneConstants(rCamera, rWindow);
+	Render3DSceneConstants(rCamera, rWindow, rScene);
 }
 
-void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWindow)
+void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWindow, const Visualization& rScene)
 {
 	// uniform grid
 	{
@@ -574,34 +573,44 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 
 		glBindVertexArray(m_uiGridPlaneVAO);
 
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 mat4WorldYPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		rCurrentShader.setMat4("world", mat4WorldYPlane);
+		if (rScene.m_bRenderGridXPlane)
+		{
+			// calculate the model matrix for each object and pass it to shader before drawing
+			glm::mat4 mat4WorldXPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+			mat4WorldXPlane = glm::rotate(mat4WorldXPlane, glm::pi<float>() * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
+			rCurrentShader.setMat4("world", mat4WorldXPlane);
 
-		// pass color
-		glm::vec4 vec4GridColorY(0.0f, 1.0f, 1.0f, 1.0f); // cyan as of now
-		rCurrentShader.setVec4("color", vec4GridColorY);
-		
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+			glm::vec4 vec4GridColorX(1.0f, 1.0f, 0.0f, 1.0f);
+			rCurrentShader.setVec4("color", vec4GridColorX);
 
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 mat4WorldXPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		mat4WorldXPlane = glm::rotate(mat4WorldXPlane, glm::pi<float>() * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
-		rCurrentShader.setMat4("world", mat4WorldXPlane);
+			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		}
 
-		glm::vec4 vec4GridColorX(1.0f, 1.0f, 0.0f, 1.0f);
-		rCurrentShader.setVec4("color", vec4GridColorX);
+		if (rScene.m_bRenderGridYPlane)
+		{
+			// calculate the model matrix for each object and pass it to shader before drawing
+			glm::mat4 mat4WorldYPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+			rCurrentShader.setMat4("world", mat4WorldYPlane);
+			// no rotation needed since the default rendered plane is defined as lying flat on the "ground", facing upwards
 
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+			// pass color
+			glm::vec4 vec4GridColorY(0.0f, 1.0f, 1.0f, 1.0f); // cyan as of now
+			rCurrentShader.setVec4("color", vec4GridColorY);
 
-		glm::mat4 mat4WorldZPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		mat4WorldZPlane = glm::rotate(mat4WorldZPlane, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f));
-		rCurrentShader.setMat4("world", mat4WorldZPlane);
+			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		}
 
-		glm::vec4 vec4GridColorZ(1.0f, 0.0f, 1.0f, 1.0f);
-		rCurrentShader.setVec4("color", vec4GridColorZ);
+		if (rScene.m_bRenderGridZPlane)
+		{
+			glm::mat4 mat4WorldZPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+			mat4WorldZPlane = glm::rotate(mat4WorldZPlane, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f));
+			rCurrentShader.setMat4("world", mat4WorldZPlane);
 
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+			glm::vec4 vec4GridColorZ(1.0f, 0.0f, 1.0f, 1.0f);
+			rCurrentShader.setVec4("color", vec4GridColorZ);
+
+			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		}	
 
 		glEnable(GL_CULL_FACE);
 
@@ -854,40 +863,73 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 
 	glDisable(GL_CULL_FACE);
 	
-	// rendering the bounding volumes for each scene object
-	for (const SceneObject& rCurrentSceneObject : rVisualization.m_vecObjects)
+	// AABBs
+	if (rVisualization.m_bRenderObjectAABBs)
 	{
-		// AABBs
 		// render colour yellow for AABBs
 		glm::vec4 vec4AABBRenderColor(1.0f, 1.0f, 0.0f, 1.0f);
 		rCurrentShader.setVec4("color", vec4AABBRenderColor);
-		RenderAABBOfSceneObject(rCurrentSceneObject, rCurrentShader);
 
-		// Bounding Spheres
+		for (const SceneObject& rCurrentSceneObject : rVisualization.m_vecObjects)
+		{
+			RenderAABBOfSceneObject(rCurrentSceneObject, rCurrentShader);
+		}
+	}
+
+	// Bounding Spheres
+	if (rVisualization.m_bRenderObjectBoundingSpheres)
+	{
 		// render colour blue for spheres
 		glm::vec4 vec4SphereRenderColor(0.0f, 0.0f, 1.0f, 1.0f);
 		rCurrentShader.setVec4("color", vec4SphereRenderColor);
-		//RenderBoundingSphereOfSceneObject(rCurrentSceneObject, rCurrentShader);
+
+		for (const SceneObject& rCurrentSceneObject : rVisualization.m_vecObjects)
+		{
+			RenderBoundingSphereOfSceneObject(rCurrentSceneObject, rCurrentShader);
+		}
 	}
 
-
 	// rendering the AABBs of tree nodes in the BVH
-	int16_t iAlreadyRenderedConstructionSteps = 0;
-	for (const CollisionDetection::TreeNodeAABBForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForRendering)
+	if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
 	{
-		bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
-		bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
-
-		bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-		if (bShallRender)
+		int16_t iAlreadyRenderedConstructionSteps = 0;
+		for (const CollisionDetection::TreeNodeAABBForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForTopDownRendering)
 		{
-			// red
-			glm::vec4 vec4TreeNodeAABBRenderColor(1.0f, 0.0f, 0.0f, 1.0f);
-			rCurrentShader.setVec4("color", vec4TreeNodeAABBRenderColor);
-			RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
-		}			
+			bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
+			bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
 
-		iAlreadyRenderedConstructionSteps++;
+			bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
+			if (bShallRender)
+			{
+				// red
+				glm::vec4 vec4TreeNodeAABBRenderColor(1.0f, 0.0f, 0.0f, 1.0f);
+				rCurrentShader.setVec4("color", vec4TreeNodeAABBRenderColor);
+				RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
+			}
+
+			iAlreadyRenderedConstructionSteps++;
+		}
+	}
+	
+	if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
+	{
+		int16_t iAlreadyRenderedConstructionSteps = 0;
+		for (const CollisionDetection::TreeNodeAABBForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForBottomUpRendering)
+		{
+			bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
+			bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
+
+			bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
+			if (bShallRender)
+			{
+				// purple
+				glm::vec4 vec4TreeNodeAABBRenderColor(1.0f, 0.0f, 1.0f, 1.0f);
+				rCurrentShader.setVec4("color", vec4TreeNodeAABBRenderColor);
+				RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
+			}
+
+			iAlreadyRenderedConstructionSteps++;
+		}
 	}
 
 	glEnable(GL_CULL_FACE);
@@ -943,7 +985,7 @@ void Renderer::RenderBoundingSphereOfSceneObject(const SceneObject & rSceneObjec
 void Renderer::RenderTreeNodeAABB(const CollisionDetection::TreeNodeAABBForRendering & rTreeNodeAABB, Shader & rShader)
 {
 	// the AABBs
-	const CollisionDetection::AABB& rRenderedAABB = rTreeNodeAABB.m_tAABBForRendering;
+	const CollisionDetection::AABB& rRenderedAABB = rTreeNodeAABB.m_pNodeToBeRendered->m_tAABBForNode;
 
 	// calc world matrix
 	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix

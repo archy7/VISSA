@@ -58,7 +58,7 @@ void Engine::MainLoop()
 
 		// rendering
 		// 3D
-		m_tRenderer.RenderScene(m_tCamera, m_tWindow, m_tVisualization);
+		m_tRenderer.Render(m_tCamera, m_tWindow, m_tVisualization);
 		// GUI
 		m_tGUI.Render(*this);
 

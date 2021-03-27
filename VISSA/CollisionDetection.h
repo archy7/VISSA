@@ -85,17 +85,26 @@ namespace CollisionDetection {
 	};
 
 	struct TreeNodeAABBForRendering {
-		AABB m_tAABBForRendering;
+		BVHTreeNode* m_pNodeToBeRendered;
 		int16_t m_iTreeDepth = 0u;
+		int16_t m_iRenderingOrder = 0u; // when stepping through the simulation, this determines in which order AABBs are rendered.
 	};
 
 	struct BoundingVolumeHierarchy {
 		BVHTreeNode* m_pRootNode = nullptr;
+		void DeleteTree();
+	private:
+		void RecursiveDeleteTree(BVHTreeNode* pNode);
 	};
 
-	BoundingVolumeHierarchy ConstructBVHForScene(Visualization& rScene);
-	void TraverseTreeForAABBDataForRendering(BVHTreeNode* pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
-	void TopDownBVTree(BVHTreeNode** pNode, SceneObject* pScenObjects, size_t uiNumSceneObjects);
+	BoundingVolumeHierarchy ConstructTopDownBVHForScene(Visualization& rScene);
+	BoundingVolumeHierarchy ConstructBottomUPBVHForScene(Visualization& rScene);
+	void RecursiveTopDownBVTree(BVHTreeNode** pNode, SceneObject* pScenObjects, size_t uiNumSceneObjects);
+	BVHTreeNode* BottomUpBVTree(SceneObject* pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization);
+	void FindBottomUpNodesToMerge(BVHTreeNode** pNode, size_t uiNumNodes, size_t& rNodeIndex1, size_t& rNodeIndex2);
+	AABB MergeTwoAABBs(const AABB& rAABB1, const AABB& rAABB2);
+	void TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode* pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
+	void TraverseTreeForAABBDataForBottomUpRendering(BVHTreeNode* pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
 	AABB CreateAABBForMultipleObjects(const SceneObject* pScenObjects, size_t uiNumSceneObjects);
 	BoundingSphere CreateBoundingSphereForMultipleSceneObjects(const SceneObject* pSceneObjects, size_t uiNumSceneObjects);
 	size_t PartitionSceneObjectsInPlace(SceneObject* pSceneObjects, size_t uiNumSceneObjects);

@@ -366,25 +366,39 @@ BoundingSphere CollisionDetection::UpdateBoundingSphere(const BoundingSphere & r
 	//////////////////////////BVH/////////////////////////////////
 	//////////////////////////////////////////////////////////////
 
-CollisionDetection::BoundingVolumeHierarchy CollisionDetection::ConstructBVHForScene(Visualization & rScene)
+CollisionDetection::BoundingVolumeHierarchy CollisionDetection::ConstructTopDownBVHForScene(Visualization & rScene)
 {
 	assert(rScene.m_vecObjects.size() > 0);
 
 	BoundingVolumeHierarchy tResult;
-	tResult.m_pRootNode = new BVHTreeNode;
-	rScene.m_vecTreeAABBsForRendering.reserve(rScene.m_vecObjects.size());
 	
 	// the construction
-	TopDownBVTree(&(tResult.m_pRootNode), rScene.m_vecObjects.data(), rScene.m_vecObjects.size());
+	tResult.m_pRootNode = new BVHTreeNode;
+	RecursiveTopDownBVTree(&(tResult.m_pRootNode), rScene.m_vecObjects.data(), rScene.m_vecObjects.size());
 
 	// first traversal to gather data for rendering. In theory, it is possible to traverse the tree every frame for BV rendering.
 	// But that is terrible, so data is fetched into a linear vector
-	TraverseTreeForAABBDataForRendering(tResult.m_pRootNode, rScene.m_vecTreeAABBsForRendering, 0u);
+	rScene.m_vecTreeAABBsForTopDownRendering.reserve(rScene.m_vecObjects.size());
+	TraverseTreeForAABBDataForTopDownRendering(tResult.m_pRootNode, rScene.m_vecTreeAABBsForTopDownRendering, 0);
 
 	return tResult;
 }
 
-void CollisionDetection::TraverseTreeForAABBDataForRendering(BVHTreeNode* pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
+BoundingVolumeHierarchy CollisionDetection::ConstructBottomUPBVHForScene(Visualization & rScene)
+{
+	assert(rScene.m_vecObjects.size() > 0);
+
+	BoundingVolumeHierarchy tResult;
+	rScene.m_vecTreeAABBsForBottomUpRendering.reserve(rScene.m_vecObjects.size());
+
+	// the construction INCLUDING HALF THE PREPARATION OF AABB RENDERING DATA
+	tResult.m_pRootNode = BottomUpBVTree(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
+	TraverseTreeForAABBDataForBottomUpRendering(tResult.m_pRootNode, rScene.m_vecTreeAABBsForBottomUpRendering, 0);
+
+	return tResult;
+}
+
+void CollisionDetection::TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode* pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
 {
 	assert(pNode);
 
@@ -399,19 +413,57 @@ void CollisionDetection::TraverseTreeForAABBDataForRendering(BVHTreeNode* pNode,
 		// save relevant data for rendering
 		TreeNodeAABBForRendering tNewAABBForRendering;
 		tNewAABBForRendering.m_iTreeDepth = iTreeDepth;
-		tNewAABBForRendering.m_tAABBForRendering = pNode->m_tAABBForNode;
+		tNewAABBForRendering.m_pNodeToBeRendered = pNode;
 		rvecAABBsForRendering.push_back(tNewAABBForRendering);
 
 		// traverse left ...
-		TraverseTreeForAABBDataForRendering(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
+		TraverseTreeForAABBDataForTopDownRendering(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
 		// ... then right
-		TraverseTreeForAABBDataForRendering(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
+		TraverseTreeForAABBDataForTopDownRendering(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
 	}
 
-	// Note: In this function we care for nodes, leaves are intentionally left out
+	// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
 }
 
-void CollisionDetection::TopDownBVTree(BVHTreeNode ** pTree, SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+void CollisionDetection::TraverseTreeForAABBDataForBottomUpRendering(BVHTreeNode * pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
+{
+	/*
+		This is going to be ugly.
+		We are facing a problem here: For Bottom up construction of a BVH, the order in which AABBs are constructed is not the same as the tree is later being traversed.
+		That means, there is no information in the tree, in which order its nodes were constructed.
+		Also, i want to keep this information outside of the tree, since it is really only relevant for rendering/visualizing.
+		So, in an effort to keep the visualization only data out of the tree, we have to now do something very ugly.
+		Order of construction can only be determined during construction. Tree depth of a given node and its associated AABB can only be determined during traversal.
+	*/
+
+	assert(pNode);
+
+	iTreeDepth++; // we are now one level deeper. depth of root node == 1 here
+
+	if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
+	{
+		// if it is a node, there was a partitioning step, which means there have to be two children
+		assert(pNode->m_pLeft);
+		assert(pNode->m_pRight);
+
+		// the ugly part. finding the appropriate rendering object to assign it its true tree depth.
+		for (TreeNodeAABBForRendering& rCurrentRenderObject : rvecAABBsForRendering)
+		{
+			if (pNode == rCurrentRenderObject.m_pNodeToBeRendered)
+			{
+				rCurrentRenderObject.m_iTreeDepth = iTreeDepth;
+				break;
+			}
+		}
+
+		// traverse left ...
+		TraverseTreeForAABBDataForBottomUpRendering(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
+		// ... then right
+		TraverseTreeForAABBDataForBottomUpRendering(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
+	}
+}
+
+void CollisionDetection::RecursiveTopDownBVTree(BVHTreeNode ** pTree, SceneObject * pSceneObjects, size_t uiNumSceneObjects)
 {
 	assert(pTree);
 	assert(pSceneObjects);
@@ -440,11 +492,127 @@ void CollisionDetection::TopDownBVTree(BVHTreeNode ** pTree, SceneObject * pScen
 		size_t uiPartitioningIndex = PartitionSceneObjectsInPlace(pSceneObjects, uiNumSceneObjects);
 
 		// move on with "left" side
-		TopDownBVTree(&(pNewNode->m_pLeft), pSceneObjects, uiPartitioningIndex);
+		RecursiveTopDownBVTree(&(pNewNode->m_pLeft), pSceneObjects, uiPartitioningIndex);
 
 		// move on with "right" side
-		TopDownBVTree(&(pNewNode->m_pRight), pSceneObjects + uiPartitioningIndex, uiNumSceneObjects - uiPartitioningIndex);
+		RecursiveTopDownBVTree(&(pNewNode->m_pRight), pSceneObjects + uiPartitioningIndex, uiNumSceneObjects - uiPartitioningIndex);
 	}
+}
+
+BVHTreeNode * CollisionDetection::BottomUpBVTree(SceneObject * pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization)
+{
+	assert(uiNumSceneObjects > 0);
+
+	BVHTreeNode** pTempNodes = new BVHTreeNode*[uiNumSceneObjects]; // careful: these are pointers to pointers
+
+	// creating all leaf nodes: number leaves == number objects
+	for (size_t uiCurrentNewLeafNode = 0u; uiCurrentNewLeafNode < uiNumSceneObjects; uiCurrentNewLeafNode++)
+	{
+		pTempNodes[uiCurrentNewLeafNode] = new BVHTreeNode;	// assigning the adress of the new leaf node to the pointer pointed at by pTempNodes[current]
+		pTempNodes[uiCurrentNewLeafNode]->m_uiNumOjbects = 1u;
+		pTempNodes[uiCurrentNewLeafNode]->m_pObjects = &pSceneObjects[uiCurrentNewLeafNode];
+		pTempNodes[uiCurrentNewLeafNode]->m_tAABBForNode = pTempNodes[uiCurrentNewLeafNode]->m_pObjects->m_tWorldSpaceAABB;
+	}
+
+	// for visualization purposes
+	int16_t iNumConstructedNodes = 0;
+
+	// merging leaves into nodes until root node is constructed
+	while (uiNumSceneObjects > 1) {
+		// Pick two volumes to pair together
+		size_t uiMergedNodeIndex1 = 0, uiMergedNodeIndex2 = 0;
+		FindBottomUpNodesToMerge(pTempNodes, uiNumSceneObjects, uiMergedNodeIndex1, uiMergedNodeIndex2);
+
+		// Pair them in new parent node
+		BVHTreeNode* pParentNode = new BVHTreeNode;
+		pParentNode->m_pLeft = pTempNodes[uiMergedNodeIndex1];
+		pParentNode->m_pRight = pTempNodes[uiMergedNodeIndex2];
+		// construct AABB for that parent node (adaption from orginal code)
+		pParentNode->m_tAABBForNode = MergeTwoAABBs(pTempNodes[uiMergedNodeIndex1]->m_tAABBForNode, pTempNodes[uiMergedNodeIndex2]->m_tAABBForNode);
+
+		// for visualization/rendering purposes
+		TreeNodeAABBForRendering tNewAABBForRendering;
+		tNewAABBForRendering.m_iRenderingOrder = iNumConstructedNodes++;
+		tNewAABBForRendering.m_pNodeToBeRendered = pParentNode;
+		rVisualization.m_vecTreeAABBsForBottomUpRendering.push_back(tNewAABBForRendering);
+
+		//Updating the current set of nodes accordingly
+		size_t uiMinIndex = uiMergedNodeIndex1, uiMaxIndex = uiMergedNodeIndex2;
+		if (uiMergedNodeIndex1 > uiMergedNodeIndex2)
+		{
+			uiMinIndex = uiMergedNodeIndex2;
+			uiMaxIndex = uiMergedNodeIndex1;
+		}
+		pTempNodes[uiMinIndex] = pParentNode;
+		pTempNodes[uiMaxIndex] = pTempNodes[uiNumSceneObjects - 1];
+		uiNumSceneObjects--;
+	}
+
+	BVHTreeNode* pRootNode = pTempNodes[0]; // careful: getting the pointer to root by dereferencing the pointer to pointer
+	delete[] pTempNodes;
+	return pRootNode;
+}
+
+void CollisionDetection::FindBottomUpNodesToMerge(BVHTreeNode ** pNode, size_t uiNumNodes, size_t & rNodeIndex1, size_t & rNodeIndex2)
+{
+	float fCurrentlySmallestAABBVolume = std::numeric_limits<float>::max();
+
+	// testing every current node...
+	for (size_t uiCurrentMergePartnerIndex1 = 0; uiCurrentMergePartnerIndex1 < uiNumNodes; uiCurrentMergePartnerIndex1++)
+	{
+		// ... against every other node
+		for (size_t uiCurrentMergePartnerIndex2 = uiCurrentMergePartnerIndex1+1; uiCurrentMergePartnerIndex2 < uiNumNodes; uiCurrentMergePartnerIndex2++)
+		{
+			//  determine the size of the bounding volume that would result from the two current 
+			const AABB& rAABB1 = pNode[uiCurrentMergePartnerIndex1]->m_tAABBForNode;
+			const AABB& rAABB2 = pNode[uiCurrentMergePartnerIndex2]->m_tAABBForNode;
+
+			const float fMergedAABBExtentX = std::abs(rAABB1.m_vec3Center.x - rAABB2.m_vec3Center.x) + rAABB1.m_vec3Radius.x + rAABB2.m_vec3Radius.x;
+			const float fMergedAABBExtentY = std::abs(rAABB1.m_vec3Center.y - rAABB2.m_vec3Center.y) + rAABB1.m_vec3Radius.y + rAABB2.m_vec3Radius.y;
+			const float fMergedAABBExtentZ = std::abs(rAABB1.m_vec3Center.z - rAABB2.m_vec3Center.z) + rAABB1.m_vec3Radius.z + rAABB2.m_vec3Radius.z;
+
+			const float fMergedAABBVolume = fMergedAABBExtentX * fMergedAABBExtentY * fMergedAABBExtentZ;
+
+			// update results conditionally
+			if (fMergedAABBVolume < fCurrentlySmallestAABBVolume)
+			{
+				fCurrentlySmallestAABBVolume = fMergedAABBVolume;
+				rNodeIndex1 = uiCurrentMergePartnerIndex1;
+				rNodeIndex2 = uiCurrentMergePartnerIndex2;
+			}
+		}
+	}
+}
+
+AABB CollisionDetection::MergeTwoAABBs(const AABB & rAABB1, const AABB & rAABB2)
+{
+	AABB tResult;
+
+	const float fXMin = std::min(rAABB1.CalcMinimumX(), rAABB2.CalcMinimumX());
+	const float fYMin = std::min(rAABB1.CalcMinimumY(), rAABB2.CalcMinimumY());
+	const float fZMin = std::min(rAABB1.CalcMinimumZ(), rAABB2.CalcMinimumZ());
+	const float fXMax = std::max(rAABB1.CalcMaximumX(), rAABB2.CalcMaximumX());
+	const float fYMax = std::max(rAABB1.CalcMaximumY(), rAABB2.CalcMaximumY());
+	const float fZMax = std::max(rAABB1.CalcMaximumZ(), rAABB2.CalcMaximumZ());
+
+	// calculating AABB center
+	const float fCenterX = fXMin * 0.5f + fXMax * 0.5f;
+	const float fCenterY = fYMin * 0.5f + fYMax * 0.5f;
+	const float fCenterZ = fZMin * 0.5f + fZMax * 0.5f;
+	tResult.m_vec3Center = glm::vec3(fCenterX, fCenterY, fCenterZ);
+
+	// calculating AABB halfwidths
+	const float fXTotalExtent = fXMax - fXMin;
+	const float fYTotalExtent = fYMax - fYMin;
+	const float fZTotalExtent = fZMax - fZMin;
+	const float fHalfWidthX = fXTotalExtent * 0.5f;
+	const float fHalfWidthY = fYTotalExtent * 0.5f;
+	const float fHalfWidthZ = fZTotalExtent * 0.5f;
+
+	// calculating AABB halfwidths
+	tResult.m_vec3Radius = glm::vec3(fHalfWidthX, fHalfWidthY, fHalfWidthZ);
+
+	return tResult;
 }
 
 AABB CollisionDetection::CreateAABBForMultipleObjects(const SceneObject * pScenObjects, size_t uiNumSceneObjects)
@@ -633,4 +801,28 @@ size_t CollisionDetection::PartitionSceneObjectsInPlace(SceneObject * pSceneObje
 	const size_t uiPartitioningIndex = uiNumElementsPerBucket[0]; // number of left children = partitioning index
 
 	return uiPartitioningIndex;
+}
+
+void CollisionDetection::BoundingVolumeHierarchy::DeleteTree()
+{
+	RecursiveDeleteTree(m_pRootNode);
+	delete m_pRootNode;
+}
+
+void CollisionDetection::BoundingVolumeHierarchy::RecursiveDeleteTree(BVHTreeNode * pNode)
+{
+	if (pNode->m_pLeft)
+	{
+		RecursiveDeleteTree(pNode->m_pLeft);
+	}
+
+	if (pNode->m_pRight)
+	{
+		RecursiveDeleteTree(pNode->m_pRight);
+	}
+
+	delete pNode->m_pLeft;
+	pNode->m_pLeft = nullptr;
+	delete pNode->m_pRight;
+	pNode->m_pRight = nullptr;
 }

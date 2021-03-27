@@ -57,7 +57,7 @@ public:
 	// Init/Loads/Frees
 	void InitRenderer();
 	// Work
-	void RenderScene(const Camera& rCamera, Window& rWindow, const Visualization& rScene);
+	void Render(const Camera& rCamera, Window& rWindow, const Visualization& rScene);
 private:
 	SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
 	void LoadShaders();
@@ -67,7 +67,7 @@ private:
 	void InitUniformBuffers();
 	void SetInitialOpenGLState();
 	void Render3DScene(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
-	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow);	// scene components that are omnipresent, like a uniform grid or a cross hair
+	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);	// scene components that are omnipresent, like a uniform grid or a cross hair
 	void RenderRealObjects(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void RenderRealObjectsOLD(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void RenderDataStructureObjectsOLD(const Camera& rCamera, const Window& rWindow);

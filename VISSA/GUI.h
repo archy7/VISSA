@@ -20,6 +20,7 @@ public:
 	void Render(Engine& rEngine);
 	void RenderMainMenu(Engine& rEngine);
 	void RenderSimControlPanel(Engine& rEngine);
+	void RenderSimOptions(Engine& rEngine);
 	void ConditionallyRenderQuitConfirmation(Engine& rEngine);
 	void ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine);
 	void ConditionallyRenderOptions(Engine& rEngine);
@@ -27,5 +28,6 @@ private:
 
 	bool m_bShowMainMenu;
 	bool m_bShowSimulationControlPanel;
+	bool m_bShowSimulationOptions;
 	bool m_bCaptureMouse;
 };

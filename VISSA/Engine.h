@@ -43,7 +43,8 @@ private:
 	Camera m_tCamera;
 	GUI m_tGUI;
 	Visualization m_tVisualization;
-	CollisionDetection::BoundingVolumeHierarchy m_tBVH;
+	CollisionDetection::BoundingVolumeHierarchy m_tTopDownBVH;
+	CollisionDetection::BoundingVolumeHierarchy m_tBottomUpBVH;
 	int m_iDiscreteKeysStates[GLFW_KEY_LAST];
 	float m_fDeltaTime, m_fLastFrame, m_fCurrentFrame;
 

@@ -8,6 +8,7 @@
 GUI::GUI():
 	m_bShowMainMenu(true),
 	m_bShowSimulationControlPanel(false),
+	m_bShowSimulationOptions(false),
 	m_bCaptureMouse(true)
 {
 
@@ -58,13 +59,15 @@ void GUI::Render(Engine& rEngine)
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
-	//ImGui::CaptureMouseFromApp(m_bCaptureMouse);
 
 	if (m_bShowSimulationControlPanel)
 		RenderSimControlPanel(rEngine);
 
 	if (m_bShowMainMenu)
 		RenderMainMenu(rEngine);
+
+	if (m_bShowSimulationOptions)
+		RenderSimOptions(rEngine);
 
 	// Rendering
 	ImGui::Render();
@@ -122,11 +125,11 @@ void GUI::RenderMainMenu(Engine& rEngine)
 void GUI::RenderSimControlPanel(Engine& rEngine)
 {
 	// configure window
-	ImVec2 simControlWindowSize(600, 100);
-	float fSimControlWindowPaddingBot = 500.0f;
+	ImVec2 simControlWindowSize(500, 100);
+	float fSimControlWindowPaddingBot = 0.0f;
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + main_viewport->Size.x * 0.5f - simControlWindowSize.x * 0.5f, main_viewport->WorkPos.y + main_viewport->Size.y - simControlWindowSize.y - fSimControlWindowPaddingBot), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(simControlWindowSize, ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + main_viewport->Size.x * 0.5f - simControlWindowSize.x * 0.5f, main_viewport->WorkPos.y + main_viewport->Size.y - simControlWindowSize.y - fSimControlWindowPaddingBot), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(simControlWindowSize, ImGuiCond_Always);
 
 	ImGuiWindowFlags window_flags = 0;
 	window_flags |= ImGuiWindowFlags_NoMove;
@@ -138,25 +141,97 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	ImGui::Begin("Sim Controls", nullptr, window_flags);
 
 	if (ImGui::Button("RESET"))
-		rEngine.m_tVisualization.Reset();
+		rEngine.m_tVisualization.ResetSimulation();
 	ImGui::SameLine();
 	if (ImGui::Button("PLAY"))
-		rEngine.m_tVisualization.Play();
+		rEngine.m_tVisualization.PlaySimulation();
 	ImGui::SameLine();
 	if (ImGui::Button("PAUSE"))
-		rEngine.m_tVisualization.Pause();
+		rEngine.m_tVisualization.PauseSimulation();
 	ImGui::SameLine();
 	if (ImGui::Button("STEP"))
-		rEngine.m_tVisualization.MoveToNextStep();
+		rEngine.m_tVisualization.MoveToNextSimulationStep();
 	ImGui::SameLine();
 	if (ImGui::Button("INVERT"))
-		rEngine.m_tVisualization.Invert();
+		rEngine.m_tVisualization.InvertSimulationProgression();
 	ImGui::SameLine();
 	if (ImGui::Button("FASTER"))
-		rEngine.m_tVisualization.IncreaseSpeed();
-	if (ImGui::Button("SLOWER"))
-		rEngine.m_tVisualization.DecreaseSpeed();
+		rEngine.m_tVisualization.IncreaseSimulationSpeed();
 	ImGui::SameLine();
+	if (ImGui::Button("SLOWER"))
+		rEngine.m_tVisualization.DecreaseSimulationSpeed();
+	
+	if (ImGui::Button("OPTIONS"))
+		m_bShowSimulationOptions = true;
+
+
+	ImGui::End();
+}
+
+void GUI::RenderSimOptions(Engine& rEngine)
+{
+	// configure window
+	ImVec2 simControlWindowSize(250, 250);
+	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(ImVec2(20.0f, 20.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(simControlWindowSize, ImGuiCond_Always);
+
+	ImGuiWindowFlags window_flags = 0;
+	window_flags |= ImGuiWindowFlags_NoMove;
+	window_flags |= ImGuiWindowFlags_NoResize;
+	window_flags |= ImGuiWindowFlags_NoCollapse;
+	if (m_bCaptureMouse == false)
+		window_flags |= ImGuiWindowFlags_NoMouseInputs;
+
+	ImGui::Begin("Sim Options", &m_bShowSimulationOptions, window_flags);
+
+	// The combo box to choose a BVH construction strategy
+	const char* pItems[] = { "TOP DOWN", "BOTTOM UP" };
+	int iCurrentItemIndex = static_cast<int>(rEngine.m_tVisualization.GetCurrenBVHConstructionStrategy());
+	const char* sComboLabel = pItems[iCurrentItemIndex];  // Label to preview before opening the combo (technically it could be anything)
+	if (ImGui::BeginCombo("BVH Construction Strategy", sComboLabel))
+	{
+		for (int iCurrentItem = 0; iCurrentItem < IM_ARRAYSIZE(pItems); iCurrentItem++)
+		{
+			const bool bIsSelected = (iCurrentItemIndex == iCurrentItem);
+			if (ImGui::Selectable(pItems[iCurrentItem], bIsSelected))
+			{
+				assert(iCurrentItem <= static_cast<int>(Visualization::eBVHConstructionStrategy::SIZE));
+				rEngine.m_tVisualization.SetNewBVHConstructionStrategy(static_cast<Visualization::eBVHConstructionStrategy>(iCurrentItem));
+			}
+
+			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+			if (bIsSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
+	
+
+	// now follow options that are specific to certain construction strategies
+	ImGui::Separator();
+
+	// TOP DOWN OPTIONS
+	if (iCurrentItemIndex == 0) 
+	{
+		ImGui::Text("TOP DOWN OPTIONS AND PARAMETERS");
+	}
+
+	// BOTTOM UP OPTIONS
+	if (iCurrentItemIndex == 1)
+	{
+		ImGui::Text("BOTTOM UP OPTIONS AND PARAMETERS");
+	}
+	
+	// now follow options that are generally available in the visualization
+	ImGui::Separator();
+	ImGui::Checkbox("Draw AABBs of Objects", &rEngine.m_tVisualization.m_bRenderObjectAABBs);
+	ImGui::Checkbox("Draw Bounding Spheres of Objects", &rEngine.m_tVisualization.m_bRenderObjectBoundingSpheres);
+	ImGui::Checkbox("Draw Grid on X Plane", &rEngine.m_tVisualization.m_bRenderGridXPlane);
+	ImGui::Checkbox("Draw Grid on Y Plane", &rEngine.m_tVisualization.m_bRenderGridYPlane);
+	ImGui::Checkbox("Draw Grid on Z Plane", &rEngine.m_tVisualization.m_bRenderGridZPlane);
+	
 
 	ImGui::End();
 }
@@ -192,18 +267,19 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 
 	if (ImGui::BeginPopupModal("VISUALIZATIONS", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		if (ImGui::Button("VISUALIZATION 1", ImVec2(120, 0)))
+		if (ImGui::Button("BOUNDING VOLUME HIERARCHY", ImVec2(120, 0)))
 		{
 			// CD relevant
 			rEngine.m_tVisualization.Load();	// really bad implementation
 			CollisionDetection::ConstructBoundingVolumesForScene(rEngine.m_tVisualization);
 			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
-			rEngine.m_tBVH = CollisionDetection::ConstructBVHForScene(rEngine.m_tVisualization);
+			rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
+			rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
 
 			// UI relevant
 			rEngine.m_tWindow.SetMouseCaptured(true);
 			ShowMenu(false);
-			m_bShowSimulationControlPanel = true;		
+			m_bShowSimulationControlPanel = true;
 			m_bCaptureMouse = false;
 			ImGui::CloseCurrentPopup();
 		}
