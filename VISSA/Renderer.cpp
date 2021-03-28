@@ -255,6 +255,11 @@ void Renderer::LoadShaders()
 	Shader tMaskedColorShader("resources/shaders/MaskedColor.vs", "resources/shaders/MaskedColor.frag");
 	m_tMaskedColorShader = tMaskedColorShader;
 	assert(m_tMaskedColorShader.IsInitialized());
+
+	// A crosshaird (hud component) shader
+	Shader tCrossHairShader("resources/shaders/crosshair.vs", "resources/shaders/crosshair.frag");
+	m_tCrosshairShader = tCrossHairShader;
+	assert(m_tCrosshairShader.IsInitialized());
 }
 
 void Renderer::LoadTextures()
@@ -263,6 +268,7 @@ void Renderer::LoadTextures()
 	m_uiTexture1 = LoadTextureFromFile("resources/textures/cobblestone_floor_13_diff_1k.jpg");
 	m_uiTexture2 = LoadTextureFromFile("resources/textures/cobblestone_floor_13_diff_1k.png");
 	m_uiGridMaskTexture = LoadTextureFromFile("resources/textures/grid_mask_transparent.png");
+	m_uiCrosshairTexture = LoadTextureFromFile("resources/textures/crosshair.png");
 }
 
 GLuint Renderer::LoadTextureFromFile(const char * sPath)
@@ -525,10 +531,10 @@ void Renderer::Render(const Camera & rCamera, Window & rWindow, const Visualizat
 	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	Render3DScene(rCamera, rWindow, rScene);
+	RenderVisualization(rCamera, rWindow, rScene);
 }
 
-void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const Visualization& rScene)
+void Renderer::RenderVisualization(const Camera& rCamera, const Window& rWindow, const Visualization& rScene)
 {
 	// start by updating the uniform buffer containing the camera and projection matrices
 	glBindBuffer(GL_UNIFORM_BUFFER, m_uiCameraProjectionUBO);
@@ -538,14 +544,16 @@ void Renderer::Render3DScene(const Camera& rCamera, const Window& rWindow, const
 		// projection
 		// NOTE: current world space transformations do not work with ortho matrix as defined below
 		// glm::mat4 projection = glm::ortho(m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop, m_fNearPlane, m_fFarPlane);
-		glm::mat4 mat4Projection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
-		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4Projection), glm::value_ptr(mat4Projection));
+		glm::mat4 mat4PerspectiveProjection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
+		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4PerspectiveProjection), glm::value_ptr(mat4PerspectiveProjection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	
 	
-	RenderRealObjects(rCamera, rWindow, rScene);	
+	RenderRealObjects(rCamera, rWindow, rScene);
+	//RenderRealObjectsOLD(rCamera, rWindow, rVisualization);
 	RenderDataStructureObjects(rCamera, rWindow, rScene);
 	Render3DSceneConstants(rCamera, rWindow, rScene);
+	RenderHUDComponents(rCamera, rWindow, rScene);
 }
 
 void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWindow, const Visualization& rScene)
@@ -615,6 +623,43 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 
 		glAssert();
 	}
+}
+
+void Renderer::RenderHUDComponents(const Camera & rCamera, const Window & rWindow, const Visualization & rVisualization)
+{
+	glAssert();
+	Shader& rCurrentShader = m_tCrosshairShader;
+	rCurrentShader.use();
+	glAssert();
+	rCurrentShader.setInt("transparencyMask", 0);
+
+	glAssert();
+
+	// bind textures on corresponding texture units
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_uiCrosshairTexture);
+
+	glDisable(GL_CULL_FACE);
+
+	glBindVertexArray(m_uiTexturedPlaneVAO);
+
+	// calculate the model matrix for each object and pass it to shader before drawing
+	glm::mat4 mat4World = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+	glm::vec3 vec3CrosshairTranslationVector(static_cast<float>(rWindow.m_iWindowWidth) * 0.5f, static_cast<float>(rWindow.m_iWindowHeight) * 0.5f, -(m_fNearPlane + 0.0f)); // in the middle of the window, within the near plane of the view frustum
+	mat4World = glm::translate(mat4World, vec3CrosshairTranslationVector);
+	mat4World = glm::scale(mat4World, glm::vec3(rVisualization.m_fCrossHairScaling, rVisualization.m_fCrossHairScaling, 1.0f));
+	mat4World = glm::rotate(mat4World, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f)); // default plane/quad is defined as lying face up flat on the floor. this makes it "stand up"
+	rCurrentShader.setMat4("world", mat4World);
+
+	glm::mat4 mat4OrthoProjection = glm::ortho(m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop, m_fNearPlane, m_fFarPlane);
+	rCurrentShader.setMat4("orthoProjection", mat4OrthoProjection);
+
+	// setting the color
+	rCurrentShader.setVec4("color", rVisualization.m_vec4CrossHairColor);
+
+	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+	glEnable(GL_CULL_FACE);
 }
 
 void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow, const Visualization & rScene)

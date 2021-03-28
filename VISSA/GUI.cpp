@@ -228,15 +228,17 @@ void GUI::RenderSimOptions(Engine& rEngine)
 		ImGui::ColorEdit3("Node Color##BOTTOMUP", (float*)&rEngine.m_tVisualization.m_vec4BottomUpNodeRenderColor, iColorPickerFlags);
 	}
 	
-	// now follow options that are generally available in the visualization
 	ImGui::Separator();
+	// now follow options that are generally available in the visualization
+
 	ImGui::Text("General");
 	ImGui::ColorEdit3("Draw Color##AABB", (float*)&rEngine.m_tVisualization.m_vec4AABBDefaultColor, iColorPickerFlags); ImGui::SameLine();
 	ImGui::Checkbox("Draw AABBs of Objects", &rEngine.m_tVisualization.m_bRenderObjectAABBs);
 	ImGui::ColorEdit3("Draw Color##BoundingSphere", (float*)&rEngine.m_tVisualization.m_vec4BoundingSphereDefaultColor, iColorPickerFlags); ImGui::SameLine();
 	ImGui::Checkbox("Draw Bounding Spheres of Objects", &rEngine.m_tVisualization.m_bRenderObjectBoundingSpheres);
-	ImGui::Separator();
 	
+	ImGui::Separator();
+
 	ImGui::Text("X Axis");
 	ImGui::ColorEdit3("Draw Color##X", (float*)&rEngine.m_tVisualization.m_vec4GridColorX, iColorPickerFlags); ImGui::SameLine();
 	ImGui::Checkbox("Draw Grid##checkBoxXGrid", &rEngine.m_tVisualization.m_bRenderGridXPlane);
@@ -247,6 +249,11 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	ImGui::ColorEdit3("Draw Color##Z", (float*)&rEngine.m_tVisualization.m_vec4GridColorZ, iColorPickerFlags); ImGui::SameLine();
 	ImGui::Checkbox("Draw Grid##checkBoxZGrid", &rEngine.m_tVisualization.m_bRenderGridZPlane); 
 	
+	ImGui::Separator();
+	ImGui::Text("Crooshair");
+	ImGui::ColorEdit3("Draw Color##XHAIR", (float*)&rEngine.m_tVisualization.m_vec4CrossHairColor, iColorPickerFlags);
+	ImGui::SliderFloat("Crosshair Size", &rEngine.m_tVisualization.m_fCrossHairScaling, 0.75f, 2.0f, "%.2f", ImGuiSliderFlags_NoInput);
+
 	ImGui::End();
 }
 

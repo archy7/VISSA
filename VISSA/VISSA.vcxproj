@@ -63,6 +63,8 @@
   <ItemGroup>
     <None Include="resources\shaders\Color.frag" />
     <None Include="resources\shaders\Color.vs" />
+    <None Include="resources\shaders\crosshair.frag" />
+    <None Include="resources\shaders\crosshair.vs" />
     <None Include="resources\shaders\FlatTexture.frag" />
     <None Include="resources\shaders\FlatTexture.vs" />
     <None Include="resources\shaders\MaskedColor.frag" />

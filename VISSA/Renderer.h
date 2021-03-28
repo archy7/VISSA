@@ -38,7 +38,7 @@ public:
 	//////////////OPENGL/////////////////////
 	/////////////////////////////////////////
 	// shader handles
-	Shader m_tColorShader, m_tTextureShader, m_tMaskedColorShader;
+	Shader m_tColorShader, m_tTextureShader, m_tMaskedColorShader, m_tCrosshairShader;
 	// Buffer Handles
 	GLuint m_uiCameraProjectionUBO;
 	GLuint m_uiTexturedCubeVBO, m_uiTexturedCubeVAO, m_uiTexturedCubeEBO;
@@ -48,7 +48,7 @@ public:
 	GLuint m_uiTexturedSphereVBO, m_uiTexturedSphereVAO;// m_uiTexturedSphereEBO;
 	GLuint m_uiGridPlaneVBO, m_uiGridPlaneVAO, m_uiGridPlaneEBO;
 	// Texture Handles
-	GLuint m_uiTexture1, m_uiTexture2, m_uiGridMaskTexture;
+	GLuint m_uiTexture1, m_uiTexture2, m_uiGridMaskTexture, m_uiCrosshairTexture;
 	// View space information
 	float m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop;
 	float m_fNearPlane, m_fFarPlane;
@@ -66,8 +66,9 @@ private:
 	void LoadPrimitivesToGPU();
 	void InitUniformBuffers();
 	void SetInitialOpenGLState();
-	void Render3DScene(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
+	void RenderVisualization(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);	// scene components that are omnipresent, like a uniform grid or a cross hair
+	void RenderHUDComponents(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void RenderRealObjects(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void RenderRealObjectsOLD(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void RenderDataStructureObjectsOLD(const Camera& rCamera, const Window& rWindow);

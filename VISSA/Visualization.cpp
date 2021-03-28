@@ -13,6 +13,7 @@ Visualization::Visualization() :
 	m_iNumberStepsRendered(0),
 	m_ePresentationMode(DISCRETE),
 	m_eConstructionStrategy(TOPDOWN),
+	m_fCrossHairScaling(1.0f),
 	m_uiCurrentPlayBackSpeedIndex(0u),
 	m_iSimulationDirectionSign(0),
 	m_fAccumulatedTimeSinceLastUpdateStep(0.0f),
@@ -200,6 +201,9 @@ void Visualization::InitRenderColors()
 	m_vec4GridColorX = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f); // yellow
 	m_vec4GridColorY = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f); // cyan
 	m_vec4GridColorZ = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f); // purple
+
+	// crosshair
+	m_vec4CrossHairColor = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f); // green
 
 	// bounding volumes
 	m_vec4AABBDefaultColor = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f); // yellow

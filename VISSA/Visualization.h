@@ -36,6 +36,8 @@ public:
 	glm::vec4 m_vec4BoundingSphereDefaultColor;
 	glm::vec4 m_vec4TopDownNodeRenderColor;
 	glm::vec4 m_vec4BottomUpNodeRenderColor;
+	glm::vec4 m_vec4CrossHairColor;
+	float m_fCrossHairScaling;
 	float m_pPlaybackSpeeds[5]; // in Steps per second
 	size_t m_uiCurrentPlayBackSpeedIndex;
 	int8_t m_iSimulationDirectionSign; // a value of 1 or -1, 
