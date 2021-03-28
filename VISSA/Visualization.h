@@ -29,6 +29,13 @@ public:
 	std::vector<SceneObject> m_vecObjects;
 	std::vector<CollisionDetection::TreeNodeAABBForRendering> m_vecTreeAABBsForTopDownRendering;
 	std::vector<CollisionDetection::TreeNodeAABBForRendering> m_vecTreeAABBsForBottomUpRendering;
+	glm::vec4 m_vec4GridColorX;
+	glm::vec4 m_vec4GridColorY;
+	glm::vec4 m_vec4GridColorZ;
+	glm::vec4 m_vec4AABBDefaultColor;
+	glm::vec4 m_vec4BoundingSphereDefaultColor;
+	glm::vec4 m_vec4TopDownNodeRenderColor;
+	glm::vec4 m_vec4BottomUpNodeRenderColor;
 	float m_pPlaybackSpeeds[5]; // in Steps per second
 	size_t m_uiCurrentPlayBackSpeedIndex;
 	int8_t m_iSimulationDirectionSign; // a value of 1 or -1, 
@@ -68,4 +75,5 @@ private:
 	void ClearPreviousVisualization();
 
 	void InitPlaybackSpeeds();
+	void InitRenderColors();
 };

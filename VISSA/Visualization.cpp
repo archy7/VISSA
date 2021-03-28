@@ -23,6 +23,7 @@ Visualization::Visualization() :
 	m_bRenderGridZPlane(false)
 {
 	InitPlaybackSpeeds();
+	InitRenderColors();
 	ResetSimulation();
 }
 
@@ -111,7 +112,7 @@ void Visualization::Update(float fDeltaTime)
 		if (m_fAccumulatedTimeSinceLastUpdateStep >= 1.0f)
 		{
 			MoveToNextSimulationStep();
-			m_fAccumulatedTimeSinceLastUpdateStep = 0.0f;
+			m_fAccumulatedTimeSinceLastUpdateStep -= 1.0f;
 		}
 	}
 }
@@ -191,4 +192,20 @@ void Visualization::InitPlaybackSpeeds()
 	m_pPlaybackSpeeds[2] = 1.00f;
 	m_pPlaybackSpeeds[3] = 2.00f;
 	m_pPlaybackSpeeds[4] = 4.00f;
+}
+
+void Visualization::InitRenderColors()
+{
+	// grid
+	m_vec4GridColorX = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f); // yellow
+	m_vec4GridColorY = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f); // cyan
+	m_vec4GridColorZ = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f); // purple
+
+	// bounding volumes
+	m_vec4AABBDefaultColor = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f); // yellow
+	m_vec4BoundingSphereDefaultColor = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f); // blue
+
+	// node colors
+	m_vec4TopDownNodeRenderColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f); // red
+	m_vec4BottomUpNodeRenderColor = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f); // purple
 }

@@ -580,8 +580,8 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 			mat4WorldXPlane = glm::rotate(mat4WorldXPlane, glm::pi<float>() * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
 			rCurrentShader.setMat4("world", mat4WorldXPlane);
 
-			glm::vec4 vec4GridColorX(1.0f, 1.0f, 0.0f, 1.0f);
-			rCurrentShader.setVec4("color", vec4GridColorX);
+			// setting the color
+			rCurrentShader.setVec4("color", rScene.m_vec4GridColorX);
 
 			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 		}
@@ -593,9 +593,8 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 			rCurrentShader.setMat4("world", mat4WorldYPlane);
 			// no rotation needed since the default rendered plane is defined as lying flat on the "ground", facing upwards
 
-			// pass color
-			glm::vec4 vec4GridColorY(0.0f, 1.0f, 1.0f, 1.0f); // cyan as of now
-			rCurrentShader.setVec4("color", vec4GridColorY);
+			// setting the color			
+			rCurrentShader.setVec4("color", rScene.m_vec4GridColorY);
 
 			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 		}
@@ -606,8 +605,8 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 			mat4WorldZPlane = glm::rotate(mat4WorldZPlane, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f));
 			rCurrentShader.setMat4("world", mat4WorldZPlane);
 
-			glm::vec4 vec4GridColorZ(1.0f, 0.0f, 1.0f, 1.0f);
-			rCurrentShader.setVec4("color", vec4GridColorZ);
+			// setting the color
+			rCurrentShader.setVec4("color", rScene.m_vec4GridColorZ);
 
 			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 		}	
@@ -868,7 +867,7 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 	{
 		// render colour yellow for AABBs
 		glm::vec4 vec4AABBRenderColor(1.0f, 1.0f, 0.0f, 1.0f);
-		rCurrentShader.setVec4("color", vec4AABBRenderColor);
+		rCurrentShader.setVec4("color", rVisualization.m_vec4AABBDefaultColor);
 
 		for (const SceneObject& rCurrentSceneObject : rVisualization.m_vecObjects)
 		{
@@ -879,9 +878,7 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 	// Bounding Spheres
 	if (rVisualization.m_bRenderObjectBoundingSpheres)
 	{
-		// render colour blue for spheres
-		glm::vec4 vec4SphereRenderColor(0.0f, 0.0f, 1.0f, 1.0f);
-		rCurrentShader.setVec4("color", vec4SphereRenderColor);
+		rCurrentShader.setVec4("color", rVisualization.m_vec4BoundingSphereDefaultColor);
 
 		for (const SceneObject& rCurrentSceneObject : rVisualization.m_vecObjects)
 		{
@@ -901,9 +898,7 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 			bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
 			if (bShallRender)
 			{
-				// red
-				glm::vec4 vec4TreeNodeAABBRenderColor(1.0f, 0.0f, 0.0f, 1.0f);
-				rCurrentShader.setVec4("color", vec4TreeNodeAABBRenderColor);
+				rCurrentShader.setVec4("color", rVisualization.m_vec4TopDownNodeRenderColor);
 				RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
 			}
 
@@ -922,9 +917,7 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 			bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
 			if (bShallRender)
 			{
-				// purple
-				glm::vec4 vec4TreeNodeAABBRenderColor(1.0f, 0.0f, 1.0f, 1.0f);
-				rCurrentShader.setVec4("color", vec4TreeNodeAABBRenderColor);
+				rCurrentShader.setVec4("color", rVisualization.m_vec4BottomUpNodeRenderColor);
 				RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
 			}
 

@@ -170,10 +170,12 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 
 void GUI::RenderSimOptions(Engine& rEngine)
 {
-	// configure window
-	ImVec2 simControlWindowSize(250, 250);
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(ImVec2(20.0f, 20.0f), ImGuiCond_Always);
+
+	// configure window
+	ImVec2 simControlWindowSize(250, main_viewport->WorkSize.y);
+	
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 00.0f), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(simControlWindowSize, ImGuiCond_Always);
 
 	ImGuiWindowFlags window_flags = 0;
@@ -207,7 +209,7 @@ void GUI::RenderSimOptions(Engine& rEngine)
 		ImGui::EndCombo();
 	}
 
-	
+	ImGuiColorEditFlags iColorPickerFlags = ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoInputs;// | ImGuiColorEditFlags_NoLabel;
 
 	// now follow options that are specific to certain construction strategies
 	ImGui::Separator();
@@ -216,23 +218,35 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	if (iCurrentItemIndex == 0) 
 	{
 		ImGui::Text("TOP DOWN OPTIONS AND PARAMETERS");
+		ImGui::ColorEdit3("Node Color##TOPDOWN", (float*)&rEngine.m_tVisualization.m_vec4TopDownNodeRenderColor, iColorPickerFlags);
 	}
 
 	// BOTTOM UP OPTIONS
 	if (iCurrentItemIndex == 1)
 	{
 		ImGui::Text("BOTTOM UP OPTIONS AND PARAMETERS");
+		ImGui::ColorEdit3("Node Color##BOTTOMUP", (float*)&rEngine.m_tVisualization.m_vec4BottomUpNodeRenderColor, iColorPickerFlags);
 	}
 	
 	// now follow options that are generally available in the visualization
 	ImGui::Separator();
+	ImGui::Text("General");
+	ImGui::ColorEdit3("Draw Color##AABB", (float*)&rEngine.m_tVisualization.m_vec4AABBDefaultColor, iColorPickerFlags); ImGui::SameLine();
 	ImGui::Checkbox("Draw AABBs of Objects", &rEngine.m_tVisualization.m_bRenderObjectAABBs);
+	ImGui::ColorEdit3("Draw Color##BoundingSphere", (float*)&rEngine.m_tVisualization.m_vec4BoundingSphereDefaultColor, iColorPickerFlags); ImGui::SameLine();
 	ImGui::Checkbox("Draw Bounding Spheres of Objects", &rEngine.m_tVisualization.m_bRenderObjectBoundingSpheres);
-	ImGui::Checkbox("Draw Grid on X Plane", &rEngine.m_tVisualization.m_bRenderGridXPlane);
-	ImGui::Checkbox("Draw Grid on Y Plane", &rEngine.m_tVisualization.m_bRenderGridYPlane);
-	ImGui::Checkbox("Draw Grid on Z Plane", &rEngine.m_tVisualization.m_bRenderGridZPlane);
+	ImGui::Separator();
 	
-
+	ImGui::Text("X Axis");
+	ImGui::ColorEdit3("Draw Color##X", (float*)&rEngine.m_tVisualization.m_vec4GridColorX, iColorPickerFlags); ImGui::SameLine();
+	ImGui::Checkbox("Draw Grid##checkBoxXGrid", &rEngine.m_tVisualization.m_bRenderGridXPlane);
+	ImGui::Text("Y Axis");
+	ImGui::ColorEdit3("Draw Color##Y", (float*)&rEngine.m_tVisualization.m_vec4GridColorY, iColorPickerFlags); ImGui::SameLine();
+	ImGui::Checkbox("Draw Grid##checkBoxYGrid", &rEngine.m_tVisualization.m_bRenderGridYPlane); 
+	ImGui::Text("Z Axis");
+	ImGui::ColorEdit3("Draw Color##Z", (float*)&rEngine.m_tVisualization.m_vec4GridColorZ, iColorPickerFlags); ImGui::SameLine();
+	ImGui::Checkbox("Draw Grid##checkBoxZGrid", &rEngine.m_tVisualization.m_bRenderGridZPlane); 
+	
 	ImGui::End();
 }
 
