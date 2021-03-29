@@ -222,15 +222,47 @@ void Engine::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 		GUI& rGUI = pEngine->m_tGUI;
 		if (!rGUI.IsMenuActive()) // scene only reacting to clicks when the menu is not active
 		{
-			Window& rWindow = pEngine->m_tWindow;
-			if (rWindow.m_bMouseCaptured)	// reacting to clicks made while the camera is active
+			if (iButton == GLFW_MOUSE_BUTTON_LEFT && iAction == GLFW_PRESS) // single click of left mouse button
 			{
+				Window& rWindow = pEngine->m_tWindow;
+				if (rWindow.m_bMouseCaptured)	// reacting to clicks made while camera control is active
+				{
+					// construct ray
+					CollisionDetection::Ray tRay(pEngine->m_tCamera.GetCurrentPosition(), pEngine->m_tCamera.GetFrontVector());
 
-			}
-			else	// reacting to clicks of a freely moving cursor
-			{
+					// check for intersections with ray
+					CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tTopDownBVH, tRay);
 
+					// execute orders in accordance with the result
+					if (tResult.IntersectionWithObjectOccured())
+					{
+						pEngine->m_tVisualization.SetFocusedObject(tResult.m_pFirstIntersectedSceneObject);
+						pEngine->m_tGUI.SetObjectPropertiesWindowPosition(static_cast<float>(pEngine->m_tWindow.m_iWindowWidth * 0.5f), static_cast<float>(pEngine->m_tWindow.m_iWindowHeight *0.5f)); // center of window						
+						pEngine->m_tGUI.ShowObjectPropertiesWindow(true);
+					}
+
+					/*if (tResult.IntersectionWithObjectOccured())
+					{
+						SceneObject* pSceneObject = tResult.m_pFirstIntersectedSceneObject;
+						printf("Scene Object hit!\n");
+						if (pSceneObject->m_eType == SceneObject::eType::CUBE)
+							printf("It is a CUBE!\n");
+						else
+							printf("It is a SPHERE!\n");
+						printf("Its position is: X=%f, Y=%f, Z=%f\n", pSceneObject->m_tTransform.m_vec3Position.x, pSceneObject->m_tTransform.m_vec3Position.y, pSceneObject->m_tTransform.m_vec3Position.z);
+						printf("\n");
+					}*/
+				}
+				else	// reacting to clicks of a freely moving cursor
+				{
+					// do somethig with result
+					Window::MousePositionInWindow tCurrentMousePosition = pEngine->m_tWindow.GetCurrentMousePosition();
+					pEngine->m_tGUI.SetObjectPropertiesWindowPosition(tCurrentMousePosition.m_fXPosition, tCurrentMousePosition.m_fYPosition); // current mouse position
+					pEngine->m_tGUI.ShowObjectPropertiesWindow(true);
+				}
 			}
+
+			
 		}
 	}
 }

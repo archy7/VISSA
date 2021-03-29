@@ -13,21 +13,27 @@ public:
 
 	void InitForWindow(Window& rWindow);
 	void ShowMenu(bool bShowMenu);
+	void ShowObjectPropertiesWindow(bool bShowIt);
 	bool IsMenuActive() const;
 	bool IsMouseCaptured() const;
 	void SetCaptureMouse(bool bIsCapturedNow);
+	void SetObjectPropertiesWindowPosition(float fXPosition, float fYPosition);
 
 	void Render(Engine& rEngine);
 	void RenderMainMenu(Engine& rEngine);
 	void RenderSimControlPanel(Engine& rEngine);
 	void RenderSimOptions(Engine& rEngine);
+	void RenderObjectPropertiesWindow(Engine& rEngine);
 	void ConditionallyRenderQuitConfirmation(Engine& rEngine);
 	void ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine);
 	void ConditionallyRenderOptions(Engine& rEngine);
 private:
+	ImVec2 m_vec2ObjectPropertiesWindowPosition;
 
 	bool m_bShowMainMenu;
 	bool m_bShowSimulationControlPanel;
 	bool m_bShowSimulationOptions;
+	bool m_bShowObjectPropertiesWindow;
+	bool m_bDisplayObjectPropertiesChangesWereMade;
 	bool m_bCaptureMouse;
 };

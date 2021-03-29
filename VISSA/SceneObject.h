@@ -16,7 +16,7 @@ struct SceneObject {
 		glm::vec3 m_vec3Position;
 		glm::vec3 m_vec3Scale;
 		struct Rotation {
-			glm::vec3 m_vec3Vector;
+			glm::vec3 m_vec3Axis;
 			float m_fAngle;
 		} m_tRotation;
 

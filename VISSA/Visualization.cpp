@@ -13,6 +13,7 @@ Visualization::Visualization() :
 	m_iNumberStepsRendered(0),
 	m_ePresentationMode(DISCRETE),
 	m_eConstructionStrategy(TOPDOWN),
+	m_pCurrentlyFocusedObject(nullptr),
 	m_fCrossHairScaling(1.0f),
 	m_uiCurrentPlayBackSpeedIndex(0u),
 	m_iSimulationDirectionSign(0),
@@ -21,7 +22,8 @@ Visualization::Visualization() :
 	m_bRenderObjectBoundingSpheres(false),
 	m_bRenderGridXPlane(false),
 	m_bRenderGridYPlane(false),
-	m_bRenderGridZPlane(false)
+	m_bRenderGridZPlane(false),
+	m_bBVHTreesValid(false)
 {
 	InitPlaybackSpeeds();
 	InitRenderColors();
@@ -69,7 +71,7 @@ void Visualization::Load()
 	// make new rotations
 	SceneObject::Transform::Rotation tNewRotation;
 	tNewRotation.m_fAngle = 45.0f;
-	tNewRotation.m_vec3Vector = glm::vec3(0.0f, 0.0f, 1.0f);
+	tNewRotation.m_vec3Axis = glm::vec3(0.0f, 0.0f, 1.0f);
 	vecNewObjectsRotations.push_back(tNewRotation);
 	vecNewObjectsRotations.push_back(tNewRotation);
 	vecNewObjectsRotations.push_back(tNewRotation);
@@ -85,7 +87,7 @@ void Visualization::Load()
 	assert(vecNewObjectsScales.size() == vecNewObjectsRotations.size());
 
 	for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
-	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < 4; uiCurrentNewObject++)
+	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < 2; uiCurrentNewObject++)
 	{
 		SceneObject tNewObject;
 		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[uiCurrentNewObject];
@@ -179,6 +181,20 @@ void Visualization::SetNewBVHConstructionStrategy(eBVHConstructionStrategy eNewS
 		m_eConstructionStrategy = eNewStrategy;
 		ResetSimulation();
 	}
+}
+
+void Visualization::SetFocusedObject(SceneObject * pFocusedObject)
+{
+	assert(pFocusedObject);
+
+	m_pCurrentlyFocusedObject = pFocusedObject;
+}
+
+SceneObject * Visualization::GetCurrentlyFocusedObject()
+{
+	assert(m_pCurrentlyFocusedObject);		// u are asking for something that isnt there. your logic is flawed
+
+	return m_pCurrentlyFocusedObject;
 }
 
 void Visualization::ClearPreviousVisualization()

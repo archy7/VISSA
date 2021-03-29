@@ -60,6 +60,20 @@ float CollisionDetection::AABB::CalcMaximumZ() const
 	return m_vec3Center.z + m_vec3Radius.z;
 }
 
+float CollisionDetection::AABB::CalcMinimumForAxis(size_t uiAxisIndex) const
+{
+	assert(glm::length(m_vec3Radius) > 0.0f);
+
+	return m_vec3Center[uiAxisIndex] - m_vec3Radius[uiAxisIndex];
+}
+
+float CollisionDetection::AABB::CalcMaximumForAxis(size_t uiAxisIndex) const
+{
+	assert(glm::length(m_vec3Radius) > 0.0f);
+
+	return m_vec3Center[uiAxisIndex] + m_vec3Radius[uiAxisIndex];
+}
+
 void CollisionDetection::ConstructBoundingVolumesForScene(Visualization& rScene)
 {
 	for (SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
@@ -93,7 +107,7 @@ void CollisionDetection::UpdateBoundingVolumesForScene(Visualization & rScene)
 			const SceneObject::Transform& rCurrentObjectTransform = rCurrentSceneObject.m_tTransform;
 
 			glm::mat4 mat4Rotation = glm::mat4(1.0f); // identity					
-			mat4Rotation = glm::rotate(mat4Rotation, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Vector);
+			mat4Rotation = glm::rotate(mat4Rotation, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Axis);
 
 			// construct the new AABB based on the current transform
 			rCurrentSceneObject.m_tWorldSpaceAABB = UpdateAABBFromAABB(rCurrentSceneObject.m_tLocalSpaceAABB, mat4Rotation, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
@@ -105,7 +119,7 @@ void CollisionDetection::UpdateBoundingVolumesForScene(Visualization & rScene)
 			const SceneObject::Transform& rCurrentObjectTransform = rCurrentSceneObject.m_tTransform;
 
 			glm::mat4 mat4Rotation = glm::mat4(1.0f); // identity
-			mat4Rotation = glm::rotate(mat4Rotation, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Vector);
+			mat4Rotation = glm::rotate(mat4Rotation, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Axis);
 
 			// construct the new AABB based on the current transform
 			rCurrentSceneObject.m_tWorldSpaceAABB = UpdateAABBFromAABB(rCurrentSceneObject.m_tLocalSpaceAABB, mat4Rotation, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
@@ -125,11 +139,11 @@ AABB CollisionDetection::ConstructAABBFromVertexData(float * pVertices, size_t u
 
 	// initializing min values to max and vice versa for definitive overwriting for the first vertex
 	float fXMin = std::numeric_limits<float>::max();
-	float fXMax = std::numeric_limits<float>::min();
+	float fXMax = std::numeric_limits<float>::lowest();
 	float fYMin = std::numeric_limits<float>::max();
-	float fYMax = std::numeric_limits<float>::min();
+	float fYMax = std::numeric_limits<float>::lowest();
 	float fZMin = std::numeric_limits<float>::max();
-	float fZMax = std::numeric_limits<float>::min();
+	float fZMax = std::numeric_limits<float>::lowest();
 
 	for (size_t uiCurrentVertex = 0u; uiCurrentVertex < uiNumberOfVertices; uiCurrentVertex++)
 	{
@@ -379,6 +393,7 @@ CollisionDetection::BoundingVolumeHierarchy CollisionDetection::ConstructTopDown
 	// first traversal to gather data for rendering. In theory, it is possible to traverse the tree every frame for BV rendering.
 	// But that is terrible, so data is fetched into a linear vector
 	rScene.m_vecTreeAABBsForTopDownRendering.reserve(rScene.m_vecObjects.size());
+	rScene.m_vecTreeAABBsForTopDownRendering.clear();
 	TraverseTreeForAABBDataForTopDownRendering(tResult.m_pRootNode, rScene.m_vecTreeAABBsForTopDownRendering, 0);
 
 	return tResult;
@@ -390,6 +405,7 @@ BoundingVolumeHierarchy CollisionDetection::ConstructBottomUPBVHForScene(Visuali
 
 	BoundingVolumeHierarchy tResult;
 	rScene.m_vecTreeAABBsForBottomUpRendering.reserve(rScene.m_vecObjects.size());
+	rScene.m_vecTreeAABBsForBottomUpRendering.clear();
 
 	// the construction INCLUDING HALF THE PREPARATION OF AABB RENDERING DATA
 	tResult.m_pRootNode = BottomUpBVTree(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
@@ -621,11 +637,11 @@ AABB CollisionDetection::CreateAABBForMultipleObjects(const SceneObject * pScenO
 
 	// initializing min values to max and vice versa for definitive overwriting for the first vertex
 	float fXMin = std::numeric_limits<float>::max();
-	float fXMax = std::numeric_limits<float>::min();
+	float fXMax = std::numeric_limits<float>::lowest();
 	float fYMin = std::numeric_limits<float>::max();
-	float fYMax = std::numeric_limits<float>::min();
+	float fYMax = std::numeric_limits<float>::lowest();
 	float fZMin = std::numeric_limits<float>::max();
-	float fZMax = std::numeric_limits<float>::min();
+	float fZMax = std::numeric_limits<float>::lowest();
 
 	for (size_t uiCurrentSceneObjectIndex = 0u; uiCurrentSceneObjectIndex < uiNumSceneObjects; uiCurrentSceneObjectIndex++)
 	{
@@ -692,11 +708,11 @@ size_t CollisionDetection::PartitionSceneObjectsInPlace(SceneObject * pSceneObje
 	// 1.1. Finding the axis with the longest extent
 
 	// initializing with values that will definitely be overwritten
-	float fXMaxExtent = std::numeric_limits<float>::min();
+	float fXMaxExtent = std::numeric_limits<float>::lowest();
 	float fXMinExtent = std::numeric_limits<float>::max();
-	float fYMaxExtent = std::numeric_limits<float>::min();
+	float fYMaxExtent = std::numeric_limits<float>::lowest();
 	float fYMinExtent = std::numeric_limits<float>::max();
-	float fZMaxExtent = std::numeric_limits<float>::min();
+	float fZMaxExtent = std::numeric_limits<float>::lowest();
 	float fZMinExtent = std::numeric_limits<float>::max();
 
 	// finding min and max extents for every axis
@@ -743,31 +759,6 @@ size_t CollisionDetection::PartitionSceneObjectsInPlace(SceneObject * pSceneObje
 	}
 
 	// 3. partitioning the scene objects:
-	// this is not the cleanest/most efficient implementation for that
-	//std::vector<SceneObject*> vecLeftChildren;
-	//std::vector<SceneObject*> vecRightChildren;
-	//vecLeftChildren.reserve(uiNumSceneObjects);
-	//vecRightChildren.reserve(uiNumSceneObjects);
-
-	//for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-	//{
-	//	if (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iSplittingAxis] < fObjectCentroidsMean)
-	//	{
-	//		vecLeftChildren.push_back(pSceneObjects + uiCurrentSceneObject);
-	//	}
-	//	else // >=
-	//	{
-	//		vecRightChildren.push_back(pSceneObjects + uiCurrentSceneObject);
-	//	}
-	//}
-
-	//// the return value
-	//size_t uiPartitioningIndex = vecLeftChildren.size();
-
-	//// in place rearrangement
-	//memcpy(pSceneObjects, vecLeftChildren.data(), sizeof(SceneObject*) * vecLeftChildren.size());
-	//memcpy(pSceneObjects + vecLeftChildren.size(), vecRightChildren.data(), sizeof(SceneObject*) * vecRightChildren.size());
-
 	SceneObject* pCopiedArray = new SceneObject[uiNumSceneObjects];
 	
 	// two passes: one for determination of bucket sizes, the second for sorting into buckets
@@ -801,6 +792,116 @@ size_t CollisionDetection::PartitionSceneObjectsInPlace(SceneObject * pSceneObje
 	const size_t uiPartitioningIndex = uiNumElementsPerBucket[0]; // number of left children = partitioning index
 
 	return uiPartitioningIndex;
+}
+
+RayCastIntersectionResult CollisionDetection::CastRayIntoBVH(const BoundingVolumeHierarchy & rBVH, const Ray & rCastedRay)
+{
+	assert(rBVH.m_pRootNode);
+
+	RayCastIntersectionResult tResult = RecursiveRayCastIntoBVHTree(rBVH.m_pRootNode, rCastedRay);	
+
+	return tResult;
+}
+
+RayCastIntersectionResult CollisionDetection::RecursiveRayCastIntoBVHTree(const BVHTreeNode * pNode, const Ray & rCastedRay)
+{
+	assert(pNode);
+
+	RayCastIntersectionResult tResultForNodeAndAllItsChilren;
+
+	if (pNode->IsANode())
+	{
+		float fIntersectionDistanceMin;
+		glm::vec3 vec3PointOfIntersection;
+		if (IntersectRayAABB(rCastedRay, pNode->m_tAABBForNode, fIntersectionDistanceMin, vec3PointOfIntersection))
+		{
+
+			if (pNode->m_pLeft)
+			{
+				RayCastIntersectionResult tResultLeftChild = RecursiveRayCastIntoBVHTree(pNode->m_pLeft, rCastedRay);
+				//if (tResultLeftChild.m_fIntersectionDistance < tResultForNodeAndAllItsChilren.m_fIntersectionDistance) // this would always be true, because default intersection distance is FLT_MAX
+					tResultForNodeAndAllItsChilren = tResultLeftChild;
+			}
+
+			if (pNode->m_pRight)
+			{
+				RayCastIntersectionResult tResultRightchild = RecursiveRayCastIntoBVHTree(pNode->m_pRight, rCastedRay);
+				if (tResultRightchild.m_fIntersectionDistance < tResultForNodeAndAllItsChilren.m_fIntersectionDistance)
+					tResultForNodeAndAllItsChilren = tResultRightchild;
+			}
+		}
+	}
+	else // is a leaf
+	{
+		assert(pNode->m_uiNumOjbects > 0u);
+		assert(pNode->m_pObjects);
+
+		/*
+			Checking every object in the current leaf.
+			This is needed because:
+			1: There could be more that one object in the leaf
+			2: The first object to be tested might not be the closest to the ray origin, i.e. the first object hit by the ray			
+		*/
+		for (uint8_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < pNode->m_uiNumOjbects; uiCurrentSceneObject++)
+		{
+			float fIntersectionDistanceForCurrentAABB;
+			glm::vec3 vec3CurrentIntersectionPoint;
+			if (IntersectRayAABB(rCastedRay, pNode->m_pObjects[uiCurrentSceneObject].m_tWorldSpaceAABB, fIntersectionDistanceForCurrentAABB, vec3CurrentIntersectionPoint))
+			{
+				// if an intersection occured with the current object's AABB...
+				// ... and the distance to the intersection point is shorter than the previously shortest intersection distance
+				if (fIntersectionDistanceForCurrentAABB < tResultForNodeAndAllItsChilren.m_fIntersectionDistance)
+				{
+					// we update the current results
+					tResultForNodeAndAllItsChilren.m_fIntersectionDistance = fIntersectionDistanceForCurrentAABB;
+					tResultForNodeAndAllItsChilren.m_vec3PointOfIntersection = vec3CurrentIntersectionPoint;
+					tResultForNodeAndAllItsChilren.m_pFirstIntersectedSceneObject = pNode->m_pObjects + uiCurrentSceneObject;
+				}
+			}
+		}
+
+		// if, at the end of all intersection tests, no object AABB was hit, the result is still defaulted (which means its intersection distance = FLT_MAX)
+	}
+
+	return tResultForNodeAndAllItsChilren;
+}
+
+int CollisionDetection::IntersectRayAABB(const Ray & rIntersectingRay, const AABB& rAABB, float & rfIntersectionDistanceMin, glm::vec3 rvec3IntersectionPoint)
+{
+	// assert that the direction vector of the ray is normalized. relevant for: see end of function
+	assert(rIntersectingRay.m_vec3Direction.length() == glm::normalize(rIntersectingRay.m_vec3Direction).length());
+
+	rfIntersectionDistanceMin = std::numeric_limits<float>::lowest();
+	float fIntersectionDistanceMax = std::numeric_limits<float>::max();
+
+	// for all three slabs of the given AABB
+	for (size_t uiCurrentSlab = 0u; uiCurrentSlab < 3u; uiCurrentSlab++)
+	{
+		if (std::abs(rIntersectingRay.m_vec3Direction[uiCurrentSlab]) < std::numeric_limits<float>::epsilon()) // this tests if the ray is parallel to the current slab
+		{
+			if (rIntersectingRay.m_vec3Origin[uiCurrentSlab] < rAABB.CalcMinimumForAxis(uiCurrentSlab) || rIntersectingRay.m_vec3Origin[uiCurrentSlab] > rAABB.CalcMaximumForAxis(uiCurrentSlab))
+				return 0; // exit if ray origin is not witin slab -> no chance of intersection
+		}
+		else
+		{
+			const float fPredivisonFactor = 1.0f / rIntersectingRay.m_vec3Direction[uiCurrentSlab];
+			float fIntersectionDistance1 = (rAABB.CalcMinimumForAxis(uiCurrentSlab) - rIntersectingRay.m_vec3Origin[uiCurrentSlab]) * fPredivisonFactor;
+			float fIntersectionDistance2 = (rAABB.CalcMaximumForAxis(uiCurrentSlab) - rIntersectingRay.m_vec3Origin[uiCurrentSlab]) * fPredivisonFactor;
+			// make sure intersection distance 1 is the intersection distance with the near plane of the current slab
+			if (fIntersectionDistance1 > fIntersectionDistance2)
+				std::swap(fIntersectionDistance1, fIntersectionDistance2);
+			// Compute the intersection of slab intersection intervals
+			if (fIntersectionDistance1 > rfIntersectionDistanceMin) rfIntersectionDistanceMin = fIntersectionDistance1;
+			if (fIntersectionDistance2 < fIntersectionDistanceMax) fIntersectionDistanceMax = fIntersectionDistance2;
+			// Exit with no collision as soon as slab intersection becomes empty
+			if (rfIntersectionDistanceMin > fIntersectionDistanceMax) 
+				return 0;
+		}
+	}
+
+	// Ray intersects all 3 slabs
+	rvec3IntersectionPoint = rIntersectingRay.m_vec3Origin + rIntersectingRay.m_vec3Direction * rfIntersectionDistanceMin;
+	return 1;
 }
 
 void CollisionDetection::BoundingVolumeHierarchy::DeleteTree()

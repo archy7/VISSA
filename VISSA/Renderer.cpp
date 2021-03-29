@@ -528,10 +528,13 @@ void Renderer::FreeGPUResources()
 
 void Renderer::Render(const Camera & rCamera, Window & rWindow, const Visualization& rScene)
 {
-	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	if (!rWindow.IsMinimized()) // hot fix to stop crashes when minimizing the window. needs proper handling in the future: https://www.glfw.org/docs/3.3/window_guide.html
+	{
+		glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	RenderVisualization(rCamera, rWindow, rScene);
+		RenderVisualization(rCamera, rWindow, rScene);
+	}
 }
 
 void Renderer::RenderVisualization(const Camera& rCamera, const Window& rWindow, const Visualization& rScene)
@@ -685,7 +688,7 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 		// translation
 		world = glm::translate(world, rCurrentTransform.m_vec3Position);
 		// rotation
-		world = glm::rotate(world, glm::radians(rCurrentTransform.m_tRotation.m_fAngle), rCurrentTransform.m_tRotation.m_vec3Vector);
+		world = glm::rotate(world, glm::radians(rCurrentTransform.m_tRotation.m_fAngle), rCurrentTransform.m_tRotation.m_vec3Axis);
 		// scale
 		world = glm::scale(world, rCurrentTransform.m_vec3Scale);
 		
@@ -695,7 +698,8 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 		glAssert();
 
 		// render
-		if (rCurrentSceneObject.m_eType == SceneObject::eType::CUBE) {
+		if (rCurrentSceneObject.m_eType == SceneObject::eType::CUBE) 
+		{
 			glBindVertexArray(m_uiTexturedCubeVAO);
 			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 		}

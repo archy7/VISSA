@@ -36,6 +36,7 @@ void Window::InitWindow()
 	glfwSetFramebufferSizeCallback(m_pGLFWwindow, Engine::ResizeWindowCallback);
 	glfwSetCursorPosCallback(m_pGLFWwindow, Engine::MouseMoveCallBack);
 	glfwSetScrollCallback(m_pGLFWwindow, Engine::MouseScrollCallBack);
+	glfwSetMouseButtonCallback(m_pGLFWwindow, Engine::MouseClickCallBack);
 
 	SetMouseCaptured(m_bMouseCaptured);	
 
@@ -109,4 +110,21 @@ void Window::SetMouseCaptured(bool bIsCaptured)
 		*/
 		glfwSetInputMode(m_pGLFWwindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
+}
+
+bool Window::IsMinimized() const
+{
+	return m_iWindowWidth == 0 && m_iWindowHeight == 0;
+}
+
+Window::MousePositionInWindow Window::GetCurrentMousePosition() const
+{
+	double x, y;
+	glfwGetCursorPos(m_pGLFWwindow, &x, &y);
+
+	MousePositionInWindow tResult;
+	tResult.m_fXPosition = static_cast<float>(x);
+	tResult.m_fYPosition = static_cast<float>(y);
+
+	return tResult;
 }

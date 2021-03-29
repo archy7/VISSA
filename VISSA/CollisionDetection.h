@@ -18,6 +18,9 @@ namespace CollisionDetection {
 		float CalcMaximumX() const;
 		float CalcMaximumY() const;
 		float CalcMaximumZ() const;
+
+		float CalcMinimumForAxis(size_t uiAxisIndex) const;
+		float CalcMaximumForAxis(size_t uiAxisIndex) const;
 	};
 
 	struct BoundingSphere {
@@ -25,7 +28,30 @@ namespace CollisionDetection {
 		float m_fRadius = 0.0f;
 	};
 
+	struct Ray {
+		Ray() {};
+		Ray(const glm::vec3& vec3Origin, const glm::vec3& vec3Direction) : // references to avoid unnecessary copies
+			m_vec3Origin(vec3Origin),
+			m_vec3Direction(vec3Direction)
+		{
+
+		};
+
+		glm::vec3 m_vec3Origin;
+		glm::vec3 m_vec3Direction;
+	};
+
+	struct RayCastIntersectionResult {
+		SceneObject* m_pFirstIntersectedSceneObject = nullptr;
+		glm::vec3 m_vec3PointOfIntersection;
+		float m_fIntersectionDistance = std::numeric_limits<float>::max();
+
+		bool IntersectionWithObjectOccured() const { return m_pFirstIntersectedSceneObject; }
+	};
+
 	struct MostSeperatedPointsIndices;
+
+	
 
 	void ConstructBoundingVolumesForScene(Visualization& rScene);
 	void UpdateBoundingVolumesForScene(Visualization& rScene);
@@ -108,4 +134,7 @@ namespace CollisionDetection {
 	AABB CreateAABBForMultipleObjects(const SceneObject* pScenObjects, size_t uiNumSceneObjects);
 	BoundingSphere CreateBoundingSphereForMultipleSceneObjects(const SceneObject* pSceneObjects, size_t uiNumSceneObjects);
 	size_t PartitionSceneObjectsInPlace(SceneObject* pSceneObjects, size_t uiNumSceneObjects);
+	RayCastIntersectionResult CastRayIntoBVH(const BoundingVolumeHierarchy& rBVH, const Ray& rCastedRay);
+	RayCastIntersectionResult RecursiveRayCastIntoBVHTree(const BVHTreeNode* pNode, const Ray& rCastedRay);
+	int IntersectRayAABB(const Ray& rIntersectingRay, const AABB& rAABB, float& rfIntersectionDistance, glm::vec3 rvec3IntersectionPoint);
 }

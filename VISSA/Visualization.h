@@ -27,6 +27,9 @@ public:
 	};
 
 	std::vector<SceneObject> m_vecObjects;
+private:
+	SceneObject* m_pCurrentlyFocusedObject;
+public:
 	std::vector<CollisionDetection::TreeNodeAABBForRendering> m_vecTreeAABBsForTopDownRendering;
 	std::vector<CollisionDetection::TreeNodeAABBForRendering> m_vecTreeAABBsForBottomUpRendering;
 	glm::vec4 m_vec4GridColorX;
@@ -53,6 +56,8 @@ public:
 	bool m_bRenderGridXPlane;
 	bool m_bRenderGridYPlane;
 	bool m_bRenderGridZPlane;
+
+	bool m_bBVHTreesValid;
 	
 	
 	void Load();
@@ -64,12 +69,14 @@ public:
 	void PauseSimulation();
 	void IncreaseSimulationSpeed();
 	void DecreaseSimulationSpeed();
-	void InvertSimulationProgression();			// instead of advancing "forward", the simulation now rolls back
+	void InvertSimulationProgression();			// instead of advancing "forward", the simulation now rolls "back", and vice versa
 	void MoveToNextSimulationStep();
 
-	// options
+	// options, parameters and manipulation
 	eBVHConstructionStrategy GetCurrenBVHConstructionStrategy() const;
 	void SetNewBVHConstructionStrategy(eBVHConstructionStrategy eNewStrategy);
+	void SetFocusedObject(SceneObject* pFocusedObject);
+	SceneObject* GetCurrentlyFocusedObject();
 
 private:
 	eBVHConstructionStrategy m_eConstructionStrategy;

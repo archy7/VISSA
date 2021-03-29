@@ -5,11 +5,34 @@
 
 #include <stdio.h>
 
+namespace {
+	template <typename T>
+	struct GenericBackup {
+		GenericBackup() :
+			m_tBackedupData(),
+			m_bValid(false)
+		{};
+		GenericBackup(T tOriginalData) :
+			m_tBackedupData(tOriginalData),
+			m_bValid(true)
+		{
+
+		}
+
+		T m_tBackedupData;
+		bool m_bValid;
+	};
+
+	GenericBackup<SceneObject::Transform> tObjectPropertiesBackup;
+}
+
 GUI::GUI():
 	m_bShowMainMenu(true),
 	m_bShowSimulationControlPanel(false),
 	m_bShowSimulationOptions(false),
-	m_bCaptureMouse(true)
+	m_bCaptureMouse(true),
+	m_bShowObjectPropertiesWindow(false),
+	m_bDisplayObjectPropertiesChangesWereMade(false)
 {
 
 }
@@ -38,6 +61,14 @@ void GUI::ShowMenu(bool bShowMenu)
 	m_bShowMainMenu = bShowMenu;
 }
 
+void GUI::ShowObjectPropertiesWindow(bool bShowIt)
+{
+	m_bShowObjectPropertiesWindow = bShowIt;
+
+	// tell the backup that it needs an update
+	tObjectPropertiesBackup.m_bValid = false;
+}
+
 bool GUI::IsMenuActive() const
 {
 	return m_bShowMainMenu;
@@ -51,6 +82,11 @@ bool GUI::IsMouseCaptured() const
 void GUI::SetCaptureMouse(bool bIsCapturedNow)
 {
 	m_bCaptureMouse = bIsCapturedNow;
+}
+
+void GUI::SetObjectPropertiesWindowPosition(float fXPosition, float fYPosition)
+{
+	m_vec2ObjectPropertiesWindowPosition = ImVec2(fXPosition, fYPosition);
 }
 
 void GUI::Render(Engine& rEngine)
@@ -68,6 +104,10 @@ void GUI::Render(Engine& rEngine)
 
 	if (m_bShowSimulationOptions)
 		RenderSimOptions(rEngine);
+
+	if (m_bShowObjectPropertiesWindow)
+		RenderObjectPropertiesWindow(rEngine);
+
 
 	// Rendering
 	ImGui::Render();
@@ -173,10 +213,10 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 
 	// configure window
-	ImVec2 simControlWindowSize(250, main_viewport->WorkSize.y);
+	ImVec2 simOptionswindowSize(250, main_viewport->WorkSize.y);
 	
-	ImGui::SetNextWindowPos(ImVec2(0.0f, 00.0f), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(simControlWindowSize, ImGuiCond_Always);
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(simOptionswindowSize, ImGuiCond_Always);
 
 	ImGuiWindowFlags window_flags = 0;
 	window_flags |= ImGuiWindowFlags_NoMove;
@@ -185,13 +225,14 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	if (m_bCaptureMouse == false)
 		window_flags |= ImGuiWindowFlags_NoMouseInputs;
 
-	ImGui::Begin("Sim Options", &m_bShowSimulationOptions, window_flags);
+	ImGui::Begin("Options", &m_bShowSimulationOptions, window_flags);
 
+	ImGui::Text("Construction Strategy");
 	// The combo box to choose a BVH construction strategy
 	const char* pItems[] = { "TOP DOWN", "BOTTOM UP" };
 	int iCurrentItemIndex = static_cast<int>(rEngine.m_tVisualization.GetCurrenBVHConstructionStrategy());
 	const char* sComboLabel = pItems[iCurrentItemIndex];  // Label to preview before opening the combo (technically it could be anything)
-	if (ImGui::BeginCombo("BVH Construction Strategy", sComboLabel))
+	if (ImGui::BeginCombo("##BVH Construction Strategy", sComboLabel))
 	{
 		for (int iCurrentItem = 0; iCurrentItem < IM_ARRAYSIZE(pItems); iCurrentItem++)
 		{
@@ -227,32 +268,129 @@ void GUI::RenderSimOptions(Engine& rEngine)
 		ImGui::Text("BOTTOM UP OPTIONS AND PARAMETERS");
 		ImGui::ColorEdit3("Node Color##BOTTOMUP", (float*)&rEngine.m_tVisualization.m_vec4BottomUpNodeRenderColor, iColorPickerFlags);
 	}
+
+	/*if (rEngine.m_tVisualization.m_bBVHTreesValid == false)
+	{
+		if (ImGui::Button("Rebuild BVHs"))
+		{
+			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
+			rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
+			rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
+			rEngine.m_tVisualization.m_bBVHTreesValid = true;
+		}
+	}*/
 	
 	ImGui::Separator();
 	// now follow options that are generally available in the visualization
 
 	ImGui::Text("General");
-	ImGui::ColorEdit3("Draw Color##AABB", (float*)&rEngine.m_tVisualization.m_vec4AABBDefaultColor, iColorPickerFlags); ImGui::SameLine();
-	ImGui::Checkbox("Draw AABBs of Objects", &rEngine.m_tVisualization.m_bRenderObjectAABBs);
-	ImGui::ColorEdit3("Draw Color##BoundingSphere", (float*)&rEngine.m_tVisualization.m_vec4BoundingSphereDefaultColor, iColorPickerFlags); ImGui::SameLine();
-	ImGui::Checkbox("Draw Bounding Spheres of Objects", &rEngine.m_tVisualization.m_bRenderObjectBoundingSpheres);
+	
+	ImGui::Text("Object AABBs");
+	ImGui::ColorEdit3("Color##AABB", (float*)&rEngine.m_tVisualization.m_vec4AABBDefaultColor, iColorPickerFlags); ImGui::SameLine();
+	ImGui::Checkbox("Visibility##Draw AABBs of Objects", &rEngine.m_tVisualization.m_bRenderObjectAABBs);
+	ImGui::Text("Object Bounding Spheres");
+	ImGui::ColorEdit3("Color##BoundingSphere", (float*)&rEngine.m_tVisualization.m_vec4BoundingSphereDefaultColor, iColorPickerFlags); ImGui::SameLine();
+	ImGui::Checkbox("Visibility##Draw Bounding Spheres of Objects", &rEngine.m_tVisualization.m_bRenderObjectBoundingSpheres);
 	
 	ImGui::Separator();
 
-	ImGui::Text("X Axis");
-	ImGui::ColorEdit3("Draw Color##X", (float*)&rEngine.m_tVisualization.m_vec4GridColorX, iColorPickerFlags); ImGui::SameLine();
-	ImGui::Checkbox("Draw Grid##checkBoxXGrid", &rEngine.m_tVisualization.m_bRenderGridXPlane);
-	ImGui::Text("Y Axis");
-	ImGui::ColorEdit3("Draw Color##Y", (float*)&rEngine.m_tVisualization.m_vec4GridColorY, iColorPickerFlags); ImGui::SameLine();
-	ImGui::Checkbox("Draw Grid##checkBoxYGrid", &rEngine.m_tVisualization.m_bRenderGridYPlane); 
-	ImGui::Text("Z Axis");
-	ImGui::ColorEdit3("Draw Color##Z", (float*)&rEngine.m_tVisualization.m_vec4GridColorZ, iColorPickerFlags); ImGui::SameLine();
-	ImGui::Checkbox("Draw Grid##checkBoxZGrid", &rEngine.m_tVisualization.m_bRenderGridZPlane); 
+	ImGui::Text("X Axis Grid");
+	ImGui::ColorEdit3("Color##X", (float*)&rEngine.m_tVisualization.m_vec4GridColorX, iColorPickerFlags); ImGui::SameLine();
+	ImGui::Checkbox("Visibility##checkBoxXGrid", &rEngine.m_tVisualization.m_bRenderGridXPlane);
+	ImGui::Text("Y Axis Grid");
+	ImGui::ColorEdit3("Color##Y", (float*)&rEngine.m_tVisualization.m_vec4GridColorY, iColorPickerFlags); ImGui::SameLine();
+	ImGui::Checkbox("Visibility##checkBoxYGrid", &rEngine.m_tVisualization.m_bRenderGridYPlane); 
+	ImGui::Text("Z Axis Grid");
+	ImGui::ColorEdit3("Color##Z", (float*)&rEngine.m_tVisualization.m_vec4GridColorZ, iColorPickerFlags); ImGui::SameLine();
+	ImGui::Checkbox("Visibility##checkBoxZGrid", &rEngine.m_tVisualization.m_bRenderGridZPlane); 
 	
 	ImGui::Separator();
-	ImGui::Text("Crooshair");
-	ImGui::ColorEdit3("Draw Color##XHAIR", (float*)&rEngine.m_tVisualization.m_vec4CrossHairColor, iColorPickerFlags);
-	ImGui::SliderFloat("Crosshair Size", &rEngine.m_tVisualization.m_fCrossHairScaling, 0.75f, 2.0f, "%.2f", ImGuiSliderFlags_NoInput);
+	ImGui::Text("Crosshair");
+	ImGui::ColorEdit3("Color##XHAIR", (float*)&rEngine.m_tVisualization.m_vec4CrossHairColor, iColorPickerFlags);
+	ImGui::SliderFloat("Size", &rEngine.m_tVisualization.m_fCrossHairScaling, 0.75f, 2.0f, "%.2f", ImGuiSliderFlags_NoInput);
+
+	ImGui::End();
+}
+
+void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
+{
+	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+
+	// configure window
+	ImVec2 objectPropertiesWindowSize(350, 250);
+
+	ImGui::SetNextWindowPos(m_vec2ObjectPropertiesWindowPosition, ImGuiCond_Always);
+	ImGui::SetNextWindowSize(objectPropertiesWindowSize, ImGuiCond_Always);
+
+	ImGuiWindowFlags window_flags = 0;
+	window_flags |= ImGuiWindowFlags_NoResize;
+	window_flags |= ImGuiWindowFlags_NoCollapse;
+	if (m_bCaptureMouse == false)
+		window_flags |= ImGuiWindowFlags_NoMouseInputs;
+
+	ImGui::Begin("Object Properties", nullptr, window_flags);
+
+	SceneObject* pCurrentlyFocusedObject = rEngine.m_tVisualization.GetCurrentlyFocusedObject();
+	
+	switch (pCurrentlyFocusedObject->m_eType)
+	{
+	case SceneObject::eType::CUBE: {
+		ImGui::Text("Type: CUBE");
+		break;
+	}
+	case SceneObject::eType::SPHERE: {
+		ImGui::Text("Type: SPHERE");
+		break;
+	}
+	default:
+		assert(!"disaster struck");
+	}
+
+	if (tObjectPropertiesBackup.m_bValid == false) // if the backup still holds data of an old object, update it
+	{
+		tObjectPropertiesBackup.m_tBackedupData = pCurrentlyFocusedObject->m_tTransform;
+		tObjectPropertiesBackup.m_bValid = true;
+	}	
+
+	ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue;
+	if (ImGui::InputFloat3("Position", &(pCurrentlyFocusedObject->m_tTransform.m_vec3Position.x), "%.2f", flags))
+		m_bDisplayObjectPropertiesChangesWereMade = true;
+	if(ImGui::InputFloat3("Scale", &(pCurrentlyFocusedObject->m_tTransform.m_vec3Scale.x), "%.2f", flags))
+		m_bDisplayObjectPropertiesChangesWereMade = true;
+	if(ImGui::InputFloat4("Rotation", &(pCurrentlyFocusedObject->m_tTransform.m_tRotation.m_vec3Axis.x), "%.2f", flags))
+		m_bDisplayObjectPropertiesChangesWereMade = true;
+
+	if (m_bDisplayObjectPropertiesChangesWereMade)
+		ImGui::TextWrapped("Applying changes to object properties [OK] will invalidate the BVH. It will automatically reconstructed and the visualization reset. Clicking [CANCEL] will discard all changes.");
+
+	if (ImGui::Button("OK"))
+	{
+		m_bShowObjectPropertiesWindow = false; // closes this window
+		tObjectPropertiesBackup.m_bValid = false; // backup data will need to be fetched again
+
+		if (m_bDisplayObjectPropertiesChangesWereMade) // only invalidate the trees if actual changes were made
+		{
+			rEngine.m_tVisualization.m_bBVHTreesValid = false;
+			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
+			rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
+			rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
+			rEngine.m_tVisualization.ResetSimulation();
+		}			
+
+		m_bDisplayObjectPropertiesChangesWereMade = false; // reset this flag
+		
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("CANCEL"))
+	{
+		m_bShowObjectPropertiesWindow = false; // closes this window
+		tObjectPropertiesBackup.m_bValid = false; // backup data will need to be fetched again
+
+		// rolling back changes
+		pCurrentlyFocusedObject->m_tTransform = tObjectPropertiesBackup.m_tBackedupData;
+
+		m_bDisplayObjectPropertiesChangesWereMade = false; // reset this flag
+	}
 
 	ImGui::End();
 }
@@ -288,7 +426,7 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 
 	if (ImGui::BeginPopupModal("VISUALIZATIONS", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		if (ImGui::Button("BOUNDING VOLUME HIERARCHY", ImVec2(120, 0)))
+		if (ImGui::Button("BOUNDING VOLUME HIERARCHY", ImVec2(0, 0)))
 		{
 			// CD relevant
 			rEngine.m_tVisualization.Load();	// really bad implementation
@@ -296,6 +434,7 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
 			rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
 			rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
+			rEngine.m_tVisualization.m_bBVHTreesValid = true;
 
 			// UI relevant
 			rEngine.m_tWindow.SetMouseCaptured(true);
@@ -305,7 +444,7 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 			ImGui::CloseCurrentPopup();
 		}
 
-		if (ImGui::Button("BACK", ImVec2(120, 0)))
+		if (ImGui::Button("BACK", ImVec2(0, 0)))
 		{
 			ImGui::CloseCurrentPopup();
 		}
