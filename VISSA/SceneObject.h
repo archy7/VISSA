@@ -9,15 +9,15 @@ struct SceneObject {
 		SPHERE,
 		PLANE,
 		CUBE
-	} m_eType;
+	} m_eType = CUBE;
 
 	struct Transform
 	{
-		glm::vec3 m_vec3Position;
-		glm::vec3 m_vec3Scale;
+		glm::vec3 m_vec3Position = glm::vec3(0.0f, 0.0f, 0.0f);
+		glm::vec3 m_vec3Scale = glm::vec3(1.0f, 1.0f, 1.0f);
 		struct Rotation {
-			glm::vec3 m_vec3Axis;
-			float m_fAngle;
+			glm::vec3 m_vec3Axis = glm::vec3(1.0f, 1.0f, 1.0f);
+			float m_fAngle = 0.0f;
 		} m_tRotation;
 
 	} m_tTransform;

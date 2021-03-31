@@ -63,14 +63,14 @@ void Visualization::Load()
 	vecNewObjectsScales.push_back(glm::vec3(1.5f, 1.5f, 1.5f));
 	vecNewObjectsScales.push_back(glm::vec3(1.7f, 1.7f, 1.7f));
 	vecNewObjectsScales.push_back(glm::vec3(0.9f, 0.9f, 0.9f));
-	vecNewObjectsScales.push_back(glm::vec3(3.0f, 3.0f, 3.0f));
+	vecNewObjectsScales.push_back(glm::vec3(3.0f, 1.0f, 2.0f));
 	vecNewObjectsScales.push_back(glm::vec3(2.0f, 2.0f, 2.0f));
 	vecNewObjectsScales.push_back(glm::vec3(0.2f, 0.2f, 0.2f));
 
 	// make new rotations
 	SceneObject::Transform::Rotation tNewRotation;
 	tNewRotation.m_fAngle = 45.0f;
-	tNewRotation.m_vec3Axis = glm::vec3(0.0f, 0.0f, 1.0f);
+	tNewRotation.m_vec3Axis = glm::vec3(0.0f, 1.0f, 0.0f);
 	vecNewObjectsRotations.push_back(tNewRotation);
 	vecNewObjectsRotations.push_back(tNewRotation);
 	vecNewObjectsRotations.push_back(tNewRotation);
@@ -209,6 +209,14 @@ void Visualization::DeleteCurrentlyFocusedObject()
 			break;
 		}
 	}
+}
+
+void Visualization::AddNewSceneObject(SceneObject & rNewSceneObject)
+{
+	m_vecObjects.push_back(rNewSceneObject);
+
+	// TODO: yes... this is not a clean solution. but it will do for now
+	CollisionDetection::ConstructBoundingVolumesForScene(*this);
 }
 
 void Visualization::ClearPreviousVisualization()

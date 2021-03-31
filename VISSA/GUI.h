@@ -24,6 +24,7 @@ public:
 	void RenderSimControlPanel(Engine& rEngine);
 	void RenderSimOptions(Engine& rEngine);
 	void RenderObjectPropertiesWindow(Engine& rEngine);
+	void RenderObjectCreationWindow(Engine& rEngine);
 	void ConditionallyRenderQuitConfirmation(Engine& rEngine);
 	void ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine);
 	void ConditionallyRenderOptions(Engine& rEngine);
@@ -34,6 +35,7 @@ private:
 	bool m_bShowSimulationControlPanel;
 	bool m_bShowSimulationOptions;
 	bool m_bShowObjectPropertiesWindow;
+	bool m_bShowObjectCreationWindow;
 	bool m_bDisplayObjectPropertiesChangesWereMade;
 	bool m_bCaptureMouse;
 };

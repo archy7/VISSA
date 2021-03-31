@@ -25,6 +25,25 @@ namespace {
 
 	GenericBackup<SceneObject::Transform> tObjectPropertiesBackup;
 
+	// TODO: reconsider this. might be a useful idea in the future. right now, its overkill
+	/*template <typename T>
+	struct GenericViewModel {
+		T m_tModelData;
+	};
+
+	GenericViewModel<SceneObject> m_tSceneObject;*/
+
+	struct SceneObjectViewModel {
+		SceneObject m_tSceneObject;
+		int iCurrentlySelectedDropDownIndex = 0;
+	} tSceneObjectViewModel;
+	
+
+	void ResetObjectCreationViewModel(){
+		tSceneObjectViewModel.m_tSceneObject = SceneObject();
+		tSceneObjectViewModel.iCurrentlySelectedDropDownIndex = 0;
+	}
+
 	// Helper to display a little (?) mark which shows a tooltip when hovered.
 	void HelpMarker(const char* desc)
 	{
@@ -46,6 +65,7 @@ GUI::GUI():
 	m_bShowSimulationOptions(false),
 	m_bCaptureMouse(true),
 	m_bShowObjectPropertiesWindow(false),
+	m_bShowObjectCreationWindow(false),
 	m_bDisplayObjectPropertiesChangesWereMade(false)
 {
 
@@ -121,6 +141,9 @@ void GUI::Render(Engine& rEngine)
 
 	if (m_bShowObjectPropertiesWindow)
 		RenderObjectPropertiesWindow(rEngine);
+
+	if (m_bShowObjectCreationWindow)
+		RenderObjectCreationWindow(rEngine);
 
 
 	// Rendering
@@ -267,7 +290,6 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	ImGuiColorEditFlags iColorPickerFlags = ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoInputs;// | ImGuiColorEditFlags_NoLabel;
 
 	// now follow options that are specific to certain construction strategies
-	ImGui::Separator();
 
 	// TOP DOWN OPTIONS
 	if (iCurrentItemIndex == 0) 
@@ -295,6 +317,13 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	// now follow options that are generally available in the visualization
 
 	ImGui::Text("General");
+
+	if (ImGui::Button("Add Object"))
+	{
+		m_bShowObjectCreationWindow = true;
+	}
+
+	ImGui::Separator();
 	
 	ImGui::Text("Object AABBs");
 	ImGui::ColorEdit3("Color##AABB", (float*)&rEngine.m_tVisualization.m_vec4AABBDefaultColor, iColorPickerFlags); ImGui::SameLine();
@@ -305,13 +334,13 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	
 	ImGui::Separator();
 
-	ImGui::Text("X Axis Grid");
+	ImGui::Text("X Axis Grid"); ImGui::SameLine(); HelpMarker("A rasterized grid facing the X axis, spanning the YZ plane. Grid size = 100cm");
 	ImGui::ColorEdit3("Color##X", (float*)&rEngine.m_tVisualization.m_vec4GridColorX, iColorPickerFlags); ImGui::SameLine();
 	ImGui::Checkbox("Visibility##checkBoxXGrid", &rEngine.m_tVisualization.m_bRenderGridXPlane);
-	ImGui::Text("Y Axis Grid");
+	ImGui::Text("Y Axis Grid"); ImGui::SameLine(); HelpMarker("A rasterized grid facing the Y axis, spanning the XZ plane. Grid size = 100cm");
 	ImGui::ColorEdit3("Color##Y", (float*)&rEngine.m_tVisualization.m_vec4GridColorY, iColorPickerFlags); ImGui::SameLine();
 	ImGui::Checkbox("Visibility##checkBoxYGrid", &rEngine.m_tVisualization.m_bRenderGridYPlane); 
-	ImGui::Text("Z Axis Grid");
+	ImGui::Text("Z Axis Grid"); ImGui::SameLine(); HelpMarker("A rasterized grid facing the Z axis, spanning the XY plane. Grid size = 100cm");
 	ImGui::ColorEdit3("Color##Z", (float*)&rEngine.m_tVisualization.m_vec4GridColorZ, iColorPickerFlags); ImGui::SameLine();
 	ImGui::Checkbox("Visibility##checkBoxZGrid", &rEngine.m_tVisualization.m_bRenderGridZPlane); 
 	
@@ -436,6 +465,83 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 		pCurrentlyFocusedObject->m_tTransform = tObjectPropertiesBackup.m_tBackedupData;
 
 		m_bDisplayObjectPropertiesChangesWereMade = false; // reset this flag
+	}
+
+	ImGui::End();
+}
+
+void GUI::RenderObjectCreationWindow(Engine & rEngine)
+{
+	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+
+	// configure window
+	ImVec2 objectPropertiesWindowSize(350, 250);
+
+	ImGui::SetNextWindowPos(main_viewport->GetWorkCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(objectPropertiesWindowSize, ImGuiCond_Always);
+
+	ImGuiWindowFlags window_flags = 0;
+	window_flags |= ImGuiWindowFlags_NoResize;
+	window_flags |= ImGuiWindowFlags_NoCollapse;
+	if (m_bCaptureMouse == false)
+		window_flags |= ImGuiWindowFlags_NoMouseInputs;
+
+	ImGui::Begin("Object Creation", nullptr, window_flags);
+
+	SceneObject* pObjectCreationData = &tSceneObjectViewModel.m_tSceneObject;
+
+	// The combo box to choose a BVH construction strategy
+	const char* pItems[] = { "CUBE", "SPHERE" };
+	int iCurrentItemIndex = static_cast<int>(tSceneObjectViewModel.iCurrentlySelectedDropDownIndex);
+	const char* sComboLabel = pItems[iCurrentItemIndex];  // Label to preview before opening the combo (technically it could be anything)
+	if (ImGui::BeginCombo("##BVH Construction Strategy", sComboLabel))
+	{
+		for (int iCurrentItem = 0; iCurrentItem < IM_ARRAYSIZE(pItems); iCurrentItem++)
+		{
+			const bool bIsSelected = (iCurrentItemIndex == iCurrentItem);
+			if (ImGui::Selectable(pItems[iCurrentItem], bIsSelected))
+			{
+				// TODO: this is really ugly
+				if (iCurrentItem == 0)
+					pObjectCreationData->m_eType = SceneObject::eType::CUBE;
+				else if (iCurrentItem == 1)
+					pObjectCreationData->m_eType = SceneObject::eType::SPHERE;
+			}
+
+			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+			if (bIsSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
+
+	ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsDecimal;
+	ImGui::InputFloat3("Position", &(pObjectCreationData->m_tTransform.m_vec3Position.x), "%.2f", flags);
+	ImGui::InputFloat3("Scale", &(pObjectCreationData->m_tTransform.m_vec3Scale.x), "%.2f", flags);
+	ImGui::InputFloat4("Rotation", &(pObjectCreationData->m_tTransform.m_tRotation.m_vec3Axis.x), "%.2f", flags);
+	ImGui::SameLine(); HelpMarker("[X][Y][Z][angle]");
+	
+	ImGui::TextWrapped("Creating a new object [OK] will invalidate the BVH. It will automatically be reconstructed and the visualization reset.");
+
+	if (ImGui::Button("OK"))
+	{
+		rEngine.m_tVisualization.AddNewSceneObject(tSceneObjectViewModel.m_tSceneObject);
+
+		// all updates and reset the sim TODO: when refactoring the classes, this should be done in the Add....() function used above
+		CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
+		rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
+		rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
+		rEngine.m_tVisualization.ResetSimulation();
+
+		m_bShowObjectCreationWindow = false; // closes this window
+		ResetObjectCreationViewModel();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("CANCEL"))
+	{
+		m_bShowObjectCreationWindow = false; // closes this window
+		ResetObjectCreationViewModel();
 	}
 
 	ImGui::End();

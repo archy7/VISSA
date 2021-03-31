@@ -75,6 +75,7 @@ public:
 	void SetFocusedObject(SceneObject* pFocusedObject);
 	SceneObject* GetCurrentlyFocusedObject();
 	void DeleteCurrentlyFocusedObject();
+	void AddNewSceneObject(SceneObject& rNewSceneObject);
 
 private:
 	eBVHConstructionStrategy m_eConstructionStrategy;
