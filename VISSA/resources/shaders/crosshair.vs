@@ -10,7 +10,7 @@ uniform mat4 orthoProjection;
 
 void main()
 {
-	//gl_Position = projection *view *world * vec4(aPos, 1.0f);
-	gl_Position = orthoProjection *world * vec4(aPos, 1.0f); // now view space
+	//gl_Position = projection *view *world * vec4(aPos, 1.0f); // classic transform chain
+	gl_Position = orthoProjection *world * vec4(aPos, 1.0f); // no view space transform here!
 	TexCoords = aTexCoord;
 }

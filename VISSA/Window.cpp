@@ -11,7 +11,7 @@ Window::Window():
 	m_fLastXOfMouse(m_iWindowWidth/ 2.0f),
 	m_fLastYOfMouse(m_iWindowHeight / 2.0f),
 	m_bFirstMouse(true),
-	m_bMouseCaptured(false),
+	m_iMouseShowingStack(1),
 	m_bIsInitialized(false)
 {
 	
@@ -38,7 +38,7 @@ void Window::InitWindow()
 	glfwSetScrollCallback(m_pGLFWwindow, Engine::MouseScrollCallBack);
 	glfwSetMouseButtonCallback(m_pGLFWwindow, Engine::MouseClickCallBack);
 
-	SetMouseCaptured(m_bMouseCaptured);	
+	m_iMouseShowingStack = 1;
 
 	// mark as ready
 	m_bIsInitialized = true;
@@ -90,10 +90,59 @@ int Window::WindowShouldClose()
 	return glfwWindowShouldClose(m_pGLFWwindow);
 }
 
-void Window::SetMouseCaptured(bool bIsCaptured)
+void Window::IncreasMouseShowingStack()
 {
-	m_bMouseCaptured = bIsCaptured;
-	if(m_bMouseCaptured)
+	ChangeMouseShowingStack(1);
+}
+
+void Window::DecreasMouseShowingStack()
+{
+	ChangeMouseShowingStack(-1);
+}
+
+void Window::ChangeMouseShowingStack(int iChange)
+{
+	assert(iChange != 0);	// if you land here, you need to reconsider what you are doing.
+
+	m_iMouseShowingStack += iChange;
+	assert(m_iMouseShowingStack >= 0); // if you land here, your logic is flawed somewhere. Each instance that wants to show the mouse asks for it by increasing the stack. when done, the stack is reduced.
+	UpdateGLFWMouseCaptureBehaviour();
+}
+
+void Window::SetHardCaptureMouse(bool bIsCaptureNow)
+{
+	if (bIsCaptureNow)
+		m_iMouseShowingStack = 0;
+	else
+		m_iMouseShowingStack = 1;
+	UpdateGLFWMouseCaptureBehaviour();
+}
+
+bool Window::IsMinimized() const
+{
+	return m_iWindowWidth == 0 && m_iWindowHeight == 0;
+}
+
+bool Window::IsMouseCaptured() const
+{
+	return m_iMouseShowingStack == 0;
+}
+
+Window::MousePositionInWindow Window::GetCurrentMousePosition() const
+{
+	double x, y;
+	glfwGetCursorPos(m_pGLFWwindow, &x, &y);
+
+	MousePositionInWindow tResult;
+	tResult.m_fXPosition = static_cast<float>(x);
+	tResult.m_fYPosition = static_cast<float>(y);
+
+	return tResult;
+}
+
+void Window::UpdateGLFWMouseCaptureBehaviour()
+{
+	if (IsMouseCaptured())
 	{
 		/**
 			tell GLFW to capture our mouse.
@@ -110,21 +159,4 @@ void Window::SetMouseCaptured(bool bIsCaptured)
 		*/
 		glfwSetInputMode(m_pGLFWwindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
-}
-
-bool Window::IsMinimized() const
-{
-	return m_iWindowWidth == 0 && m_iWindowHeight == 0;
-}
-
-Window::MousePositionInWindow Window::GetCurrentMousePosition() const
-{
-	double x, y;
-	glfwGetCursorPos(m_pGLFWwindow, &x, &y);
-
-	MousePositionInWindow tResult;
-	tResult.m_fXPosition = static_cast<float>(x);
-	tResult.m_fYPosition = static_cast<float>(y);
-
-	return tResult;
 }

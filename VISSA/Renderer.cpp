@@ -35,14 +35,19 @@ struct TriangularFace {
 };
 
 Renderer::Renderer() :
-	// projection members
+	// frame constant matrices
+	m_mat4Camera(glm::mat4(1.0f)), // identity matrix for starters
+	m_mat4PerspectiveProjection(glm::mat4(1.0f)), // identity matrix for starters
+	m_mat4OrthographicProjection(glm::mat4(1.0f)), // identity matrix for starters
+	// members defining the view frustums
 	m_fOrthoLeft(0.0f),
 	m_fOrthoRight(1280.0f),
 	m_fOrthoBottom(0.0f),
 	m_fOrthoTop(720.0f),
 	m_fNearPlane(0.1f),
 	m_fFarPlane(10000.0f),
-	m_vec4fClearColor(0.3f, 0.3f, 0.3f, 1.0f) // a light grey tone
+	// clear color: a light grey
+	m_vec4fClearColor(0.3f, 0.3f, 0.3f, 1.0f)
 {
 	
 }
@@ -64,6 +69,16 @@ void Renderer::InitRenderer()
 	glAssert();
 	SetInitialOpenGLState();
 	glAssert();
+}
+
+const glm::mat4 & Renderer::GetCameraMatrix() const
+{
+	return m_mat4Camera;
+}
+
+const glm::mat4 & Renderer::GetPerspectiveProjectionMatrix() const
+{
+	return m_mat4PerspectiveProjection;
 }
 
 /*
@@ -526,15 +541,56 @@ void Renderer::FreeGPUResources()
 	glDeleteTextures(1, &m_uiGridMaskTexture);
 }
 
+void Renderer::UpdateFrameConstants(const Camera& rCamera, const Window& rWindow)
+{
+	// camera matrix
+	m_mat4Camera = rCamera.GetViewMatrix();
+}
+
+void Renderer::UpdateProjectionMatrices(const Camera& rCamera, const Window& rWindow)
+{
+	// perspective projection matrix
+	m_mat4PerspectiveProjection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
+
+	// orthographic projection matrix
+	m_mat4OrthographicProjection = glm::ortho(m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop, m_fNearPlane, m_fFarPlane);
+}
+
 void Renderer::Render(const Camera & rCamera, Window & rWindow, const Visualization& rScene)
 {
-	if (!rWindow.IsMinimized()) // hot fix to stop crashes when minimizing the window. needs proper handling in the future: https://www.glfw.org/docs/3.3/window_guide.html
-	{
-		glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	if (rWindow.IsMinimized()) // hot fix to stop crashes when minimizing the window. needs proper handling in the future: https://www.glfw.org/docs/3.3/window_guide.html
+		return;
 
-		RenderVisualization(rCamera, rWindow, rScene);
-	}
+	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	UpdateFrameConstants(rCamera, rWindow);
+	UpdateProjectionMatrices(rCamera, rWindow);
+	RenderVisualization(rCamera, rWindow, rScene);
+}
+
+glm::vec3 Renderer::ConstructRayDirectionFromMousePosition(const Window& rWindow) const
+{
+	// from: https://antongerdelan.net/opengl/raycasting.html
+
+	const Window::MousePositionInWindow tMousePosition = rWindow.GetCurrentMousePosition();
+
+	// screen space (viewport coordinates)
+	float x = (2.0f * tMousePosition.m_fXPosition) / static_cast<float>(rWindow.m_iWindowWidth) - 1.0f;
+	float y = 1.0f - (2.0f * tMousePosition.m_fYPosition) / static_cast<float>(rWindow.m_iWindowHeight);
+	float z = 1.0f;
+	// normalised device space
+	glm::vec3 ray_nds = glm::vec3(x, y, z);
+	// clip space
+	glm::vec4 ray_clip = glm::vec4(ray_nds.x, ray_nds.y, -1.0, 1.0);
+	// camera space
+	glm::vec4 ray_eye = glm::inverse(m_mat4PerspectiveProjection) * ray_clip;
+	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+	// world space
+	glm::vec3 ray_world = glm::vec3(glm::inverse(m_mat4Camera) * ray_eye);
+	// don't forget to normalise the vector at some point
+	ray_world = glm::normalize(ray_world);
+	return ray_world;
 }
 
 void Renderer::RenderVisualization(const Camera& rCamera, const Window& rWindow, const Visualization& rScene)
@@ -542,13 +598,9 @@ void Renderer::RenderVisualization(const Camera& rCamera, const Window& rWindow,
 	// start by updating the uniform buffer containing the camera and projection matrices
 	glBindBuffer(GL_UNIFORM_BUFFER, m_uiCameraProjectionUBO);
 		// camera
-		glm::mat4 mat4Camera = rCamera.GetViewMatrix();
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(mat4Camera), glm::value_ptr(mat4Camera));
-		// projection
-		// NOTE: current world space transformations do not work with ortho matrix as defined below
-		// glm::mat4 projection = glm::ortho(m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop, m_fNearPlane, m_fFarPlane);
-		glm::mat4 mat4PerspectiveProjection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
-		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(mat4Camera), sizeof(mat4PerspectiveProjection), glm::value_ptr(mat4PerspectiveProjection));
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m_mat4Camera), glm::value_ptr(m_mat4Camera));
+		// perspective projection
+		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m_mat4Camera), sizeof(m_mat4PerspectiveProjection), glm::value_ptr(m_mat4PerspectiveProjection));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	
 	
@@ -630,39 +682,44 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 
 void Renderer::RenderHUDComponents(const Camera & rCamera, const Window & rWindow, const Visualization & rVisualization)
 {
-	glAssert();
-	Shader& rCurrentShader = m_tCrosshairShader;
-	rCurrentShader.use();
-	glAssert();
-	rCurrentShader.setInt("transparencyMask", 0);
+	// Crosshair
+	{
+		glAssert();
+		Shader& rCurrentShader = m_tCrosshairShader;
+		rCurrentShader.use();
+		glAssert();
+		rCurrentShader.setInt("transparencyMask", 0);
 
-	glAssert();
+		glAssert();
 
-	// bind textures on corresponding texture units
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_uiCrosshairTexture);
+		// bind textures on corresponding texture units
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_uiCrosshairTexture);
 
-	glDisable(GL_CULL_FACE);
+		glDisable(GL_CULL_FACE);
 
-	glBindVertexArray(m_uiTexturedPlaneVAO);
+		glBindVertexArray(m_uiTexturedPlaneVAO);
 
-	// calculate the model matrix for each object and pass it to shader before drawing
-	glm::mat4 mat4World = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-	glm::vec3 vec3CrosshairTranslationVector(static_cast<float>(rWindow.m_iWindowWidth) * 0.5f, static_cast<float>(rWindow.m_iWindowHeight) * 0.5f, -(m_fNearPlane + 0.0f)); // in the middle of the window, within the near plane of the view frustum
-	mat4World = glm::translate(mat4World, vec3CrosshairTranslationVector);
-	mat4World = glm::scale(mat4World, glm::vec3(rVisualization.m_fCrossHairScaling, rVisualization.m_fCrossHairScaling, 1.0f));
-	mat4World = glm::rotate(mat4World, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f)); // default plane/quad is defined as lying face up flat on the floor. this makes it "stand up"
-	rCurrentShader.setMat4("world", mat4World);
+		// world matrix
+		glm::mat4 mat4World = glm::mat4(1.0f); // init to identity
+		glm::vec3 vec3CrosshairTranslationVector(static_cast<float>(rWindow.m_iWindowWidth) * 0.5f, static_cast<float>(rWindow.m_iWindowHeight) * 0.5f, -(m_fNearPlane + 0.0f)); // in the middle of the window, within the near plane of the view frustum
+		mat4World = glm::translate(mat4World, vec3CrosshairTranslationVector);
+		mat4World = glm::scale(mat4World, glm::vec3(rVisualization.m_fCrossHairScaling, rVisualization.m_fCrossHairScaling, 1.0f));
+		mat4World = glm::rotate(mat4World, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f)); // default plane/quad is defined as lying face up flat on the floor. this makes it "stand up" and face the camera
+		rCurrentShader.setMat4("world", mat4World);
 
-	glm::mat4 mat4OrthoProjection = glm::ortho(m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop, m_fNearPlane, m_fFarPlane);
-	rCurrentShader.setMat4("orthoProjection", mat4OrthoProjection);
+		// no camera matrix for hud components!
 
-	// setting the color
-	rCurrentShader.setVec4("color", rVisualization.m_vec4CrossHairColor);
+		// projection matrix
+		rCurrentShader.setMat4("orthoProjection", m_mat4OrthographicProjection);
 
-	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+		// setting the color
+		rCurrentShader.setVec4("color", rVisualization.m_vec4CrossHairColor);
 
-	glEnable(GL_CULL_FACE);
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+		glEnable(GL_CULL_FACE);
+	}
 }
 
 void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow, const Visualization & rScene)
@@ -691,8 +748,6 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 		world = glm::rotate(world, glm::radians(rCurrentTransform.m_tRotation.m_fAngle), rCurrentTransform.m_tRotation.m_vec3Axis);
 		// scale
 		world = glm::scale(world, rCurrentTransform.m_vec3Scale);
-		
-
 		m_tTextureShader.setMat4("world", world);
 
 		glAssert();
@@ -703,10 +758,14 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 			glBindVertexArray(m_uiTexturedCubeVAO);
 			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 		}
-		else
+		else if (rCurrentSceneObject.m_eType == SceneObject::eType::SPHERE)
 		{
 			glBindVertexArray(m_uiTexturedSphereVAO);
 			glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
+		}
+		else
+		{
+			assert(!"disaster :)");
 		}
 	}
 }

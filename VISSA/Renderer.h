@@ -26,8 +26,8 @@ public:
 	Renderer& operator=(Renderer&& rOther) = delete;		// no move assignment
 	~Renderer();
 
-private:
 	// Member types
+private:
 	struct SphereTrianglesGenerationResult {
 		GLuint m_uiNumberOfTriangles;
 		TriangularFace* m_pTriangleData;
@@ -37,6 +37,12 @@ public:
 	/////////////////////////////////////////
 	//////////////OPENGL/////////////////////
 	/////////////////////////////////////////
+private:
+	// matrices
+	glm::mat4 m_mat4Camera;
+	glm::mat4 m_mat4PerspectiveProjection;
+	glm::mat4 m_mat4OrthographicProjection;
+public:
 	// shader handles
 	Shader m_tColorShader, m_tTextureShader, m_tMaskedColorShader, m_tCrosshairShader;
 	// Buffer Handles
@@ -57,7 +63,16 @@ public:
 	// Init/Loads/Frees
 	void InitRenderer();
 	// Work
+	// during a frame and before rendering, this updates some objects that will be constant for the duration of a frame, i.e. camera and projection matrix
+	void UpdateFrameConstants(const Camera& rCamera, const Window& rWindow);
+	void UpdateProjectionMatrices(const Camera& rCamera, const Window& rWindow);
 	void Render(const Camera& rCamera, Window& rWindow, const Visualization& rScene);
+
+	glm::vec3 ConstructRayDirectionFromMousePosition(const Window& rWindow) const;
+
+	// Getters
+	const glm::mat4& GetCameraMatrix() const;
+	const glm::mat4& GetPerspectiveProjectionMatrix() const;
 private:
 	SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
 	void LoadShaders();

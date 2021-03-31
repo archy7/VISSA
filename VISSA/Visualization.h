@@ -55,10 +55,7 @@ public:
 	bool m_bRenderObjectBoundingSpheres;
 	bool m_bRenderGridXPlane;
 	bool m_bRenderGridYPlane;
-	bool m_bRenderGridZPlane;
-
-	bool m_bBVHTreesValid;
-	
+	bool m_bRenderGridZPlane;	
 	
 	void Load();
 	void Update(float fDeltaTime);
@@ -77,6 +74,7 @@ public:
 	void SetNewBVHConstructionStrategy(eBVHConstructionStrategy eNewStrategy);
 	void SetFocusedObject(SceneObject* pFocusedObject);
 	SceneObject* GetCurrentlyFocusedObject();
+	void DeleteCurrentlyFocusedObject();
 
 private:
 	eBVHConstructionStrategy m_eConstructionStrategy;

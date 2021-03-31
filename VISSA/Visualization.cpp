@@ -22,8 +22,7 @@ Visualization::Visualization() :
 	m_bRenderObjectBoundingSpheres(false),
 	m_bRenderGridXPlane(false),
 	m_bRenderGridYPlane(false),
-	m_bRenderGridZPlane(false),
-	m_bBVHTreesValid(false)
+	m_bRenderGridZPlane(false)
 {
 	InitPlaybackSpeeds();
 	InitRenderColors();
@@ -192,9 +191,24 @@ void Visualization::SetFocusedObject(SceneObject * pFocusedObject)
 
 SceneObject * Visualization::GetCurrentlyFocusedObject()
 {
-	assert(m_pCurrentlyFocusedObject);		// u are asking for something that isnt there. your logic is flawed
+	assert(m_pCurrentlyFocusedObject);		// u are asking for something that is not there. your logic is flawed
 
 	return m_pCurrentlyFocusedObject;
+}
+
+void Visualization::DeleteCurrentlyFocusedObject()
+{
+	assert(m_pCurrentlyFocusedObject);	// no object currently focused. your logic is flawed
+
+	for (auto it = m_vecObjects.begin(); it != m_vecObjects.end(); it++)
+	{
+		if (&(*it) == m_pCurrentlyFocusedObject)
+		{
+			m_vecObjects.erase(it);
+			m_pCurrentlyFocusedObject = nullptr;
+			break;
+		}
+	}
 }
 
 void Visualization::ClearPreviousVisualization()

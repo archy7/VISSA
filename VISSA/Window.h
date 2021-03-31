@@ -19,7 +19,9 @@ struct Window {
 	int32_t m_iWindowWidth, m_iWindowHeight;
 	float m_fLastXOfMouse, m_fLastYOfMouse;
 	bool m_bFirstMouse;
-	bool m_bMouseCaptured;
+private:
+	int m_iMouseShowingStack;
+public:
 	bool m_bIsInitialized;
 
 	void InitWindow();
@@ -27,7 +29,14 @@ struct Window {
 	void CleanUpSequence();
 	void RecreateWindow();
 	int WindowShouldClose();
-	void SetMouseCaptured(bool bIsCaptured);
+	void IncreasMouseShowingStack();
+	void DecreasMouseShowingStack();
+	void ChangeMouseShowingStack(int iChange);
+	void SetHardCaptureMouse(bool bIsCaptureNow);
 	bool IsMinimized() const;
+	bool IsMouseCaptured() const;
 	MousePositionInWindow GetCurrentMousePosition() const;
+
+private:
+	void UpdateGLFWMouseCaptureBehaviour();
 };

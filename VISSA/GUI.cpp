@@ -24,6 +24,20 @@ namespace {
 	};
 
 	GenericBackup<SceneObject::Transform> tObjectPropertiesBackup;
+
+	// Helper to display a little (?) mark which shows a tooltip when hovered.
+	void HelpMarker(const char* desc)
+	{
+		ImGui::TextDisabled("(?)");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+			ImGui::TextUnformatted(desc);
+			ImGui::PopTextWrapPos();
+			ImGui::EndTooltip();
+		}
+	}
 }
 
 GUI::GUI():
@@ -201,8 +215,8 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	if (ImGui::Button("SLOWER"))
 		rEngine.m_tVisualization.DecreaseSimulationSpeed();
 	
-	if (ImGui::Button("OPTIONS"))
-		m_bShowSimulationOptions = true;
+	if (ImGui::Button("OPTIONS and PARAMTERS"))
+		m_bShowSimulationOptions = !m_bShowSimulationOptions;
 
 
 	ImGui::End();
@@ -269,16 +283,13 @@ void GUI::RenderSimOptions(Engine& rEngine)
 		ImGui::ColorEdit3("Node Color##BOTTOMUP", (float*)&rEngine.m_tVisualization.m_vec4BottomUpNodeRenderColor, iColorPickerFlags);
 	}
 
-	/*if (rEngine.m_tVisualization.m_bBVHTreesValid == false)
-	{
-		if (ImGui::Button("Rebuild BVHs"))
-		{
-			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
-			rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
-			rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
-			rEngine.m_tVisualization.m_bBVHTreesValid = true;
-		}
-	}*/
+	//if (ImGui::Button("Rebuild BVHs"))
+	//{
+	//	CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
+	//	rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
+	//	rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
+	//	rEngine.m_tVisualization.m_bBVHTreesValid = true;
+	//}
 	
 	ImGui::Separator();
 	// now follow options that are generally available in the visualization
@@ -359,18 +370,53 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 		m_bDisplayObjectPropertiesChangesWereMade = true;
 	if(ImGui::InputFloat4("Rotation", &(pCurrentlyFocusedObject->m_tTransform.m_tRotation.m_vec3Axis.x), "%.2f", flags))
 		m_bDisplayObjectPropertiesChangesWereMade = true;
+	ImGui::SameLine(); HelpMarker("[X][Y][Z][angle]");	
+	if (ImGui::Button("DELETE OBJECT"))
+	{
+		ImGui::OpenPopup("CONFIRM OBJECT DELETION");
+	}
+	{
+		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
+		if (ImGui::BeginPopupModal("CONFIRM OBJECT DELETION", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Are you sure?");
+			//ImGui::TextWrapped("Deleting this object will reconstruct the Bounding Volume Hierarchy and resest the simulation. It cannot be undone.");
+			if (ImGui::Button("YES", ImVec2(120, 0)))
+			{
+				m_bShowObjectPropertiesWindow = false; // closes the window
+
+				rEngine.m_tVisualization.DeleteCurrentlyFocusedObject(); // do it
+
+				// all updates and reset the sim
+				CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
+				rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
+				rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
+				rEngine.m_tVisualization.ResetSimulation();
+			}
+			ImGui::SetItemDefaultFocus();
+			ImGui::SameLine();
+			if (ImGui::Button("CANCEL", ImVec2(120, 0)))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
+	}
+
+	
 	if (m_bDisplayObjectPropertiesChangesWereMade)
-		ImGui::TextWrapped("Applying changes to object properties [OK] will invalidate the BVH. It will automatically reconstructed and the visualization reset. Clicking [CANCEL] will discard all changes.");
+		ImGui::TextWrapped("Applying changes to object properties [OK] will invalidate the BVH. It will automatically be reconstructed and the visualization reset. Clicking [CANCEL] will discard all changes.");
 
 	if (ImGui::Button("OK"))
 	{
 		m_bShowObjectPropertiesWindow = false; // closes this window
 		tObjectPropertiesBackup.m_bValid = false; // backup data will need to be fetched again
 
-		if (m_bDisplayObjectPropertiesChangesWereMade) // only invalidate the trees if actual changes were made
+		if (m_bDisplayObjectPropertiesChangesWereMade) // only reconstruct the trees if actual changes were made
 		{
-			rEngine.m_tVisualization.m_bBVHTreesValid = false;
+			// all updates and reset the sim
 			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
 			rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
 			rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
@@ -384,7 +430,7 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 	if (ImGui::Button("CANCEL"))
 	{
 		m_bShowObjectPropertiesWindow = false; // closes this window
-		tObjectPropertiesBackup.m_bValid = false; // backup data will need to be fetched again
+		tObjectPropertiesBackup.m_bValid = false; // future backup data will need to be fetched again
 
 		// rolling back changes
 		pCurrentlyFocusedObject->m_tTransform = tObjectPropertiesBackup.m_tBackedupData;
@@ -406,7 +452,7 @@ void GUI::ConditionallyRenderQuitConfirmation(Engine& rEngine)
 		ImGui::Text("Are you sure?");
 		if (ImGui::Button("YES", ImVec2(120, 0)))
 		{
-			glfwSetWindowShouldClose(rEngine.m_tWindow.m_pGLFWwindow, true);
+			glfwSetWindowShouldClose(rEngine.m_tWindow.m_pGLFWwindow, true);	// it's all ogre now
 		}
 		ImGui::SetItemDefaultFocus();
 		ImGui::SameLine();
@@ -434,10 +480,9 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
 			rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
 			rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
-			rEngine.m_tVisualization.m_bBVHTreesValid = true;
 
 			// UI relevant
-			rEngine.m_tWindow.SetMouseCaptured(true);
+			rEngine.m_tWindow.SetHardCaptureMouse(true);
 			ShowMenu(false);
 			m_bShowSimulationControlPanel = true;
 			m_bCaptureMouse = false;

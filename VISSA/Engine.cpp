@@ -86,8 +86,9 @@ void Engine::ProcessKeyboardInput()
 				if (IsDiscreteKeyReady(iCurrentKey))
 				{
 					m_tGUI.ShowMenu(!m_tGUI.IsMenuActive());
-					m_tWindow.SetMouseCaptured(!m_tGUI.IsMenuActive());	// mouse is captured by window when menu active and vice versa
-					m_tGUI.SetCaptureMouse(m_tGUI.IsMenuActive());
+					//m_tWindow.ChangeMouseShowingStack(m_tGUI.IsMenuActive() ? 1: -1); // mouse wants to show when menu is active
+					m_tWindow.SetHardCaptureMouse(!m_tGUI.IsMenuActive());
+					m_tGUI.SetCaptureMouse(m_tGUI.IsMenuActive());	// the GUI captures mouse input when the menu is active
 				}
 			}
 		}
@@ -105,15 +106,15 @@ void Engine::ProcessKeyboardInput()
 
 				if (IsDiscreteKeyReady(iCurrentKey))
 				{
-					m_tWindow.SetMouseCaptured(!m_tWindow.m_bMouseCaptured);	// toggle between captured mouse or a cursor
-					m_tGUI.SetCaptureMouse(!m_tGUI.IsMouseCaptured());			// toggle GUI behaviour
+					m_tWindow.SetHardCaptureMouse(!m_tWindow.IsMouseCaptured());	// toggle between captured mouse or a cursor
+					m_tGUI.SetCaptureMouse(!m_tWindow.IsMouseCaptured());			// control GUI behaviour
 				}
 			}
 
 			/*
 				inputs that are only available when the mouse is captured/the camera controlled
 			*/
-			if (m_tWindow.m_bMouseCaptured)
+			if (m_tWindow.IsMouseCaptured())
 			{
 				Camera& rCamera = m_tCamera;
 
@@ -181,7 +182,7 @@ void Engine::MouseMoveCallBack(GLFWwindow* pWindow, double dXPosition, double dY
 		if (!pEngine->m_tGUI.IsMenuActive())
 		{
 			Window& rWindow = pEngine->m_tWindow;
-			if (rWindow.m_bMouseCaptured) // Control the camera only when mouse is captured
+			if (rWindow.IsMouseCaptured()) // Control the camera only when mouse is captured
 			{
 				if (rWindow.m_bFirstMouse)
 				{
@@ -224,8 +225,10 @@ void Engine::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 		{
 			if (iButton == GLFW_MOUSE_BUTTON_LEFT && iAction == GLFW_PRESS) // single click of left mouse button
 			{
+				// TODO: yes, there is code duplication going on here. however, the entire scope of how clicks are handled is unclear. that is why improving this might be pointless
+
 				Window& rWindow = pEngine->m_tWindow;
-				if (rWindow.m_bMouseCaptured)	// reacting to clicks made while camera control is active
+				if (rWindow.IsMouseCaptured())	// reacting to clicks made while camera control is active
 				{
 					// construct ray
 					CollisionDetection::Ray tRay(pEngine->m_tCamera.GetCurrentPosition(), pEngine->m_tCamera.GetFrontVector());
@@ -240,29 +243,36 @@ void Engine::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 						pEngine->m_tGUI.SetObjectPropertiesWindowPosition(static_cast<float>(pEngine->m_tWindow.m_iWindowWidth * 0.5f), static_cast<float>(pEngine->m_tWindow.m_iWindowHeight *0.5f)); // center of window						
 						pEngine->m_tGUI.ShowObjectPropertiesWindow(true);
 					}
-
-					/*if (tResult.IntersectionWithObjectOccured())
+					else
 					{
-						SceneObject* pSceneObject = tResult.m_pFirstIntersectedSceneObject;
-						printf("Scene Object hit!\n");
-						if (pSceneObject->m_eType == SceneObject::eType::CUBE)
-							printf("It is a CUBE!\n");
-						else
-							printf("It is a SPHERE!\n");
-						printf("Its position is: X=%f, Y=%f, Z=%f\n", pSceneObject->m_tTransform.m_vec3Position.x, pSceneObject->m_tTransform.m_vec3Position.y, pSceneObject->m_tTransform.m_vec3Position.z);
-						printf("\n");
-					}*/
+						pEngine->m_tGUI.ShowObjectPropertiesWindow(false);
+					}
 				}
 				else	// reacting to clicks of a freely moving cursor
 				{
-					// do somethig with result
-					Window::MousePositionInWindow tCurrentMousePosition = pEngine->m_tWindow.GetCurrentMousePosition();
-					pEngine->m_tGUI.SetObjectPropertiesWindowPosition(tCurrentMousePosition.m_fXPosition, tCurrentMousePosition.m_fYPosition); // current mouse position
-					pEngine->m_tGUI.ShowObjectPropertiesWindow(true);
+					// extra step: the freely moving cursor position is, in world space, not aligned with the camera position. needs adjustment!
+					const glm::vec3 vec3RayDirection = pEngine->m_tRenderer.ConstructRayDirectionFromMousePosition(rWindow);
+
+					// construct ray
+					CollisionDetection::Ray tRay(pEngine->m_tCamera.GetCurrentPosition(), vec3RayDirection);
+
+					// check for intersections with ray
+					CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tTopDownBVH, tRay);
+
+					// execute orders in accordance with the result
+					if (tResult.IntersectionWithObjectOccured())
+					{
+						pEngine->m_tVisualization.SetFocusedObject(tResult.m_pFirstIntersectedSceneObject);
+						Window::MousePositionInWindow tCurrentMousePosition = pEngine->m_tWindow.GetCurrentMousePosition();
+						pEngine->m_tGUI.SetObjectPropertiesWindowPosition(tCurrentMousePosition.m_fXPosition, tCurrentMousePosition.m_fYPosition); // center of window						
+						pEngine->m_tGUI.ShowObjectPropertiesWindow(true);
+					}
+					else
+					{
+						pEngine->m_tGUI.ShowObjectPropertiesWindow(false);
+					}
 				}
 			}
-
-			
 		}
 	}
 }
