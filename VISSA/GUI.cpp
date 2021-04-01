@@ -36,12 +36,12 @@ namespace {
 	struct SceneObjectViewModel {
 		SceneObject m_tSceneObject;
 		int iCurrentlySelectedDropDownIndex = 0;
-	} tSceneObjectViewModel;
+	} tObjectCreationViewModel;
 	
 
 	void ResetObjectCreationViewModel(){
-		tSceneObjectViewModel.m_tSceneObject = SceneObject();
-		tSceneObjectViewModel.iCurrentlySelectedDropDownIndex = 0;
+		tObjectCreationViewModel.m_tSceneObject = SceneObject();
+		tObjectCreationViewModel.iCurrentlySelectedDropDownIndex = 0;
 	}
 
 	// Helper to display a little (?) mark which shows a tooltip when hovered.
@@ -245,7 +245,7 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	if (ImGui::Button("SLOWER"))
 		rEngine.m_tVisualization.DecreaseSimulationSpeed();
 	
-	if (ImGui::Button("OPTIONS and PARAMTERS"))
+	if (ImGui::Button("SIMULATION OPTIONS"))
 		m_bShowSimulationOptions = !m_bShowSimulationOptions;
 
 	ImGui::End();
@@ -494,24 +494,30 @@ void GUI::RenderObjectCreationWindow(Engine & rEngine)
 
 	ImGui::Begin("Object Creation", nullptr, window_flags);
 
-	SceneObject* pObjectCreationData = &tSceneObjectViewModel.m_tSceneObject;
+	SceneObject* pObjectCreationData = &tObjectCreationViewModel.m_tSceneObject;
 
 	// The combo box to choose a BVH construction strategy
 	const char* pItems[] = { "CUBE", "SPHERE" };
-	int iCurrentItemIndex = static_cast<int>(tSceneObjectViewModel.iCurrentlySelectedDropDownIndex);
-	const char* sComboLabel = pItems[iCurrentItemIndex];  // Label to preview before opening the combo (technically it could be anything)
+	int iCurrentlySelectedItemIndex = static_cast<int>(tObjectCreationViewModel.iCurrentlySelectedDropDownIndex);
+	const char* sComboLabel = pItems[iCurrentlySelectedItemIndex];  // Label to preview before opening the combo (technically it could be anything)
 	if (ImGui::BeginCombo("##BVH Construction Strategy", sComboLabel))
 	{
-		for (int iCurrentItem = 0; iCurrentItem < IM_ARRAYSIZE(pItems); iCurrentItem++)
+		for (int iCurrentItemIndex = 0; iCurrentItemIndex < IM_ARRAYSIZE(pItems); iCurrentItemIndex++)
 		{
-			const bool bIsSelected = (iCurrentItemIndex == iCurrentItem);
-			if (ImGui::Selectable(pItems[iCurrentItem], bIsSelected))
+			const bool bIsSelected = (iCurrentlySelectedItemIndex == iCurrentItemIndex);
+			if (ImGui::Selectable(pItems[iCurrentItemIndex], bIsSelected))
 			{
 				// TODO: this is really ugly
-				if (iCurrentItem == 0)
+				if (iCurrentItemIndex == 0)
+				{
+					tObjectCreationViewModel.iCurrentlySelectedDropDownIndex = iCurrentItemIndex;
 					pObjectCreationData->m_eType = SceneObject::eType::CUBE;
-				else if (iCurrentItem == 1)
+				}	
+				else if (iCurrentItemIndex == 1)
+				{
+					tObjectCreationViewModel.iCurrentlySelectedDropDownIndex = iCurrentItemIndex;
 					pObjectCreationData->m_eType = SceneObject::eType::SPHERE;
+				}
 			}
 
 			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
@@ -532,7 +538,7 @@ void GUI::RenderObjectCreationWindow(Engine & rEngine)
 
 	if (ImGui::Button("OK"))
 	{
-		rEngine.m_tVisualization.AddNewSceneObject(tSceneObjectViewModel.m_tSceneObject);
+		rEngine.m_tVisualization.AddNewSceneObject(tObjectCreationViewModel.m_tSceneObject);
 
 		// all updates and reset the sim TODO: when refactoring the classes, this should be done in the Add....() function used above
 		CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
