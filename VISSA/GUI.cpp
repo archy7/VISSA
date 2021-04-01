@@ -343,15 +343,33 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	
 	ImGui::Separator();
 
+	// X axis grid
 	ImGui::Text("X Axis Grid"); ImGui::SameLine(); HelpMarker("A rasterized grid facing the X axis, spanning the YZ plane. Grid size = 100cm");
 	ImGui::ColorEdit3("Color##X", (float*)&rEngine.m_tVisualization.m_vec4GridColorX, iColorPickerFlags); ImGui::SameLine();
-	ImGui::Checkbox("Visibility##checkBoxXGrid", &rEngine.m_tVisualization.m_bRenderGridXPlane);
+	ImGui::Checkbox("Visibility##checkBoxXGrid", &rEngine.m_tVisualization.m_bRenderGridXPlane); ImGui::SameLine();
+	ImGui::PushButtonRepeat(true);
+	if (ImGui::ArrowButton("##Xdown", ImGuiDir_Down)) { rEngine.m_tVisualization.m_vec3GridPositionsOnAxes.x -= 10.0f; }
+	ImGui::SameLine();
+	if (ImGui::ArrowButton("##Xup", ImGuiDir_Up)) { rEngine.m_tVisualization.m_vec3GridPositionsOnAxes.x += 10.0f; }
+	ImGui::PopButtonRepeat();
+	// Y axis grid
 	ImGui::Text("Y Axis Grid"); ImGui::SameLine(); HelpMarker("A rasterized grid facing the Y axis, spanning the XZ plane. Grid size = 100cm");
 	ImGui::ColorEdit3("Color##Y", (float*)&rEngine.m_tVisualization.m_vec4GridColorY, iColorPickerFlags); ImGui::SameLine();
-	ImGui::Checkbox("Visibility##checkBoxYGrid", &rEngine.m_tVisualization.m_bRenderGridYPlane); 
+	ImGui::Checkbox("Visibility##checkBoxYGrid", &rEngine.m_tVisualization.m_bRenderGridYPlane); ImGui::SameLine();
+	ImGui::PushButtonRepeat(true);
+	if (ImGui::ArrowButton("##Ydown", ImGuiDir_Down)) { rEngine.m_tVisualization.m_vec3GridPositionsOnAxes.y -= 10.0f; }
+	ImGui::SameLine();
+	if (ImGui::ArrowButton("##Yup", ImGuiDir_Up)) { rEngine.m_tVisualization.m_vec3GridPositionsOnAxes.y += 10.0f; }
+	ImGui::PopButtonRepeat();
+	// Z axis grid
 	ImGui::Text("Z Axis Grid"); ImGui::SameLine(); HelpMarker("A rasterized grid facing the Z axis, spanning the XY plane. Grid size = 100cm");
 	ImGui::ColorEdit3("Color##Z", (float*)&rEngine.m_tVisualization.m_vec4GridColorZ, iColorPickerFlags); ImGui::SameLine();
-	ImGui::Checkbox("Visibility##checkBoxZGrid", &rEngine.m_tVisualization.m_bRenderGridZPlane); 
+	ImGui::Checkbox("Visibility##checkBoxZGrid", &rEngine.m_tVisualization.m_bRenderGridZPlane); ImGui::SameLine();
+	ImGui::PushButtonRepeat(true);
+	if (ImGui::ArrowButton("##Zdown", ImGuiDir_Down)) { rEngine.m_tVisualization.m_vec3GridPositionsOnAxes.z -= 10.0f; }
+	ImGui::SameLine();
+	if (ImGui::ArrowButton("##Zup", ImGuiDir_Up)) { rEngine.m_tVisualization.m_vec3GridPositionsOnAxes.z += 10.0f; }
+	ImGui::PopButtonRepeat();
 	
 	ImGui::Separator();
 	ImGui::Text("Crosshair");

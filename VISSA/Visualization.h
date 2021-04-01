@@ -44,6 +44,7 @@ public:
 	glm::vec4 m_vec4TopDownNodeRenderColor;
 	glm::vec4 m_vec4BottomUpNodeRenderColor;
 	glm::vec4 m_vec4CrossHairColor;
+	glm::vec3 m_vec3GridPositionsOnAxes;
 	float m_fCrossHairScaling;
 	float m_pPlaybackSpeeds[5]; // in Steps per second
 	size_t m_uiCurrentPlayBackSpeedIndex;

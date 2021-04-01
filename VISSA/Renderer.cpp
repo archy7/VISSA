@@ -640,6 +640,7 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 		{
 			// calculate the model matrix for each object and pass it to shader before drawing
 			glm::mat4 mat4WorldXPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+			mat4WorldXPlane = glm::translate(mat4WorldXPlane, glm::vec3(rScene.m_vec3GridPositionsOnAxes.x, 0.0f, 0.0f));
 			mat4WorldXPlane = glm::rotate(mat4WorldXPlane, glm::pi<float>() * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
 			rCurrentShader.setMat4("world", mat4WorldXPlane);
 
@@ -653,6 +654,7 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 		{
 			// calculate the model matrix for each object and pass it to shader before drawing
 			glm::mat4 mat4WorldYPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+			mat4WorldYPlane = glm::translate(mat4WorldYPlane, glm::vec3(0.0f, rScene.m_vec3GridPositionsOnAxes.y, 0.0f));
 			rCurrentShader.setMat4("world", mat4WorldYPlane);
 			// no rotation needed since the default rendered plane is defined as lying flat on the "ground", facing upwards
 
@@ -665,6 +667,7 @@ void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWi
 		if (rScene.m_bRenderGridZPlane)
 		{
 			glm::mat4 mat4WorldZPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+			mat4WorldZPlane = glm::translate(mat4WorldZPlane, glm::vec3(0.0f, 0.0f, -rScene.m_vec3GridPositionsOnAxes.z));
 			mat4WorldZPlane = glm::rotate(mat4WorldZPlane, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f));
 			rCurrentShader.setMat4("world", mat4WorldZPlane);
 
