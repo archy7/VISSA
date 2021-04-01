@@ -220,16 +220,23 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	if (ImGui::Button("RESET"))
 		rEngine.m_tVisualization.ResetSimulation();
 	ImGui::SameLine();
-	if (ImGui::Button("PLAY"))
-		rEngine.m_tVisualization.PlaySimulation();
-	ImGui::SameLine();
-	if (ImGui::Button("PAUSE"))
-		rEngine.m_tVisualization.PauseSimulation();
+
+	if (rEngine.m_tVisualization.m_ePresentationMode == Visualization::ePresentationMode::DISCRETE)
+	{
+		if (ImGui::Button("PLAY"))
+			rEngine.m_tVisualization.PlaySimulation();
+	}
+	else
+	{
+		if (ImGui::Button("PAUSE"))
+			rEngine.m_tVisualization.PauseSimulation();
+	}
 	ImGui::SameLine();
 	if (ImGui::Button("STEP"))
 		rEngine.m_tVisualization.MoveToNextSimulationStep();
 	ImGui::SameLine();
-	if (ImGui::Button("INVERT"))
+	std::string sInverButtonLabel = (rEngine.m_tVisualization.m_iSimulationDirectionSign == 1) ? "REVERSE PLAYBACK" : "FORWARD PLAYBACK";
+	if (ImGui::Button(sInverButtonLabel.c_str()))
 		rEngine.m_tVisualization.InvertSimulationProgression();
 	ImGui::SameLine();
 	if (ImGui::Button("FASTER"))
@@ -240,7 +247,6 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	
 	if (ImGui::Button("OPTIONS and PARAMTERS"))
 		m_bShowSimulationOptions = !m_bShowSimulationOptions;
-
 
 	ImGui::End();
 }
