@@ -20,6 +20,12 @@ struct SceneObject {
 			float m_fAngle = 0.0f;
 		} m_tRotation;
 
+		bool HasUniformScaling() const{
+			const bool bXandYUniform = m_vec3Scale.x == m_vec3Scale.y;
+			const bool bXandZUniform = m_vec3Scale.x == m_vec3Scale.z;
+			return bXandYUniform && bXandZUniform;
+		}
+
 	} m_tTransform;
 
 	CollisionDetection::AABB m_tLocalSpaceAABB;

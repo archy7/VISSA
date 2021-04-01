@@ -64,9 +64,19 @@ namespace CollisionDetection {
 	AABB ConstructAABBFromVertexData(float* pVertices, size_t uiNumberOfVertices);
 	
 	/*
-		Creates a new AABB based on the local space AABB, taking into consideration its new position, scale, and rotation
+		Creates a new AABB based on the local space AABB, taking into consideration its new position, UNIFORM scale, and rotation.
+		Uniform scaling can easily be supported by the common and efficient way of updating an AABB.
+		Here, updating is performed on a per axis basis.
 	*/
-	AABB UpdateAABBFromAABB(const AABB& rLocalSpaceAABB, const glm::mat4& mat4Rotation, const glm::vec3& rTranslation, const glm::vec3& rScale);
+	AABB UpdateAABBFromAABB_UniformScaling(const AABB& rLocalSpaceAABB, const glm::mat4& mat4Rotation, const glm::vec3& rTranslation, const glm::vec3& rScale);
+	/*
+		Creates a new AABB based on the local space AABB, taking into consideration its new position, NON-UNIFORM scale, and rotation.
+		In order to support non-uniform scaling, a more expensive approach to updating AABBs is required.
+		Here, updating is performed on a per "corner point of AABB" basis.
+
+		
+	*/
+	AABB UpdateAABBFromAABB_NonUniformScaling(const AABB& rLocalSpaceAABB, const glm::mat4& mat4Transform);
 
 	int StaticTestAABBagainstAABB(const AABB& rAABB, const AABB& rOtherAABB);
 
@@ -110,7 +120,7 @@ namespace CollisionDetection {
 		}
 	};
 
-	struct TreeNodeAABBForRendering {
+	struct TreeNodeForRendering {
 		BVHTreeNode* m_pNodeToBeRendered;
 		int16_t m_iTreeDepth = 0u;
 		int16_t m_iRenderingOrder = 0u; // when stepping through the simulation, this determines in which order AABBs are rendered.
@@ -129,8 +139,8 @@ namespace CollisionDetection {
 	BVHTreeNode* BottomUpBVTree(SceneObject* pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization);
 	void FindBottomUpNodesToMerge(BVHTreeNode** pNode, size_t uiNumNodes, size_t& rNodeIndex1, size_t& rNodeIndex2);
 	AABB MergeTwoAABBs(const AABB& rAABB1, const AABB& rAABB2);
-	void TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode* pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
-	void TraverseTreeForAABBDataForBottomUpRendering(BVHTreeNode* pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
+	void TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
+	void TraverseTreeForAABBDataForBottomUpRendering(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
 	AABB CreateAABBForMultipleObjects(const SceneObject* pScenObjects, size_t uiNumSceneObjects);
 	BoundingSphere CreateBoundingSphereForMultipleSceneObjects(const SceneObject* pSceneObjects, size_t uiNumSceneObjects);
 	size_t PartitionSceneObjectsInPlace(SceneObject* pSceneObjects, size_t uiNumSceneObjects);

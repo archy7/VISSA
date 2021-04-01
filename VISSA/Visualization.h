@@ -30,8 +30,12 @@ public:
 private:
 	SceneObject* m_pCurrentlyFocusedObject;
 public:
-	std::vector<CollisionDetection::TreeNodeAABBForRendering> m_vecTreeAABBsForTopDownRendering;
-	std::vector<CollisionDetection::TreeNodeAABBForRendering> m_vecTreeAABBsForBottomUpRendering;
+	CollisionDetection::BoundingVolumeHierarchy m_tTopDownBVH;
+	CollisionDetection::BoundingVolumeHierarchy m_tBottomUpBVH;
+	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeAABBsForTopDownRendering;
+	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeAABBsForBottomUpRendering;
+	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeBoundingSpheresForTopDownRendering;
+	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeBoundingSpheresForBottomUpRendering;
 	glm::vec4 m_vec4GridColorX;
 	glm::vec4 m_vec4GridColorY;
 	glm::vec4 m_vec4GridColorZ;
@@ -58,6 +62,8 @@ public:
 	bool m_bRenderGridZPlane;	
 	
 	void Load();
+	void ReconstructAllTrees();
+	void UpdateAfterObjectPropertiesChange();
 	void Update(float fDeltaTime);
 
 	// simulation controls
@@ -66,6 +72,7 @@ public:
 	void PauseSimulation();
 	void IncreaseSimulationSpeed();
 	void DecreaseSimulationSpeed();
+	float GetCurrentSimulationSpeed() const;
 	void InvertSimulationProgression();			// instead of advancing "forward", the simulation now rolls "back", and vice versa
 	void MoveToNextSimulationStep();
 

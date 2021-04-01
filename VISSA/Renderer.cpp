@@ -998,7 +998,7 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 	if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
 	{
 		int16_t iAlreadyRenderedConstructionSteps = 0;
-		for (const CollisionDetection::TreeNodeAABBForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForTopDownRendering)
+		for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForTopDownRendering)
 		{
 			bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
 			bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
@@ -1017,7 +1017,7 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 	if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
 	{
 		int16_t iAlreadyRenderedConstructionSteps = 0;
-		for (const CollisionDetection::TreeNodeAABBForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForBottomUpRendering)
+		for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForBottomUpRendering)
 		{
 			bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
 			bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
@@ -1083,7 +1083,7 @@ void Renderer::RenderBoundingSphereOfSceneObject(const SceneObject & rSceneObjec
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void Renderer::RenderTreeNodeAABB(const CollisionDetection::TreeNodeAABBForRendering & rTreeNodeAABB, Shader & rShader)
+void Renderer::RenderTreeNodeAABB(const CollisionDetection::TreeNodeForRendering & rTreeNodeAABB, Shader & rShader)
 {
 	// the AABBs
 	const CollisionDetection::AABB& rRenderedAABB = rTreeNodeAABB.m_pNodeToBeRendered->m_tAABBForNode;

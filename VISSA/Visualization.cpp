@@ -103,6 +103,24 @@ void Visualization::Load()
 
 		m_vecObjects.push_back(tNewObject);
 	}
+
+	CollisionDetection::ConstructBoundingVolumesForScene(*this);
+	CollisionDetection::UpdateBoundingVolumesForScene(*this);
+	ReconstructAllTrees();
+}
+
+void Visualization::ReconstructAllTrees()
+{
+	m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(*this);
+	m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(*this);
+}
+
+void Visualization::UpdateAfterObjectPropertiesChange()
+{
+	// all updates and reset the sim
+	CollisionDetection::UpdateBoundingVolumesForScene(*this);
+	ReconstructAllTrees();
+	ResetSimulation();
 }
 
 void Visualization::Update(float fDeltaTime)
@@ -151,6 +169,11 @@ void Visualization::DecreaseSimulationSpeed()
 	assert(m_uiCurrentPlayBackSpeedIndex <= 4u);
 	if (m_uiCurrentPlayBackSpeedIndex > 0u)
 		m_uiCurrentPlayBackSpeedIndex--;
+}
+
+float Visualization::GetCurrentSimulationSpeed() const
+{
+	return m_pPlaybackSpeeds[m_uiCurrentPlayBackSpeedIndex];
 }
 
 void Visualization::InvertSimulationProgression()
@@ -209,14 +232,22 @@ void Visualization::DeleteCurrentlyFocusedObject()
 			break;
 		}
 	}
+
+	// all updates and reset the sim
+	CollisionDetection::UpdateBoundingVolumesForScene(*this);
+	ReconstructAllTrees();
+	ResetSimulation();
 }
 
 void Visualization::AddNewSceneObject(SceneObject & rNewSceneObject)
 {
 	m_vecObjects.push_back(rNewSceneObject);
 
-	// TODO: yes... this is not a clean solution. but it will do for now
+	// updating the data structures
 	CollisionDetection::ConstructBoundingVolumesForScene(*this);
+	CollisionDetection::UpdateBoundingVolumesForScene(*this);
+	ReconstructAllTrees();
+	ResetSimulation();
 }
 
 void Visualization::ClearPreviousVisualization()

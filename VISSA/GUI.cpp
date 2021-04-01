@@ -215,7 +215,7 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	if(m_bCaptureMouse == false)
 		window_flags |= ImGuiWindowFlags_NoMouseInputs;
 	
-	ImGui::Begin("Sim Controls", nullptr, window_flags);
+	ImGui::Begin("CONTROLS", nullptr, window_flags);
 
 	if (ImGui::Button("RESET"))
 		rEngine.m_tVisualization.ResetSimulation();
@@ -238,12 +238,15 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	std::string sInverButtonLabel = (rEngine.m_tVisualization.m_iSimulationDirectionSign == 1) ? "REVERSE PLAYBACK" : "FORWARD PLAYBACK";
 	if (ImGui::Button(sInverButtonLabel.c_str()))
 		rEngine.m_tVisualization.InvertSimulationProgression();
+
+
+	if (ImGui::Button("SLOWER"))
+		rEngine.m_tVisualization.DecreaseSimulationSpeed();
+	ImGui::SameLine();
+	ImGui::Text("Speed: %.2f", rEngine.m_tVisualization.GetCurrentSimulationSpeed());
 	ImGui::SameLine();
 	if (ImGui::Button("FASTER"))
 		rEngine.m_tVisualization.IncreaseSimulationSpeed();
-	ImGui::SameLine();
-	if (ImGui::Button("SLOWER"))
-		rEngine.m_tVisualization.DecreaseSimulationSpeed();
 	
 	if (ImGui::Button("SIMULATION OPTIONS"))
 		m_bShowSimulationOptions = !m_bShowSimulationOptions;
@@ -422,13 +425,7 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 			{
 				m_bShowObjectPropertiesWindow = false; // closes the window
 
-				rEngine.m_tVisualization.DeleteCurrentlyFocusedObject(); // do it
-
-				// all updates and reset the sim
-				CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
-				rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
-				rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
-				rEngine.m_tVisualization.ResetSimulation();
+				rEngine.m_tVisualization.DeleteCurrentlyFocusedObject();
 			}
 			ImGui::SetItemDefaultFocus();
 			ImGui::SameLine();
@@ -449,14 +446,10 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 		m_bShowObjectPropertiesWindow = false; // closes this window
 		tObjectPropertiesBackup.m_bValid = false; // backup data will need to be fetched again
 
-		if (m_bDisplayObjectPropertiesChangesWereMade) // only reconstruct the trees if actual changes were made
+		if (m_bDisplayObjectPropertiesChangesWereMade) // only update the trees if changes were commited
 		{
-			// all updates and reset the sim
-			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
-			rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
-			rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
-			rEngine.m_tVisualization.ResetSimulation();
-		}			
+			rEngine.m_tVisualization.UpdateAfterObjectPropertiesChange();
+		}
 
 		m_bDisplayObjectPropertiesChangesWereMade = false; // reset this flag
 		
@@ -540,12 +533,6 @@ void GUI::RenderObjectCreationWindow(Engine & rEngine)
 	{
 		rEngine.m_tVisualization.AddNewSceneObject(tObjectCreationViewModel.m_tSceneObject);
 
-		// all updates and reset the sim TODO: when refactoring the classes, this should be done in the Add....() function used above
-		CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
-		rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
-		rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
-		rEngine.m_tVisualization.ResetSimulation();
-
 		m_bShowObjectCreationWindow = false; // closes this window
 		ResetObjectCreationViewModel();
 	}
@@ -593,11 +580,7 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 		if (ImGui::Button("BOUNDING VOLUME HIERARCHY", ImVec2(0, 0)))
 		{
 			// CD relevant
-			rEngine.m_tVisualization.Load();	// really bad implementation
-			CollisionDetection::ConstructBoundingVolumesForScene(rEngine.m_tVisualization);
-			CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
-			rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
-			rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
+			rEngine.m_tVisualization.Load();	// really bad implementation of "loading"
 
 			// UI relevant
 			rEngine.m_tWindow.SetHardCaptureMouse(true);

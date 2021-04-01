@@ -63,15 +63,23 @@ float CollisionDetection::AABB::CalcMaximumZ() const
 float CollisionDetection::AABB::CalcMinimumForAxis(size_t uiAxisIndex) const
 {
 	assert(glm::length(m_vec3Radius) > 0.0f);
+	assert(uiAxisIndex <= 2u);	// logic
+	assert(uiAxisIndex <= std::numeric_limits<glm::vec3::length_type>::max()); // technical
 
-	return m_vec3Center[uiAxisIndex] - m_vec3Radius[uiAxisIndex];
+	const auto uiNonWarningProducingAxisIndex = static_cast<glm::vec3::length_type>(uiAxisIndex);
+
+	return m_vec3Center[uiNonWarningProducingAxisIndex] - m_vec3Radius[uiNonWarningProducingAxisIndex];
 }
 
 float CollisionDetection::AABB::CalcMaximumForAxis(size_t uiAxisIndex) const
 {
 	assert(glm::length(m_vec3Radius) > 0.0f);
+	assert(uiAxisIndex <= 2u);	// logic
+	assert(uiAxisIndex <= std::numeric_limits<glm::vec3::length_type>::max()); // technical
 
-	return m_vec3Center[uiAxisIndex] + m_vec3Radius[uiAxisIndex];
+	const auto uiNonWarningProducingAxisIndex = static_cast<glm::vec3::length_type>(uiAxisIndex);
+
+	return m_vec3Center[uiNonWarningProducingAxisIndex] + m_vec3Radius[uiNonWarningProducingAxisIndex];
 }
 
 void CollisionDetection::ConstructBoundingVolumesForScene(Visualization& rScene)
@@ -102,34 +110,27 @@ void CollisionDetection::UpdateBoundingVolumesForScene(Visualization & rScene)
 {
 	for (SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
 	{
-		if (rCurrentSceneObject.m_eType == SceneObject::eType::CUBE)
+		const SceneObject::Transform& rCurrentObjectTransform = rCurrentSceneObject.m_tTransform;
+
+		if (rCurrentObjectTransform.HasUniformScaling())
 		{
-			const SceneObject::Transform& rCurrentObjectTransform = rCurrentSceneObject.m_tTransform;
+			glm::mat4 mat4Transform = glm::mat4(1.0f); // identity
+			mat4Transform = glm::rotate(mat4Transform, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Axis);
 
-			glm::mat4 mat4Rotation = glm::mat4(1.0f); // identity					
-			mat4Rotation = glm::rotate(mat4Rotation, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Axis);
-
-			// construct the new AABB based on the current transform
-			rCurrentSceneObject.m_tWorldSpaceAABB = UpdateAABBFromAABB(rCurrentSceneObject.m_tLocalSpaceAABB, mat4Rotation, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
-			// updated Bounding Sphere
-			rCurrentSceneObject.m_tWorldSpaceBoundingSphere = UpdateBoundingSphere(rCurrentSceneObject.m_tLocalSpaceBoundingSphere, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
-		}
-		else if (rCurrentSceneObject.m_eType == SceneObject::eType::SPHERE)
-		{
-			const SceneObject::Transform& rCurrentObjectTransform = rCurrentSceneObject.m_tTransform;
-
-			glm::mat4 mat4Rotation = glm::mat4(1.0f); // identity
-			mat4Rotation = glm::rotate(mat4Rotation, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Axis);
-
-			// construct the new AABB based on the current transform
-			rCurrentSceneObject.m_tWorldSpaceAABB = UpdateAABBFromAABB(rCurrentSceneObject.m_tLocalSpaceAABB, mat4Rotation, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
-			// updated Bounding Sphere
-			rCurrentSceneObject.m_tWorldSpaceBoundingSphere = UpdateBoundingSphere(rCurrentSceneObject.m_tLocalSpaceBoundingSphere, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
+			rCurrentSceneObject.m_tWorldSpaceAABB = UpdateAABBFromAABB_UniformScaling(rCurrentSceneObject.m_tLocalSpaceAABB, mat4Transform, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
 		}
 		else
 		{
-			assert(!"nothing here");
+			glm::mat4 mat4Transform = glm::mat4(1.0f); // identity
+			mat4Transform = glm::translate(mat4Transform, rCurrentObjectTransform.m_vec3Position);
+			mat4Transform = glm::rotate(mat4Transform, glm::radians(rCurrentObjectTransform.m_tRotation.m_fAngle), rCurrentObjectTransform.m_tRotation.m_vec3Axis);
+			mat4Transform = glm::scale(mat4Transform, rCurrentObjectTransform.m_vec3Scale);
+
+			rCurrentSceneObject.m_tWorldSpaceAABB = UpdateAABBFromAABB_NonUniformScaling(rCurrentSceneObject.m_tLocalSpaceAABB, mat4Transform);
 		}
+		
+		// updated Bounding Sphere
+		rCurrentSceneObject.m_tWorldSpaceBoundingSphere = UpdateBoundingSphere(rCurrentSceneObject.m_tLocalSpaceBoundingSphere, rCurrentObjectTransform.m_vec3Position, rCurrentObjectTransform.m_vec3Scale);
 	}
 }
 
@@ -162,7 +163,7 @@ AABB CollisionDetection::ConstructAABBFromVertexData(float * pVertices, size_t u
 	}
 
 	/*
-		maximum and minimum extents along every axis are now stored
+		maximum and minimum extents along current axis are now stored
 		now to determine the radius of the AABB.
 		to tightly fit the AABB for the given vertices, the absolute distance to the centre, which is assumed to be 0,0,0 
 		are compared. The longer distance is the half-width for that axis.
@@ -178,9 +179,9 @@ AABB CollisionDetection::ConstructAABBFromVertexData(float * pVertices, size_t u
 	return tResult;
 }
 
-AABB CollisionDetection::UpdateAABBFromAABB(const AABB& rOldAABB, const glm::mat4& mat4Rotation, const glm::vec3& rTranslation, const glm::vec3& rScale)
+AABB CollisionDetection::UpdateAABBFromAABB_UniformScaling(const AABB& rLocalSpaceAABB, const glm::mat4& mat4Rotation, const glm::vec3& rTranslation, const glm::vec3& rScale)
 {
-	assert(glm::length(rOldAABB.m_vec3Radius) > 0.0f);	// make sure old AABB has already been constructed
+	assert(glm::length(rLocalSpaceAABB.m_vec3Radius) > 0.0f);	// make sure old AABB has already been constructed
 
 	AABB tResult;
 	
@@ -190,10 +191,50 @@ AABB CollisionDetection::UpdateAABBFromAABB(const AABB& rOldAABB, const glm::mat
 		tResult.m_vec3Radius[i] = 0.0f;				// and start with a radius of 0
 		for (int j = 0; j < 3; j++)		// for every axis of the old AABB
 		{
-			tResult.m_vec3Center[i] += mat4Rotation[i][j] * rOldAABB.m_vec3Center[j];				// we adjust the center. This only has an effect, when the old AABBs center was not {0,0,0}, like somewhere in world-space.	When the old AABBs centre point was in 0,0,0 local space, this will do nothing.
-			tResult.m_vec3Radius[i] += std::abs(mat4Rotation[i][j]) * rOldAABB.m_vec3Radius[j];		// we continuosly increase the radius, starting at 0. For every axis of the old, rotated old AABB (j), we add its impact to the radius of the axis of the new AABB (i)
+			tResult.m_vec3Center[i] += mat4Rotation[i][j] * rLocalSpaceAABB.m_vec3Center[j];				// we adjust the center. This only has an effect, when the old AABBs center was not {0,0,0}, like somewhere in world-space.	When the old AABBs centre point was in 0,0,0 local space, this will do nothing.
+			tResult.m_vec3Radius[i] += std::abs(mat4Rotation[i][j]) * rLocalSpaceAABB.m_vec3Radius[j];		// we continuosly increase the radius, starting at 0. For every axis of the old, rotated old AABB (j), we add its impact to the radius of the axis of the new AABB (i)
 		}
 		tResult.m_vec3Radius[i] *= rScale[i]; // we scale the current axis of the new AABB
+	}
+
+	return tResult;
+}
+
+AABB CollisionDetection::UpdateAABBFromAABB_NonUniformScaling(const AABB & rLocalSpaceAABB, const glm::mat4 & mat4Transform)
+{
+	assert(glm::length(rLocalSpaceAABB.m_vec3Radius) > 0.0f);	// make sure old AABB has already been constructed
+
+	AABB tResult;
+
+	// world space AABB center by extracting the 4th colum of the transform matrix
+	const glm::vec3 vec3NewAABBCenter = mat4Transform[3];
+	tResult.m_vec3Center = vec3NewAABBCenter;
+
+	// constructing all corner points of the old AABB
+	std::vector<glm::vec4> vecOldAABBCornerPoints{
+		glm::vec4(rLocalSpaceAABB.CalcMaximumX(), rLocalSpaceAABB.CalcMaximumY(), rLocalSpaceAABB.CalcMaximumZ(), 1.0f),
+		glm::vec4(rLocalSpaceAABB.CalcMinimumX(), rLocalSpaceAABB.CalcMaximumY(), rLocalSpaceAABB.CalcMaximumZ(), 1.0f),
+		glm::vec4(rLocalSpaceAABB.CalcMaximumX(), rLocalSpaceAABB.CalcMinimumY(), rLocalSpaceAABB.CalcMaximumZ(), 1.0f),
+		glm::vec4(rLocalSpaceAABB.CalcMaximumX(), rLocalSpaceAABB.CalcMaximumY(), rLocalSpaceAABB.CalcMinimumZ(), 1.0f),
+		glm::vec4(rLocalSpaceAABB.CalcMinimumX(), rLocalSpaceAABB.CalcMinimumY(), rLocalSpaceAABB.CalcMaximumZ(), 1.0f),
+		glm::vec4(rLocalSpaceAABB.CalcMaximumX(), rLocalSpaceAABB.CalcMinimumY(), rLocalSpaceAABB.CalcMinimumZ(), 1.0f),
+		glm::vec4(rLocalSpaceAABB.CalcMinimumX(), rLocalSpaceAABB.CalcMaximumY(), rLocalSpaceAABB.CalcMinimumZ(), 1.0f),
+		glm::vec4(rLocalSpaceAABB.CalcMinimumX(), rLocalSpaceAABB.CalcMinimumY(), rLocalSpaceAABB.CalcMinimumZ(), 1.0f),
+	};
+
+	for (const glm::vec4& rCurrentCornerPoint : vecOldAABBCornerPoints) // for every corner point
+	{
+		// transform it into world space
+		const glm::vec4 vec4WorldSpaceCornerPoint = mat4Transform * rCurrentCornerPoint;
+
+		// world space AABB half-widths
+		const float fHalfWidthXForCurrentCornerPoint = std::abs(vec4WorldSpaceCornerPoint.x - tResult.m_vec3Center.x);
+		const float fHalfWidthYForCurrentCornerPoint = std::abs(vec4WorldSpaceCornerPoint.y - tResult.m_vec3Center.y);
+		const float fHalfWidthZForCurrentCornerPoint = std::abs(vec4WorldSpaceCornerPoint.z - tResult.m_vec3Center.z);
+
+		tResult.m_vec3Radius.x = std::max(tResult.m_vec3Radius.x, fHalfWidthXForCurrentCornerPoint);
+		tResult.m_vec3Radius.y = std::max(tResult.m_vec3Radius.y, fHalfWidthYForCurrentCornerPoint);
+		tResult.m_vec3Radius.z = std::max(tResult.m_vec3Radius.z, fHalfWidthZForCurrentCornerPoint);
 	}
 
 	return tResult;
@@ -414,7 +455,7 @@ BoundingVolumeHierarchy CollisionDetection::ConstructBottomUPBVHForScene(Visuali
 	return tResult;
 }
 
-void CollisionDetection::TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode* pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
+void CollisionDetection::TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
 {
 	assert(pNode);
 
@@ -427,7 +468,7 @@ void CollisionDetection::TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode*
 		assert(pNode->m_pRight);
 
 		// save relevant data for rendering
-		TreeNodeAABBForRendering tNewAABBForRendering;
+		TreeNodeForRendering tNewAABBForRendering;
 		tNewAABBForRendering.m_iTreeDepth = iTreeDepth;
 		tNewAABBForRendering.m_pNodeToBeRendered = pNode;
 		rvecAABBsForRendering.push_back(tNewAABBForRendering);
@@ -441,7 +482,7 @@ void CollisionDetection::TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode*
 	// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
 }
 
-void CollisionDetection::TraverseTreeForAABBDataForBottomUpRendering(BVHTreeNode * pNode, std::vector<TreeNodeAABBForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
+void CollisionDetection::TraverseTreeForAABBDataForBottomUpRendering(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
 {
 	/*
 		This is going to be ugly.
@@ -463,7 +504,7 @@ void CollisionDetection::TraverseTreeForAABBDataForBottomUpRendering(BVHTreeNode
 		assert(pNode->m_pRight);
 
 		// the ugly part. finding the appropriate rendering object to assign it its true tree depth.
-		for (TreeNodeAABBForRendering& rCurrentRenderObject : rvecAABBsForRendering)
+		for (TreeNodeForRendering& rCurrentRenderObject : rvecAABBsForRendering)
 		{
 			if (pNode == rCurrentRenderObject.m_pNodeToBeRendered)
 			{
@@ -547,7 +588,7 @@ BVHTreeNode * CollisionDetection::BottomUpBVTree(SceneObject * pSceneObjects, si
 		pParentNode->m_tAABBForNode = MergeTwoAABBs(pTempNodes[uiMergedNodeIndex1]->m_tAABBForNode, pTempNodes[uiMergedNodeIndex2]->m_tAABBForNode);
 
 		// for visualization/rendering purposes
-		TreeNodeAABBForRendering tNewAABBForRendering;
+		TreeNodeForRendering tNewAABBForRendering;
 		tNewAABBForRendering.m_iRenderingOrder = iNumConstructedNodes++;
 		tNewAABBForRendering.m_pNodeToBeRendered = pParentNode;
 		rVisualization.m_vecTreeAABBsForBottomUpRendering.push_back(tNewAABBForRendering);
@@ -875,18 +916,18 @@ int CollisionDetection::IntersectRayAABB(const Ray & rIntersectingRay, const AAB
 	float fIntersectionDistanceMax = std::numeric_limits<float>::max();
 
 	// for all three slabs of the given AABB
-	for (size_t uiCurrentSlab = 0u; uiCurrentSlab < 3u; uiCurrentSlab++)
+	for (int iCurrentSlab = 0u; iCurrentSlab < 3u; iCurrentSlab++)
 	{
-		if (std::abs(rIntersectingRay.m_vec3Direction[uiCurrentSlab]) < std::numeric_limits<float>::epsilon()) // this tests if the ray is parallel to the current slab
+		if (std::abs(rIntersectingRay.m_vec3Direction[iCurrentSlab]) < std::numeric_limits<float>::epsilon()) // this tests if the ray is parallel to the current slab
 		{
-			if (rIntersectingRay.m_vec3Origin[uiCurrentSlab] < rAABB.CalcMinimumForAxis(uiCurrentSlab) || rIntersectingRay.m_vec3Origin[uiCurrentSlab] > rAABB.CalcMaximumForAxis(uiCurrentSlab))
+			if (rIntersectingRay.m_vec3Origin[iCurrentSlab] < rAABB.CalcMinimumForAxis(iCurrentSlab) || rIntersectingRay.m_vec3Origin[iCurrentSlab] > rAABB.CalcMaximumForAxis(iCurrentSlab))
 				return 0; // exit if ray origin is not witin slab -> no chance of intersection
 		}
 		else
 		{
-			const float fPredivisonFactor = 1.0f / rIntersectingRay.m_vec3Direction[uiCurrentSlab];
-			float fIntersectionDistance1 = (rAABB.CalcMinimumForAxis(uiCurrentSlab) - rIntersectingRay.m_vec3Origin[uiCurrentSlab]) * fPredivisonFactor;
-			float fIntersectionDistance2 = (rAABB.CalcMaximumForAxis(uiCurrentSlab) - rIntersectingRay.m_vec3Origin[uiCurrentSlab]) * fPredivisonFactor;
+			const float fPredivisonFactor = 1.0f / rIntersectingRay.m_vec3Direction[iCurrentSlab];
+			float fIntersectionDistance1 = (rAABB.CalcMinimumForAxis(iCurrentSlab) - rIntersectingRay.m_vec3Origin[iCurrentSlab]) * fPredivisonFactor;
+			float fIntersectionDistance2 = (rAABB.CalcMaximumForAxis(iCurrentSlab) - rIntersectingRay.m_vec3Origin[iCurrentSlab]) * fPredivisonFactor;
 			// make sure intersection distance 1 is the intersection distance with the near plane of the current slab
 			if (fIntersectionDistance1 > fIntersectionDistance2)
 				std::swap(fIntersectionDistance1, fIntersectionDistance2);

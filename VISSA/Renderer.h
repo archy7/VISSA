@@ -90,6 +90,6 @@ private:
 	void RenderDataStructureObjects(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
 	void RenderAABBOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
 	void RenderBoundingSphereOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
-	void RenderTreeNodeAABB(const CollisionDetection::TreeNodeAABBForRendering& rTreeNodeAABB, Shader& rShader);
+	void RenderTreeNodeAABB(const CollisionDetection::TreeNodeForRendering& rTreeNodeAABB, Shader& rShader);
 	void FreeGPUResources();
 };
