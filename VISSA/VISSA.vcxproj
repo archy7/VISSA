@@ -155,7 +155,7 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy /E /Y "$(MSBuildProjectDirectory)\resources\*" "$(SolutionDir)x64\Debug\resources"
-</Command>
+xcopy /E /Y "$(MSBuildProjectDirectory)\resources\*" "$(SolutionDir)x64\Release\resources"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
