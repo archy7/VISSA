@@ -13,6 +13,7 @@ Visualization::Visualization() :
 	m_iNumberStepsRendered(0),
 	m_ePresentationMode(DISCRETE),
 	m_eConstructionStrategy(TOPDOWN),
+	m_eBVHBoundingVolume(AABB),
 	m_pCurrentlyFocusedObject(nullptr),
 	m_fCrossHairScaling(1.0f),
 	m_uiCurrentPlayBackSpeedIndex(0u),
@@ -85,8 +86,8 @@ void Visualization::Load()
 	assert(vecNewObjectsPositions.size() == vecNewObjectsScales.size());
 	assert(vecNewObjectsScales.size() == vecNewObjectsRotations.size());
 
-	for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
-	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < 2; uiCurrentNewObject++)
+	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
+	for (int uiCurrentNewObject = 0; uiCurrentNewObject < 2; uiCurrentNewObject++)
 	{
 		SceneObject tNewObject;
 		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[uiCurrentNewObject];
@@ -111,8 +112,17 @@ void Visualization::Load()
 
 void Visualization::ReconstructAllTrees()
 {
-	m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(*this);
-	m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(*this);
+	m_tTopDownBVH_AABB.DeleteTree();
+	m_tTopDownBVH_AABB = CollisionDetection::ConstructTopDownAABBBVHForScene(*this);
+
+	m_tBottomUpBVH_AABB.DeleteTree();
+	m_tBottomUpBVH_AABB = CollisionDetection::ConstructBottomUpAABBBVHForScene(*this);
+
+	m_tTopDownBVH_BoundingSphere.DeleteTree();
+	m_tTopDownBVH_BoundingSphere = CollisionDetection::ConstructTopDownBoundingSphereBVHForScene(*this);
+
+	//m_tBottomUpBVH_BoundingSphere.DeleteTree();
+	//m_tBottomUpBVH_BoundingSphere = CollisionDetection::ConstructBottomUpBoundingSphereBVHForScene(*this);
 }
 
 void Visualization::UpdateAfterObjectPropertiesChange()
@@ -203,6 +213,16 @@ void Visualization::SetNewBVHConstructionStrategy(eBVHConstructionStrategy eNewS
 		m_eConstructionStrategy = eNewStrategy;
 		ResetSimulation();
 	}
+}
+
+Visualization::eBVHBoundingVolume Visualization::GetCurrentBVHBoundingVolume() const
+{
+	return m_eBVHBoundingVolume;
+}
+
+void Visualization::SetNewBVHBoundingVolume(eBVHBoundingVolume eNewBoundingVolume)
+{
+	m_eBVHBoundingVolume = eNewBoundingVolume;
 }
 
 void Visualization::SetFocusedObject(SceneObject * pFocusedObject)

@@ -275,17 +275,17 @@ void GUI::RenderSimOptions(Engine& rEngine)
 
 	ImGui::Text("Construction Strategy");
 	// The combo box to choose a BVH construction strategy
-	const char* pItems[] = { "TOP DOWN", "BOTTOM UP" };
-	int iCurrentItemIndex = static_cast<int>(rEngine.m_tVisualization.GetCurrenBVHConstructionStrategy());
-	const char* sComboLabel = pItems[iCurrentItemIndex];  // Label to preview before opening the combo (technically it could be anything)
-	if (ImGui::BeginCombo("##BVH Construction Strategy", sComboLabel))
+	const char* pBVHConstructionStrategyItems[] = { "TOP DOWN", "BOTTOM UP" };
+	int iCurrentConstructionStrategyItemIndex = static_cast<int>(rEngine.m_tVisualization.GetCurrenBVHConstructionStrategy());
+	const char* sConstructionStrategyComboLabel = pBVHConstructionStrategyItems[iCurrentConstructionStrategyItemIndex];  // Label to preview before opening the combo (technically it could be anything)
+	if (ImGui::BeginCombo("##BVH Construction Strategy", sConstructionStrategyComboLabel))
 	{
-		for (int iCurrentItem = 0; iCurrentItem < IM_ARRAYSIZE(pItems); iCurrentItem++)
+		for (int iCurrentItem = 0; iCurrentItem < IM_ARRAYSIZE(pBVHConstructionStrategyItems); iCurrentItem++)
 		{
-			const bool bIsSelected = (iCurrentItemIndex == iCurrentItem);
-			if (ImGui::Selectable(pItems[iCurrentItem], bIsSelected))
+			const bool bIsSelected = (iCurrentConstructionStrategyItemIndex == iCurrentItem);
+			if (ImGui::Selectable(pBVHConstructionStrategyItems[iCurrentItem], bIsSelected))
 			{
-				assert(iCurrentItem <= static_cast<int>(Visualization::eBVHConstructionStrategy::SIZE));
+				assert(iCurrentItem <= static_cast<int>(Visualization::eBVHConstructionStrategy::NUM_BVHCONSTRUCTIONSTRATEGIES));
 				rEngine.m_tVisualization.SetNewBVHConstructionStrategy(static_cast<Visualization::eBVHConstructionStrategy>(iCurrentItem));
 			}
 
@@ -301,14 +301,14 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	// now follow options that are specific to certain construction strategies
 
 	// TOP DOWN OPTIONS
-	if (iCurrentItemIndex == 0) 
+	if (iCurrentConstructionStrategyItemIndex == 0) 
 	{
 		ImGui::Text("TOP DOWN OPTIONS AND PARAMETERS");
 		ImGui::ColorEdit3("Node Color##TOPDOWN", (float*)&rEngine.m_tVisualization.m_vec4TopDownNodeRenderColor, iColorPickerFlags);
 	}
 
 	// BOTTOM UP OPTIONS
-	if (iCurrentItemIndex == 1)
+	if (iCurrentConstructionStrategyItemIndex == 1)
 	{
 		ImGui::Text("BOTTOM UP OPTIONS AND PARAMETERS");
 		ImGui::ColorEdit3("Node Color##BOTTOMUP", (float*)&rEngine.m_tVisualization.m_vec4BottomUpNodeRenderColor, iColorPickerFlags);
@@ -317,8 +317,8 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	//if (ImGui::Button("Rebuild BVHs"))
 	//{
 	//	CollisionDetection::UpdateBoundingVolumesForScene(rEngine.m_tVisualization);
-	//	rEngine.m_tTopDownBVH = CollisionDetection::ConstructTopDownBVHForScene(rEngine.m_tVisualization);
-	//	rEngine.m_tBottomUpBVH = CollisionDetection::ConstructBottomUPBVHForScene(rEngine.m_tVisualization);
+	//	rEngine.m_tTopDownBVH_AABB = CollisionDetection::ConstructTopDownAABBBVHForScene(rEngine.m_tVisualization);
+	//	rEngine.m_tBottomUpBVH_AABB = CollisionDetection::ConstructBottomUpAABBBVHForScene(rEngine.m_tVisualization);
 	//	rEngine.m_tVisualization.m_bBVHTreesValid = true;
 	//}
 	
@@ -326,6 +326,29 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	// now follow options that are generally available in the visualization
 
 	ImGui::Text("General");
+	ImGui::Text("BVH Bounding Volume"); ImGui::SameLine(); HelpMarker("The Hierarchy's nodes' Bounding Volume");
+	// The combo box to choose the hierarchy's node bounding volume
+	const char* pBVHBoundingVolumeItems[] = { "AABB", "Bounding Sphere" };
+	int iCurrentBVHBoundingVolumeItemIndex = static_cast<int>(rEngine.m_tVisualization.GetCurrentBVHBoundingVolume());
+	const char* sBVHBoundingVolumeComboLabel = pBVHBoundingVolumeItems[iCurrentBVHBoundingVolumeItemIndex];  // Label to preview before opening the combo (technically it could be anything)
+	if (ImGui::BeginCombo("##BVH Bounding Volume", sBVHBoundingVolumeComboLabel))
+	{
+		for (int iCurrentItem = 0; iCurrentItem < IM_ARRAYSIZE(pBVHBoundingVolumeItems); iCurrentItem++)
+		{
+			const bool bIsSelected = (iCurrentBVHBoundingVolumeItemIndex == iCurrentItem);
+			if (ImGui::Selectable(pBVHBoundingVolumeItems[iCurrentItem], bIsSelected))
+			{
+				assert(iCurrentItem <= static_cast<int>(Visualization::eBVHBoundingVolume::NUM_BVHBOUNDINGVOLUMES));
+				rEngine.m_tVisualization.SetNewBVHBoundingVolume(static_cast<Visualization::eBVHBoundingVolume>(iCurrentItem));
+			}
+
+			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+			if (bIsSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
 
 	if (ImGui::Button("Add Object"))
 	{

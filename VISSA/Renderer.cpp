@@ -699,8 +699,6 @@ void Renderer::RenderHUDComponents(const Camera & rCamera, const Window & rWindo
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, m_uiCrosshairTexture);
 
-		glDisable(GL_CULL_FACE);
-
 		glBindVertexArray(m_uiTexturedPlaneVAO);
 
 		// world matrix
@@ -720,8 +718,6 @@ void Renderer::RenderHUDComponents(const Camera & rCamera, const Window & rWindo
 		rCurrentShader.setVec4("color", rVisualization.m_vec4CrossHairColor);
 
 		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glEnable(GL_CULL_FACE);
 	}
 }
 
@@ -997,44 +993,73 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 		}
 	}
 
-	// rendering the AABBs of tree nodes in the BVH
-	if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
+	if (rVisualization.GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::AABB) 
 	{
-		int16_t iAlreadyRenderedConstructionSteps = 0;
-		for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForTopDownRendering)
+		// rendering the AABBs of tree nodes in the BVH
+		if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
 		{
-			bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
-			bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
-
-			bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-			if (bShallRender)
+			int16_t iAlreadyRenderedConstructionSteps = 0;
+			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForTopDownRendering)
 			{
-				rCurrentShader.setVec4("color", rVisualization.m_vec4TopDownNodeRenderColor);
-				RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
-			}
+				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
+				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
 
-			iAlreadyRenderedConstructionSteps++;
+				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
+				if (bShallRender)
+				{
+					rCurrentShader.setVec4("color", rVisualization.m_vec4TopDownNodeRenderColor);
+					RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
+				}
+
+				iAlreadyRenderedConstructionSteps++;
+			}
 		}
+
+		if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
+		{
+			int16_t iAlreadyRenderedConstructionSteps = 0;
+			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForBottomUpRendering)
+			{
+				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
+				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
+
+				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
+				if (bShallRender)
+				{
+					rCurrentShader.setVec4("color", rVisualization.m_vec4BottomUpNodeRenderColor);
+					RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
+				}
+
+				iAlreadyRenderedConstructionSteps++;
+			}
+		}
+	}
+	else if (rVisualization.GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::BOUNDING_SPHERE)
+	{
+		if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
+		{
+			int16_t iAlreadyRenderedConstructionSteps = 0;
+			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHBoundingSphere : rVisualization.m_vecTreeBoundingSpheresForTopDownRendering)
+			{
+				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingSphere.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
+				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
+
+				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
+				if (bShallRender)
+				{
+					rCurrentShader.setVec4("color", rVisualization.m_vec4TopDownNodeRenderColor);
+					RenderTreeNodeBoundingsphere(rCurrentRenderedBVHBoundingSphere, rCurrentShader);
+				}
+
+				iAlreadyRenderedConstructionSteps++;
+			}
+		}
+	}
+	else
+	{
+		assert(!"disaster");
 	}
 	
-	if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
-	{
-		int16_t iAlreadyRenderedConstructionSteps = 0;
-		for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForBottomUpRendering)
-		{
-			bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
-			bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
-
-			bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-			if (bShallRender)
-			{
-				rCurrentShader.setVec4("color", rVisualization.m_vec4BottomUpNodeRenderColor);
-				RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
-			}
-
-			iAlreadyRenderedConstructionSteps++;
-		}
-	}
 
 	glEnable(GL_CULL_FACE);
 }
@@ -1079,7 +1104,7 @@ void Renderer::RenderBoundingSphereOfSceneObject(const SceneObject & rSceneObjec
 
 	glAssert();
 
-	// render
+	// render a sphere
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glBindVertexArray(m_uiTexturedSphereVAO);
 	glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
@@ -1088,7 +1113,7 @@ void Renderer::RenderBoundingSphereOfSceneObject(const SceneObject & rSceneObjec
 
 void Renderer::RenderTreeNodeAABB(const CollisionDetection::TreeNodeForRendering & rTreeNodeAABB, Shader & rShader)
 {
-	// the AABBs
+	// the AABB
 	const CollisionDetection::AABB& rRenderedAABB = rTreeNodeAABB.m_pNodeToBeRendered->m_tAABBForNode;
 
 	// calc world matrix
@@ -1103,9 +1128,36 @@ void Renderer::RenderTreeNodeAABB(const CollisionDetection::TreeNodeForRendering
 
 	glAssert();
 
-	// render the object appropriately
+	// render the cube
 	glBindVertexArray(m_uiColoredCubeVAO);
 	glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+	glAssert();
+}
+
+void Renderer::RenderTreeNodeBoundingsphere(const CollisionDetection::TreeNodeForRendering & rTreeNodeAABB, Shader & rShader)
+{
+	// the bounding sphere
+	const CollisionDetection::BoundingSphere& rRenderedBoundingSphere = rTreeNodeAABB.m_pNodeToBeRendered->m_tBoundingSphereForNode;
+
+	// calc world matrix
+	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
+	// translation
+	world = glm::translate(world, rRenderedBoundingSphere.m_vec3Center);
+	// scale
+	const float fDefaultSphereRadius = Primitives::Sphere::SphereDefaultRadius;
+	const float fRenderedSphereRadius = rRenderedBoundingSphere.m_fRadius / fDefaultSphereRadius;
+	world = glm::scale(world,  glm::vec3(fRenderedSphereRadius, fRenderedSphereRadius, fRenderedSphereRadius)); // scaling a "default" sphere so it has the same extents as the current AABB
+
+	rShader.setMat4("world", world);
+
+	glAssert();
+
+	// render the sphere
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glBindVertexArray(m_uiTexturedSphereVAO);
+	glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	glAssert();
 }

@@ -30,9 +30,9 @@ namespace CollisionDetection {
 		//////////////////////////////////////////
 
 		/*
-		pVertices = original vertex data as it was sent to the GPU, including position, normals and UVs (= stride of 8 floats per vertex)
+			pVertices = original vertex data as it was sent to the GPU, including position, normals and UVs (= stride of 8 floats per vertex)
 
-		Constructs a tight-fitting axis-aligned bounding box for the given vertices.
+			Constructs a tight-fitting axis-aligned bounding box for the given vertices.
 		*/
 		AABB ConstructAABBFromVertexData(float* pVertices, size_t uiNumberOfVertices);
 		/*
@@ -50,11 +50,11 @@ namespace CollisionDetection {
 		/*
 			Constructs a bounding sphere using the iterative Ritter Approach
 		*/
-		BoundingSphere ConstructBoundingSphereFromVertexData(float* pVertices, size_t uiNumberOfVertices);
+		BoundingSphere ConstructBoundingSphereFromVertexData_Iterative(float* pVertices, size_t uiNumberOfVertices);
 		/*
 			Constructs a singular RitterSphere for the given points in local space
 		*/
-		BoundingSphere ConstructRitterSphere(float* pVertices, size_t uiNumberOfVertices);
+		BoundingSphere ConstructBoundingSphereFromVertexData(float* pVertices, size_t uiNumberOfVertices);
 		/*
 			TODO: DOC
 		*/
@@ -66,7 +66,7 @@ namespace CollisionDetection {
 		/*
 			TODO: doc
 		*/
-		void UpdateSphereToEncompassPoint(BoundingSphere& rSphereToBeUpdated, const glm::vec3& rvec3PointToBeEncompassed);
+		void ConditionallyUpdateSphereToEncompassPoint(BoundingSphere& rSphereToBeUpdated, const glm::vec3& rvec3PointToBeEncompassed);
 		/*
 			TODO: doc
 		*/
@@ -87,15 +87,15 @@ namespace CollisionDetection {
 		/*
 			recursive function that constructs a top down AABB tree
 		*/
-		void RecursiveTopDownAABBTree(BVHTreeNode** pNode, SceneObject* pScenObjects, size_t uiNumSceneObjects);
+		void RecursiveTopDownTree_AABB(BVHTreeNode** pNode, SceneObject* pSceneObjects, size_t uiNumSceneObjects);
 		/*
 			TODO: DOC
 		*/
-		BVHTreeNode* BottomUpAABBTree(SceneObject* pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization);
+		BVHTreeNode* BottomUpTree_AABB(SceneObject* pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization);
 		/*
 			TODO: DOC
 		*/
-		void FindBottomUpNodesToMerge(BVHTreeNode** pNode, size_t uiNumNodes, size_t& rNodeIndex1, size_t& rNodeIndex2);
+		void FindBottomUpNodesToMerge_AABB(BVHTreeNode** pNode, size_t uiNumNodes, size_t& rNodeIndex1, size_t& rNodeIndex2);
 		/*
 			TODO: DOC
 		*/
@@ -103,23 +103,53 @@ namespace CollisionDetection {
 		/*
 			TODO: DOC
 		*/
-		void TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
+		void TraverseTreeForDataForTopDownRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
 		/*
 			TODO: DOC
 		*/
-		void TraverseTreeForAABBDataForBottomUpRendering(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
+		void TraverseTreeForDataForBottomUpRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
 		/*
 			TODO: DOC
 		*/
-		AABB CreateAABBForMultipleObjects(const SceneObject* pScenObjects, size_t uiNumSceneObjects);
+		AABB CreateAABBForMultipleObjects(const SceneObject* pSceneObjects, size_t uiNumSceneObjects);
 		/*
 			TODO: DOC
 		*/
-		BoundingSphere CreateBoundingSphereForMultipleSceneObjects(const SceneObject* pSceneObjects, size_t uiNumSceneObjects);
+		size_t PartitionSceneObjectsInPlace_AABB(SceneObject* pSceneObjects, size_t uiNumSceneObjects);
+
+
+		/*
+			recursive function that constructs a top down Bounding Sphere tree
+		*/
+		void RecursiveTopDownTree_BoundingSphere(BVHTreeNode** pNode, SceneObject* pSceneObjects, size_t uiNumSceneObjects);
 		/*
 			TODO: DOC
 		*/
-		size_t PartitionSceneObjectsInPlace(SceneObject* pSceneObjects, size_t uiNumSceneObjects);
+		BVHTreeNode* BottomUpTree_BoundingSphere(SceneObject* pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization);
+		/*
+			TODO: DOC
+		*/
+		void FindBottomUpNodesToMerge_BoundingSphere(BVHTreeNode** pNode, size_t uiNumNodes, size_t& rNodeIndex1, size_t& rNodeIndex2);
+		/*
+			TODO: DOC
+		*/
+		BoundingSphere MergeTwoBoundingSpheres(const BoundingSphere& rBoundingSphere1, const BoundingSphere& rBoundingSphere2);
+		/*
+			TODO: DOC
+		*/
+		void TraverseTreeForDataForTopDownRendering_BoundingSphere(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecBoundingspheresForRendering, int16_t iTreeDepth);
+		/*
+			TODO: DOC
+		*/
+		void TraverseTreeForDataForBottomUpRendering_BoundingSphere(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecBoundingSpheresForRendering, int16_t iTreeDepth);
+		/*
+			TODO: DOC
+		*/
+		BoundingSphere CreateBoundingSphereForMultipleObjects(const SceneObject* pSceneObjects, size_t uiNumSceneObjects);
+		/*
+			TODO: DOC
+		*/
+		size_t PartitionSceneObjectsInPlace_BoundingSphere(SceneObject* pSceneObjects, size_t uiNumSceneObjects);
 
 		//////////////////////////////////////////
 		// RAY CASTING
@@ -134,6 +164,7 @@ namespace CollisionDetection {
 		*/
 		int IntersectRayAABB(const Ray& rIntersectingRay, const AABB& rAABB, float& rfIntersectionDistance, glm::vec3 rvec3IntersectionPoint);
 	}
+	
 };
 
 /*
@@ -204,6 +235,36 @@ float CollisionDetection::AABB::CalcMaximumForAxis(size_t uiAxisIndex) const
 	return m_vec3Center[uiNonWarningProducingAxisIndex] + m_vec3Radius[uiNonWarningProducingAxisIndex];
 }
 
+float CollisionDetection::BoundingSphere::CalcMinimumX() const
+{
+	return m_vec3Center.x - m_fRadius;
+}
+
+float CollisionDetection::BoundingSphere::CalcMinimumY() const
+{
+	return m_vec3Center.y - m_fRadius;
+}
+
+float CollisionDetection::BoundingSphere::CalcMinimumZ() const
+{
+	return m_vec3Center.z - m_fRadius;
+}
+
+float CollisionDetection::BoundingSphere::CalcMaximumX() const
+{
+	return m_vec3Center.x + m_fRadius;
+}
+
+float CollisionDetection::BoundingSphere::CalcMaximumY() const
+{
+	return m_vec3Center.y + m_fRadius;
+}
+
+float CollisionDetection::BoundingSphere::CalcMaximumZ() const
+{
+	return m_vec3Center.z + m_fRadius;
+}
+
 void CollisionDetection::ConstructBoundingVolumesForScene(Visualization& rScene)
 {
 	for (SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
@@ -211,14 +272,14 @@ void CollisionDetection::ConstructBoundingVolumesForScene(Visualization& rScene)
 		if (rCurrentSceneObject.m_eType == SceneObject::eType::CUBE)
 		{
 			rCurrentSceneObject.m_tLocalSpaceAABB = ConstructAABBFromVertexData(Primitives::Cube::VertexData, sizeof(Primitives::Cube::IndexData) / sizeof(GLfloat));
-			//rCurrentSceneObject.m_tLocalSpaceBoundingSphere = ConstructRitterSphere(Primitives::Cube::VertexData, sizeof(Primitives::Cube::IndexData) / sizeof(GLfloat));
+			//rCurrentSceneObject.m_tLocalSpaceBoundingSphere = ConstructBoundingSphereFromVertexData(Primitives::Cube::VertexData, sizeof(Primitives::Cube::IndexData) / sizeof(GLfloat));
 			rCurrentSceneObject.m_tLocalSpaceBoundingSphere = ConstructLocalSpaceBoundingSphereForCube(rCurrentSceneObject);
 
 		}
 		else if(rCurrentSceneObject.m_eType == SceneObject::eType::SPHERE)
 		{
 			rCurrentSceneObject.m_tLocalSpaceAABB = ConstructAABBFromVertexData(Primitives::Sphere::VertexData, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
-			rCurrentSceneObject.m_tLocalSpaceBoundingSphere = ConstructRitterSphere(Primitives::Sphere::VertexData, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
+			rCurrentSceneObject.m_tLocalSpaceBoundingSphere = ConstructBoundingSphereFromVertexData(Primitives::Sphere::VertexData, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
 			//rCurrentSceneObject.m_tLocalSpaceBoundingSphere = ConstructLocalSpaceBoundingSphereForSphere(rCurrentSceneObject);
 		}
 		else
@@ -256,10 +317,6 @@ void CollisionDetection::UpdateBoundingVolumesForScene(Visualization & rScene)
 	}
 }
 
-
-
-
-
 int CollisionDetection::StaticTestAABBagainstAABB(const AABB & rAABB, const AABB & rOtherAABB)
 {
 	if (std::abs(rAABB.m_vec3Center.x - rOtherAABB.m_vec3Center.x) > (rAABB.m_vec3Radius.x + rOtherAABB.m_vec3Radius.x))
@@ -275,7 +332,7 @@ int CollisionDetection::StaticTestAABBagainstAABB(const AABB & rAABB, const AABB
 	//////////////////////////BVH/////////////////////////////////
 	//////////////////////////////////////////////////////////////
 
-CollisionDetection::BoundingVolumeHierarchy CollisionDetection::ConstructTopDownBVHForScene(Visualization & rScene)
+CollisionDetection::BoundingVolumeHierarchy CollisionDetection::ConstructTopDownAABBBVHForScene(Visualization & rScene)
 {
 	assert(rScene.m_vecObjects.size() > 0);
 
@@ -283,28 +340,56 @@ CollisionDetection::BoundingVolumeHierarchy CollisionDetection::ConstructTopDown
 	
 	// the construction
 	tResult.m_pRootNode = new BVHTreeNode;
-	RecursiveTopDownAABBTree(&(tResult.m_pRootNode), rScene.m_vecObjects.data(), rScene.m_vecObjects.size());
+	RecursiveTopDownTree_AABB(&(tResult.m_pRootNode), rScene.m_vecObjects.data(), rScene.m_vecObjects.size());
 
 	// first traversal to gather data for rendering. In theory, it is possible to traverse the tree every frame for BV rendering.
 	// But that is terrible, so data is fetched into a linear vector
-	rScene.m_vecTreeAABBsForTopDownRendering.reserve(rScene.m_vecObjects.size());
 	rScene.m_vecTreeAABBsForTopDownRendering.clear();
-	TraverseTreeForAABBDataForTopDownRendering(tResult.m_pRootNode, rScene.m_vecTreeAABBsForTopDownRendering, 0);
+	rScene.m_vecTreeAABBsForTopDownRendering.reserve(rScene.m_vecObjects.size());
+	TraverseTreeForDataForTopDownRendering_AABB(tResult.m_pRootNode, rScene.m_vecTreeAABBsForTopDownRendering, 0);
 
 	return tResult;
 }
 
-BoundingVolumeHierarchy CollisionDetection::ConstructBottomUPBVHForScene(Visualization & rScene)
+BoundingVolumeHierarchy CollisionDetection::ConstructBottomUpAABBBVHForScene(Visualization & rScene)
 {
 	assert(rScene.m_vecObjects.size() > 0);
 
 	BoundingVolumeHierarchy tResult;
-	rScene.m_vecTreeAABBsForBottomUpRendering.reserve(rScene.m_vecObjects.size());
 	rScene.m_vecTreeAABBsForBottomUpRendering.clear();
+	rScene.m_vecTreeAABBsForBottomUpRendering.reserve(rScene.m_vecObjects.size());
 
 	// the construction INCLUDING HALF THE PREPARATION OF AABB RENDERING DATA
-	tResult.m_pRootNode = BottomUpAABBTree(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
-	TraverseTreeForAABBDataForBottomUpRendering(tResult.m_pRootNode, rScene.m_vecTreeAABBsForBottomUpRendering, 0);
+	tResult.m_pRootNode = BottomUpTree_AABB(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
+	TraverseTreeForDataForBottomUpRendering_AABB(tResult.m_pRootNode, rScene.m_vecTreeAABBsForBottomUpRendering, 0);
+
+	return tResult;
+}
+
+BoundingVolumeHierarchy CollisionDetection::ConstructTopDownBoundingSphereBVHForScene(Visualization & rScene)
+{
+	assert(rScene.m_vecObjects.size() > 0);
+
+	BoundingVolumeHierarchy tResult;
+
+	// the construction
+	tResult.m_pRootNode = new BVHTreeNode;
+	RecursiveTopDownTree_BoundingSphere(&(tResult.m_pRootNode), rScene.m_vecObjects.data(), rScene.m_vecObjects.size());
+
+	// first traversal to gather data for rendering. In theory, it is possible to traverse the tree every frame for BV rendering.
+	// But that is terrible, so data is fetched into a linear vector
+	rScene.m_vecTreeBoundingSpheresForTopDownRendering.clear();
+	rScene.m_vecTreeBoundingSpheresForTopDownRendering.reserve(rScene.m_vecObjects.size());
+	TraverseTreeForDataForTopDownRendering_BoundingSphere(tResult.m_pRootNode, rScene.m_vecTreeBoundingSpheresForTopDownRendering, 0);
+
+	return tResult;
+}
+
+BoundingVolumeHierarchy CollisionDetection::ConstructBottomUpBoundingSphereBVHForScene(Visualization & rScene)
+{
+	assert(!"empty");
+
+	BoundingVolumeHierarchy tResult;
 
 	return tResult;
 }
@@ -313,10 +398,14 @@ void CollisionDetection::BoundingVolumeHierarchy::DeleteTree()
 {
 	RecursiveDeleteTree(m_pRootNode);
 	delete m_pRootNode;
+	m_pRootNode = nullptr;
 }
 
 void CollisionDetection::BoundingVolumeHierarchy::RecursiveDeleteTree(BVHTreeNode * pNode)
 {
+	if (pNode == nullptr)
+		return;
+
 	if (pNode->m_pLeft)
 	{
 		RecursiveDeleteTree(pNode->m_pLeft);
@@ -523,7 +612,7 @@ namespace CollisionDetection {
 			return tResult;
 		}
 
-		BoundingSphere ConstructBoundingSphereFromVertexData(float * pVertices, size_t uiNumberOfVertices)
+		BoundingSphere ConstructBoundingSphereFromVertexData_Iterative(float * pVertices, size_t uiNumberOfVertices)
 		{
 			assert(!"not yet implemented");
 			const size_t uiNumberOfIterations = 8u;
@@ -533,7 +622,7 @@ namespace CollisionDetection {
 			return tResult;
 		}
 
-		BoundingSphere ConstructRitterSphere(float * pVertices, size_t uiNumberOfVertices)
+		BoundingSphere ConstructBoundingSphereFromVertexData(float * pVertices, size_t uiNumberOfVertices)
 		{
 			BoundingSphere tRitterSphere = BoundingSphereFromDistantPoints(pVertices, uiNumberOfVertices);
 
@@ -541,7 +630,7 @@ namespace CollisionDetection {
 			for (size_t uiCurrentVertex = 0; uiCurrentVertex < uiNumberOfVertices; uiCurrentVertex++)
 			{
 				glm::vec3 vec3PointToBeEncompassed(pVertices[uiCurrentVertex * 8 + 0], pVertices[uiCurrentVertex * 8 + 1], pVertices[uiCurrentVertex * 8 + 2]);
-				UpdateSphereToEncompassPoint(tRitterSphere, vec3PointToBeEncompassed);
+				ConditionallyUpdateSphereToEncompassPoint(tRitterSphere, vec3PointToBeEncompassed);
 			}
 
 
@@ -564,7 +653,7 @@ namespace CollisionDetection {
 			return tResult;
 		}
 
-		void UpdateSphereToEncompassPoint(BoundingSphere & rSphereToBeUpdated, const glm::vec3 & rvec3PointToBeEncompassed)
+		void ConditionallyUpdateSphereToEncompassPoint(BoundingSphere & rSphereToBeUpdated, const glm::vec3 & rvec3PointToBeEncompassed)
 		{
 			const glm::vec3 vec3DistanceBetweenSphereCenterAndPoint = rvec3PointToBeEncompassed - rSphereToBeUpdated.m_vec3Center;
 			const float fSquaredDistance = glm::dot(vec3DistanceBetweenSphereCenterAndPoint, vec3DistanceBetweenSphereCenterAndPoint);
@@ -633,7 +722,7 @@ namespace CollisionDetection {
 		// BOUNDING VOLUME HIERARCHY
 		//////////////////////////////////////////
 
-		void RecursiveTopDownAABBTree(BVHTreeNode ** pTree, SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+		void RecursiveTopDownTree_AABB(BVHTreeNode ** pTree, SceneObject * pSceneObjects, size_t uiNumSceneObjects)
 		{
 			assert(pTree);
 			assert(pSceneObjects);
@@ -656,20 +745,20 @@ namespace CollisionDetection {
 				pNewNode->m_tAABBForNode = CreateAABBForMultipleObjects(pSceneObjects, uiNumSceneObjects);
 
 				// create Bounding Sphere volume for the current set of objects
-				//pNewNode->m_tBoundingSphereForNode = CreateBoundingSphereForMultipleSceneObjects(pSceneObjects, uiNumSceneObjects);
+				//pNewNode->m_tBoundingSphereForNode = CreateBoundingSphereForMultipleObjects(pSceneObjects, uiNumSceneObjects);
 
 				// partition current set into subsets IN PLACE!!!
-				size_t uiPartitioningIndex = PartitionSceneObjectsInPlace(pSceneObjects, uiNumSceneObjects);
+				size_t uiPartitioningIndex = PartitionSceneObjectsInPlace_AABB(pSceneObjects, uiNumSceneObjects);
 
 				// move on with "left" side
-				RecursiveTopDownAABBTree(&(pNewNode->m_pLeft), pSceneObjects, uiPartitioningIndex);
+				RecursiveTopDownTree_AABB(&(pNewNode->m_pLeft), pSceneObjects, uiPartitioningIndex);
 
 				// move on with "right" side
-				RecursiveTopDownAABBTree(&(pNewNode->m_pRight), pSceneObjects + uiPartitioningIndex, uiNumSceneObjects - uiPartitioningIndex);
+				RecursiveTopDownTree_AABB(&(pNewNode->m_pRight), pSceneObjects + uiPartitioningIndex, uiNumSceneObjects - uiPartitioningIndex);
 			}
 		}
 
-		BVHTreeNode * BottomUpAABBTree(SceneObject * pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization)
+		BVHTreeNode * BottomUpTree_AABB(SceneObject * pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization)
 		{
 			assert(uiNumSceneObjects > 0);
 
@@ -691,7 +780,7 @@ namespace CollisionDetection {
 			while (uiNumSceneObjects > 1) {
 				// Pick two volumes to pair together
 				size_t uiMergedNodeIndex1 = 0, uiMergedNodeIndex2 = 0;
-				FindBottomUpNodesToMerge(pTempNodes, uiNumSceneObjects, uiMergedNodeIndex1, uiMergedNodeIndex2);
+				FindBottomUpNodesToMerge_AABB(pTempNodes, uiNumSceneObjects, uiMergedNodeIndex1, uiMergedNodeIndex2);
 
 				// Pair them in new parent node
 				BVHTreeNode* pParentNode = new BVHTreeNode;
@@ -723,7 +812,7 @@ namespace CollisionDetection {
 			return pRootNode;
 		}
 
-		void TraverseTreeForAABBDataForTopDownRendering(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
+		void TraverseTreeForDataForTopDownRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
 		{
 			assert(pNode);
 
@@ -742,15 +831,15 @@ namespace CollisionDetection {
 				rvecAABBsForRendering.push_back(tNewAABBForRendering);
 
 				// traverse left ...
-				TraverseTreeForAABBDataForTopDownRendering(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
+				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
 				// ... then right
-				TraverseTreeForAABBDataForTopDownRendering(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
+				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
 			}
 
 			// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
 		}
 
-		void TraverseTreeForAABBDataForBottomUpRendering(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
+		void TraverseTreeForDataForBottomUpRendering_AABB(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
 		{
 			/*
 				This is going to be ugly.
@@ -782,13 +871,13 @@ namespace CollisionDetection {
 				}
 
 				// traverse left ...
-				TraverseTreeForAABBDataForBottomUpRendering(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
+				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
 				// ... then right
-				TraverseTreeForAABBDataForBottomUpRendering(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
+				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
 			}
 		}
 
-		void FindBottomUpNodesToMerge(BVHTreeNode ** pNode, size_t uiNumNodes, size_t & rNodeIndex1, size_t & rNodeIndex2)
+		void FindBottomUpNodesToMerge_AABB(BVHTreeNode ** pNode, size_t uiNumNodes, size_t & rNodeIndex1, size_t & rNodeIndex2)
 		{
 			float fCurrentlySmallestAABBVolume = std::numeric_limits<float>::max();
 
@@ -850,7 +939,7 @@ namespace CollisionDetection {
 			return tResult;
 		}
 
-		AABB CreateAABBForMultipleObjects(const SceneObject * pScenObjects, size_t uiNumSceneObjects)
+		AABB CreateAABBForMultipleObjects(const SceneObject * pSceneObjects, size_t uiNumSceneObjects)
 		{
 			AABB tResult;
 
@@ -864,7 +953,7 @@ namespace CollisionDetection {
 
 			for (size_t uiCurrentSceneObjectIndex = 0u; uiCurrentSceneObjectIndex < uiNumSceneObjects; uiCurrentSceneObjectIndex++)
 			{
-				const SceneObject& rCurrentObject = pScenObjects[uiCurrentSceneObjectIndex];
+				const SceneObject& rCurrentObject = pSceneObjects[uiCurrentSceneObjectIndex];
 				assert(glm::length(rCurrentObject.m_tWorldSpaceAABB.m_vec3Radius) > 0.0f);	// make sure AABB of current object has already been constructed
 
 				// get extent of current AABB
@@ -904,14 +993,168 @@ namespace CollisionDetection {
 			return tResult;
 		}
 
-		BoundingSphere CreateBoundingSphereForMultipleSceneObjects(const SceneObject * pScenObjects, size_t uiNumSceneObjects)
+		void TraverseTreeForDataForTopDownRendering_BoundingSphere(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecBoundingspheresForRendering, int16_t iTreeDepth)
 		{
-			assert(!"not done yet xD");
+			assert(pNode);
 
-			return BoundingSphere();
+			iTreeDepth++; // we are now one level deeper. depth of root node == 1 here
+
+			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
+			{
+				// if it is a node, there was a partitioning step, which means there have to be two children
+				assert(pNode->m_pLeft);
+				assert(pNode->m_pRight);
+
+				// save relevant data for rendering
+				TreeNodeForRendering tNewBoundingSphereForRendering;
+				tNewBoundingSphereForRendering.m_iTreeDepth = iTreeDepth;
+				tNewBoundingSphereForRendering.m_pNodeToBeRendered = pNode;
+				rvecBoundingspheresForRendering.push_back(tNewBoundingSphereForRendering);
+
+				// traverse left ...
+				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pLeft, rvecBoundingspheresForRendering, iTreeDepth);
+				// ... then right
+				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rvecBoundingspheresForRendering, iTreeDepth);
+			}
+
+			// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
 		}
 
-		size_t PartitionSceneObjectsInPlace(SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+		BoundingSphere CreateBoundingSphereForMultipleObjects(const SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+		{
+			assert(uiNumSceneObjects >= 2u); // if 1 or less, some error occurred
+			assert(pSceneObjects[0].m_tWorldSpaceBoundingSphere.m_fRadius > 0.0f);
+
+			// initiliazing result with first object
+			BoundingSphere tResult = pSceneObjects[0].m_tWorldSpaceBoundingSphere;
+
+			// for every FOLLOWING object (its bounding sphere specifically) ...
+			for (size_t uiCurrentObjectToBeEncompassed = 1u; uiCurrentObjectToBeEncompassed < uiNumSceneObjects; uiCurrentObjectToBeEncompassed++)
+			{
+				const BoundingSphere& rCurrentOtherBoundingSphere = pSceneObjects[uiCurrentObjectToBeEncompassed].m_tWorldSpaceBoundingSphere;
+				assert(rCurrentOtherBoundingSphere.m_fRadius > 0.0f);
+
+				// we determine the distance vector to encompassed sphere from result sphere
+				const glm::vec3 vec3CenterPointsDistance = rCurrentOtherBoundingSphere.m_vec3Center - tResult.m_vec3Center;
+
+				// we construct the normalized direction of the distance ...
+				const glm::vec3 vec3NormalizedCenterPointsDirection = glm::normalize(vec3CenterPointsDistance);
+				// ...  to then scale it by the encompassed sphere's radius, resulting in a "directed" radius
+				const glm::vec3 vec3DirectedEncompassedSphereRadius = vec3NormalizedCenterPointsDirection * rCurrentOtherBoundingSphere.m_fRadius;
+				// we construct the point on the encompassed sphere that is the most distant to the current sphere's radius
+				const glm::vec3 vec3EncompassedSphereMostDistantPoint = rCurrentOtherBoundingSphere.m_vec3Center + vec3DirectedEncompassedSphereRadius;
+				// we conditionally update the result sphere to encompass this most distant point
+				ConditionallyUpdateSphereToEncompassPoint(tResult, vec3EncompassedSphereMostDistantPoint);
+			}
+
+			// after every "other" sphere has been encompassed, the bounding sphere of all given objects is ready
+
+			return tResult;
+		}
+
+		size_t PartitionSceneObjectsInPlace_BoundingSphere(SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+		{
+			assert(pSceneObjects);
+			assert(uiNumSceneObjects > 0u);
+			/*
+				an explanation:
+				This function:
+				1. decides the splitting axis
+				2. then the splitting point
+				3. then partitions the given scene objects
+			*/
+
+			// 1. Finding the splitting axis
+			// 1.1. Finding the axis with the longest extent
+
+			// initializing with values that will definitely be overwritten
+			float fXMaxExtent = std::numeric_limits<float>::lowest();
+			float fXMinExtent = std::numeric_limits<float>::max();
+			float fYMaxExtent = std::numeric_limits<float>::lowest();
+			float fYMinExtent = std::numeric_limits<float>::max();
+			float fZMaxExtent = std::numeric_limits<float>::lowest();
+			float fZMinExtent = std::numeric_limits<float>::max();
+
+			// finding min and max extents for every axis
+			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+			{
+				const SceneObject& rCurrentSceneObject = pSceneObjects[uiCurrentSceneObject];
+
+				fXMaxExtent = std::max(fXMaxExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMaximumX());
+				fYMaxExtent = std::max(fYMaxExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMaximumY());
+				fZMaxExtent = std::max(fZMaxExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMaximumZ());
+
+				fXMinExtent = std::min(fXMinExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMinimumX());
+				fYMinExtent = std::min(fYMinExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMinimumY());
+				fZMinExtent = std::min(fZMinExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMinimumZ());
+			}
+
+			// Getting the longest extent of the 3 axes
+			const float fXTotalExtent = fXMaxExtent - fXMinExtent;
+			const float fYTotalExtent = fYMaxExtent - fYMinExtent;
+			const float fZTotalExtent = fZMaxExtent - fZMinExtent;
+
+			const int x = 0, y = 1, z = 2;
+			int iSplittingAxis = x;
+
+			if (fYTotalExtent > fXTotalExtent && fYTotalExtent > fZTotalExtent)
+				iSplittingAxis = y;
+
+			if (fZTotalExtent > fXTotalExtent && fZTotalExtent > fYTotalExtent)
+				iSplittingAxis = z;
+
+			// axis now stores the index of the longest axis in the 3 dimensional coordinate vector
+
+			// 2. Finding the splitting point on the axis
+			// done by using the object mean (mean of the object centroids)
+
+			float fObjectCentroidsMean = 0.0f;
+			const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
+
+			// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
+			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+			{
+				const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceBoundingSphere.m_vec3Center;
+				fObjectCentroidsMean += rCurrentSceneObjectCenter[iSplittingAxis] * fPreDivisionFactor;
+			}
+
+			// 3. partitioning the scene objects:
+			SceneObject* pCopiedArray = new SceneObject[uiNumSceneObjects];
+
+			// two passes: one for determination of bucket sizes, the second for sorting into buckets
+			// first pass
+			const size_t uiNumBuckets = 2u;
+			size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
+			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+			{
+				// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+				const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceBoundingSphere.m_vec3Center[iSplittingAxis] >= fObjectCentroidsMean);
+				uiNumElementsPerBucket[uiBucketIndex]++;
+			}
+
+			assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
+
+			// second pass
+			size_t uiBucketInsertionIndices[uiNumBuckets];
+			uiBucketInsertionIndices[0u] = 0u;
+			uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
+
+			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+			{
+				// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+				const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceBoundingSphere.m_vec3Center[iSplittingAxis] >= fObjectCentroidsMean);
+				const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
+				pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
+			}
+
+			memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
+
+			const size_t uiPartitioningIndex = uiNumElementsPerBucket[0]; // number of left children = partitioning index
+
+			return uiPartitioningIndex;
+		}
+
+		size_t PartitionSceneObjectsInPlace_AABB(SceneObject * pSceneObjects, size_t uiNumSceneObjects)
 		{
 			assert(pSceneObjects);
 			assert(uiNumSceneObjects > 0u);
@@ -1011,6 +1254,39 @@ namespace CollisionDetection {
 			const size_t uiPartitioningIndex = uiNumElementsPerBucket[0]; // number of left children = partitioning index
 
 			return uiPartitioningIndex;
+		}
+
+		void RecursiveTopDownTree_BoundingSphere(BVHTreeNode ** pNode, SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+		{
+			assert(pNode);
+			assert(pSceneObjects);
+			assert(uiNumSceneObjects > 0);
+
+			const uint8_t uiNumberOfObjectsPerLeaf = 1u;
+			BVHTreeNode* pNewNode = new BVHTreeNode;
+			*pNode = pNewNode;
+
+			if (uiNumSceneObjects <= uiNumberOfObjectsPerLeaf) // is a leaf
+			{
+				assert(uiNumSceneObjects == 1); // needs reconsideration for >1 objects per leaf
+				// bounding volumes for single objects is already done, no need to compute that here
+				pNewNode->m_uiNumOjbects = static_cast<uint8_t>(uiNumSceneObjects);
+				pNewNode->m_pObjects = pSceneObjects;
+			}
+			else // is a node
+			{
+				// create Bounding Sphere volume for the current set of objects
+				pNewNode->m_tBoundingSphereForNode = CreateBoundingSphereForMultipleObjects(pSceneObjects, uiNumSceneObjects);
+
+				// partition current set into subsets IN PLACE!!!
+				size_t uiPartitioningIndex = PartitionSceneObjectsInPlace_BoundingSphere(pSceneObjects, uiNumSceneObjects);
+
+				// move on with "left" side
+				RecursiveTopDownTree_BoundingSphere(&(pNewNode->m_pLeft), pSceneObjects, uiPartitioningIndex);
+
+				// move on with "right" side
+				RecursiveTopDownTree_BoundingSphere(&(pNewNode->m_pRight), pSceneObjects + uiPartitioningIndex, uiNumSceneObjects - uiPartitioningIndex);
+			}
 		}
 
 		//////////////////////////////////////////

@@ -23,15 +23,23 @@ public:
 	enum eBVHConstructionStrategy {
 		TOPDOWN = 0,
 		BOTTOMUP,
-		SIZE
+		NUM_BVHCONSTRUCTIONSTRATEGIES
+	};
+
+	enum eBVHBoundingVolume {
+		AABB = 0,
+		BOUNDING_SPHERE,
+		NUM_BVHBOUNDINGVOLUMES
 	};
 
 	std::vector<SceneObject> m_vecObjects;
 private:
 	SceneObject* m_pCurrentlyFocusedObject;
 public:
-	CollisionDetection::BoundingVolumeHierarchy m_tTopDownBVH;
-	CollisionDetection::BoundingVolumeHierarchy m_tBottomUpBVH;
+	CollisionDetection::BoundingVolumeHierarchy m_tTopDownBVH_AABB;
+	CollisionDetection::BoundingVolumeHierarchy m_tBottomUpBVH_AABB;
+	CollisionDetection::BoundingVolumeHierarchy m_tTopDownBVH_BoundingSphere;
+	CollisionDetection::BoundingVolumeHierarchy m_tBottomUpBVH_BoundingSphere;
 	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeAABBsForTopDownRendering;
 	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeAABBsForBottomUpRendering;
 	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeBoundingSpheresForTopDownRendering;
@@ -80,6 +88,8 @@ public:
 	// options, parameters and manipulation
 	eBVHConstructionStrategy GetCurrenBVHConstructionStrategy() const;
 	void SetNewBVHConstructionStrategy(eBVHConstructionStrategy eNewStrategy);
+	eBVHBoundingVolume GetCurrentBVHBoundingVolume() const;
+	void SetNewBVHBoundingVolume(eBVHBoundingVolume eNewBoundingVolume);
 	void SetFocusedObject(SceneObject* pFocusedObject);
 	SceneObject* GetCurrentlyFocusedObject();
 	void DeleteCurrentlyFocusedObject();
@@ -87,6 +97,7 @@ public:
 
 private:
 	eBVHConstructionStrategy m_eConstructionStrategy;
+	eBVHBoundingVolume m_eBVHBoundingVolume;
 
 	void ClearPreviousVisualization();
 

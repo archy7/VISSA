@@ -26,6 +26,13 @@ namespace CollisionDetection {
 	struct BoundingSphere {
 		glm::vec3 m_vec3Center;
 		float m_fRadius = 0.0f;
+
+		float CalcMinimumX() const;
+		float CalcMinimumY() const;
+		float CalcMinimumZ() const;
+		float CalcMaximumX() const;
+		float CalcMaximumY() const;
+		float CalcMaximumZ() const;
 	};
 
 	struct Ray {
@@ -55,9 +62,7 @@ namespace CollisionDetection {
 
 	//////////////////////////////////////////////////////////////
 	//////////////////////////BVH/////////////////////////////////
-	//////////////////////////////////////////////////////////////
-
-	
+	//////////////////////////////////////////////////////////////	
 
 	struct BVHTreeNode {
 		AABB m_tAABBForNode;
@@ -74,20 +79,25 @@ namespace CollisionDetection {
 
 	struct BoundingVolumeHierarchy {
 		BVHTreeNode* m_pRootNode = nullptr;
+		//BoundingVolumeHierarchy();
+		//~BoundingVolumeHierarchy();
+		//BoundingVolumeHierarchy(BoundingVolumeHierarchy& rOther);
+		//BoundingVolumeHierarchy& operator=(BoundingVolumeHierarchy tOther);
 		void DeleteTree();
 	private:
+		
 		void RecursiveDeleteTree(BVHTreeNode* pNode);
 	};
 
 	struct TreeNodeForRendering {
 		BVHTreeNode* m_pNodeToBeRendered;
 		int16_t m_iTreeDepth = 0u;
-		int16_t m_iRenderingOrder = 0u; // when stepping through the simulation, this determines in which order AABBs are rendered.
+		int16_t m_iRenderingOrder = 0u; // when stepping through the simulation, this determines in which order node bounding volumes are rendered.
 	};
 
-	
-
-	BoundingVolumeHierarchy ConstructTopDownBVHForScene(Visualization& rScene);
-	BoundingVolumeHierarchy ConstructBottomUPBVHForScene(Visualization& rScene);
+	BoundingVolumeHierarchy ConstructTopDownAABBBVHForScene(Visualization& rScene);
+	BoundingVolumeHierarchy ConstructBottomUpAABBBVHForScene(Visualization& rScene);
+	BoundingVolumeHierarchy ConstructTopDownBoundingSphereBVHForScene(Visualization& rScene);
+	BoundingVolumeHierarchy ConstructBottomUpBoundingSphereBVHForScene(Visualization& rScene);
 	RayCastIntersectionResult CastRayIntoBVH(const BoundingVolumeHierarchy& rBVH, const Ray& rCastedRay);
 }

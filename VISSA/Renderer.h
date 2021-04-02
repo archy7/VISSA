@@ -91,5 +91,6 @@ private:
 	void RenderAABBOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
 	void RenderBoundingSphereOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
 	void RenderTreeNodeAABB(const CollisionDetection::TreeNodeForRendering& rTreeNodeAABB, Shader& rShader);
+	void RenderTreeNodeBoundingsphere(const CollisionDetection::TreeNodeForRendering& rTreeNodeAABB, Shader& rShader);
 	void FreeGPUResources();
 };
