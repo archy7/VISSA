@@ -126,6 +126,12 @@ void Engine::ProcessKeyboardInput()
 					rCamera.ProcessKeyboard(LEFT, m_fDeltaTime);
 				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_D) == GLFW_PRESS)
 					rCamera.ProcessKeyboard(RIGHT, m_fDeltaTime);
+
+				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_Q) == GLFW_PRESS)
+					rCamera.ProcessKeyboard(UP, m_fDeltaTime);
+				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_E) == GLFW_PRESS)
+					rCamera.ProcessKeyboard(DOWN, m_fDeltaTime);
+
 			}
 			else // inputs that are only available when the mouse is freely moving in an active scene
 			{
