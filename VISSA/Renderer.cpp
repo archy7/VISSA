@@ -261,7 +261,7 @@ void Renderer::LoadShaders()
 	m_tColorShader = tColorShader;
 	assert(m_tColorShader.IsInitialized());
 
-	// A texture shader
+	// A flat texture shader
 	Shader tTextureShader("resources/shaders/FlatTexture.vs", "resources/shaders/FlatTexture.frag");
 	m_tTextureShader = tTextureShader;
 	assert(m_tTextureShader.IsInitialized());
@@ -271,7 +271,7 @@ void Renderer::LoadShaders()
 	m_tMaskedColorShader = tMaskedColorShader;
 	assert(m_tMaskedColorShader.IsInitialized());
 
-	// A crosshaird (hud component) shader
+	// A crosshair (hud component) shader
 	Shader tCrossHairShader("resources/shaders/crosshair.vs", "resources/shaders/crosshair.frag");
 	m_tCrosshairShader = tCrossHairShader;
 	assert(m_tCrosshairShader.IsInitialized());
@@ -281,7 +281,6 @@ void Renderer::LoadTextures()
 {
 	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
 	m_uiTexture1 = LoadTextureFromFile("resources/textures/cobblestone_floor_13_diff_1k.jpg");
-	m_uiTexture2 = LoadTextureFromFile("resources/textures/cobblestone_floor_13_diff_1k.png");
 	m_uiGridMaskTexture = LoadTextureFromFile("resources/textures/grid_mask_transparent.png");
 	m_uiCrosshairTexture = LoadTextureFromFile("resources/textures/crosshair.png");
 }
@@ -537,7 +536,6 @@ void Renderer::FreeGPUResources()
 
 	// Textures
 	glDeleteTextures(1, &m_uiTexture1);
-	glDeleteTextures(1, &m_uiTexture2);
 	glDeleteTextures(1, &m_uiGridMaskTexture);
 }
 
@@ -727,13 +725,10 @@ void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow,
 	m_tTextureShader.use();
 	glAssert();
 	m_tTextureShader.setInt("texture1", 0);
-	m_tTextureShader.setInt("texture2", 1);
 
 	// bind textures on corresponding texture units
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
 
 	for (const SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
 	{
@@ -786,9 +781,7 @@ void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWind
 
 		// bind textures on corresponding texture units
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
+		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);;
 
 		glAssert();
 
@@ -822,8 +815,6 @@ void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWind
 		// bind textures on corresponding texture units
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
 
 		glAssert();
 
@@ -857,8 +848,6 @@ void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWind
 		// bind textures on corresponding texture units
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture2);
 
 		glAssert();
 

@@ -54,7 +54,7 @@ public:
 	GLuint m_uiTexturedSphereVBO, m_uiTexturedSphereVAO;// m_uiTexturedSphereEBO;
 	GLuint m_uiGridPlaneVBO, m_uiGridPlaneVAO, m_uiGridPlaneEBO;
 	// Texture Handles
-	GLuint m_uiTexture1, m_uiTexture2, m_uiGridMaskTexture, m_uiCrosshairTexture;
+	GLuint m_uiTexture1, m_uiGridMaskTexture, m_uiCrosshairTexture;
 	// View space information
 	float m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop;
 	float m_fNearPlane, m_fFarPlane;
