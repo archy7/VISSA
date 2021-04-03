@@ -993,6 +993,16 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 		}
 	}
 
+	auto InterpolateRenderColorForTreeNode = [](const glm::vec4& rColor1, const glm::vec4& rColor2, int16_t iDepthInTree, int16_t iDeepestDepthOfNodes) {
+		assert(iDepthInTree >= 0);
+
+		const float fWeightPerDepthLevel = 1.0f / static_cast<float>(iDeepestDepthOfNodes); // OK
+		const float fWeightColor1 = 1.0f - fWeightPerDepthLevel * static_cast<float>(iDepthInTree);
+		const float fWeightColor2 = 1.0f - fWeightColor1;
+	
+		return rColor1 * fWeightColor1 + rColor2 * fWeightColor2;
+	};
+
 	if (rVisualization.GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::AABB) 
 	{
 		// rendering the AABBs of tree nodes in the BVH
@@ -1001,13 +1011,23 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 			int16_t iAlreadyRenderedConstructionSteps = 0;
 			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForTopDownRendering)
 			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
+				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iDepthInTree <= rVisualization.m_iMaximumRenderedTreeDepth);
 				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
 
 				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
 				if (bShallRender)
 				{
-					rCurrentShader.setVec4("color", rVisualization.m_vec4TopDownNodeRenderColor);
+					glm::vec4 vec4NodeRenderColor = rVisualization.m_vec4TopDownNodeRenderColor;
+					if (rVisualization.m_bNodeDepthColorGrading)
+					{
+						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(rVisualization.m_vec4TopDownNodeRenderColor,
+							rVisualization.m_vec4TopDownNodeRenderColor_Gradient,
+							rCurrentRenderedBVHAABB.m_iDepthInTree,
+							rVisualization.m_tTopDownBVH_AABB.m_iTDeepestDepthOfNodes
+						);
+					}
+
+					rCurrentShader.setVec4("color", vec4NodeRenderColor);
 					RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
 				}
 
@@ -1020,13 +1040,23 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 			int16_t iAlreadyRenderedConstructionSteps = 0;
 			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForBottomUpRendering)
 			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
+				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iDepthInTree <= rVisualization.m_iMaximumRenderedTreeDepth);
 				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
 
 				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
 				if (bShallRender)
 				{
-					rCurrentShader.setVec4("color", rVisualization.m_vec4BottomUpNodeRenderColor);
+					glm::vec4 vec4NodeRenderColor = rVisualization.m_vec4BottomUpNodeRenderColor;
+					if (rVisualization.m_bNodeDepthColorGrading)
+					{
+						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(rVisualization.m_vec4BottomUpNodeRenderColor,
+							rVisualization.m_vec4BottomUpNodeRenderColor_Gradient,
+							rCurrentRenderedBVHAABB.m_iDepthInTree,
+							rVisualization.m_tTopDownBVH_AABB.m_iTDeepestDepthOfNodes
+						);
+					}
+
+					rCurrentShader.setVec4("color", vec4NodeRenderColor);
 					RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
 				}
 
@@ -1041,13 +1071,52 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 			int16_t iAlreadyRenderedConstructionSteps = 0;
 			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHBoundingSphere : rVisualization.m_vecTreeBoundingSpheresForTopDownRendering)
 			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingSphere.m_iTreeDepth <= rVisualization.m_iMaximumRenderedTreeDepth);
+				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingSphere.m_iDepthInTree <= rVisualization.m_iMaximumRenderedTreeDepth);
 				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
 
 				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
 				if (bShallRender)
 				{
-					rCurrentShader.setVec4("color", rVisualization.m_vec4TopDownNodeRenderColor);
+					glm::vec4 vec4NodeRenderColor = rVisualization.m_vec4TopDownNodeRenderColor;
+					if (rVisualization.m_bNodeDepthColorGrading)
+					{
+						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(rVisualization.m_vec4TopDownNodeRenderColor,
+							rVisualization.m_vec4TopDownNodeRenderColor_Gradient,
+							rCurrentRenderedBVHBoundingSphere.m_iDepthInTree,
+							rVisualization.m_tTopDownBVH_AABB.m_iTDeepestDepthOfNodes
+						);
+					}
+
+					rCurrentShader.setVec4("color", vec4NodeRenderColor);
+					RenderTreeNodeBoundingsphere(rCurrentRenderedBVHBoundingSphere, rCurrentShader);
+				}
+
+				iAlreadyRenderedConstructionSteps++;
+			}
+		}
+
+		if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
+		{
+			int16_t iAlreadyRenderedConstructionSteps = 0;
+			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHBoundingSphere : rVisualization.m_vecTreeBoundingSpheresForBottomUpRendering)
+			{
+				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingSphere.m_iDepthInTree <= rVisualization.m_iMaximumRenderedTreeDepth);
+				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
+
+				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
+				if (bShallRender)
+				{
+					glm::vec4 vec4NodeRenderColor = rVisualization.m_vec4BottomUpNodeRenderColor;
+					if (rVisualization.m_bNodeDepthColorGrading)
+					{
+						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(rVisualization.m_vec4BottomUpNodeRenderColor,
+							rVisualization.m_vec4BottomUpNodeRenderColor_Gradient,
+							rCurrentRenderedBVHBoundingSphere.m_iDepthInTree,
+							rVisualization.m_tTopDownBVH_AABB.m_iTDeepestDepthOfNodes
+						);
+					}
+
+					rCurrentShader.setVec4("color", vec4NodeRenderColor);
 					RenderTreeNodeBoundingsphere(rCurrentRenderedBVHBoundingSphere, rCurrentShader);
 				}
 

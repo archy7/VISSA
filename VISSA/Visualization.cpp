@@ -23,18 +23,19 @@ Visualization::Visualization() :
 	m_bRenderObjectBoundingSpheres(false),
 	m_bRenderGridXPlane(false),
 	m_bRenderGridYPlane(false),
-	m_bRenderGridZPlane(false)
+	m_bRenderGridZPlane(false),
+	m_bNodeDepthColorGrading(false)
 {
 	InitPlaybackSpeeds();
 	InitRenderColors();
 	ResetSimulation();
 }
 
-void Visualization::Load()
+void Visualization::LoadDefaultScene()
 {
 	using namespace Primitives;
 
-	ClearPreviousVisualization();
+	ClearCurrentScene();
 
 	std::vector<glm::vec3> vecNewObjectsPositions;
 	std::vector<glm::vec3> vecNewObjectsScales;
@@ -86,8 +87,8 @@ void Visualization::Load()
 	assert(vecNewObjectsPositions.size() == vecNewObjectsScales.size());
 	assert(vecNewObjectsScales.size() == vecNewObjectsRotations.size());
 
-	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
-	for (int uiCurrentNewObject = 0; uiCurrentNewObject < 2; uiCurrentNewObject++)
+	for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
+	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < 2; uiCurrentNewObject++)
 	{
 		SceneObject tNewObject;
 		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[uiCurrentNewObject];
@@ -121,8 +122,8 @@ void Visualization::ReconstructAllTrees()
 	m_tTopDownBVH_BoundingSphere.DeleteTree();
 	m_tTopDownBVH_BoundingSphere = CollisionDetection::ConstructTopDownBoundingSphereBVHForScene(*this);
 
-	//m_tBottomUpBVH_BoundingSphere.DeleteTree();
-	//m_tBottomUpBVH_BoundingSphere = CollisionDetection::ConstructBottomUpBoundingSphereBVHForScene(*this);
+	m_tBottomUpBVH_BoundingSphere.DeleteTree();
+	m_tBottomUpBVH_BoundingSphere = CollisionDetection::ConstructBottomUpBoundingSphereBVHForScene(*this);
 }
 
 void Visualization::UpdateAfterObjectPropertiesChange()
@@ -270,9 +271,15 @@ void Visualization::AddNewSceneObject(SceneObject & rNewSceneObject)
 	ResetSimulation();
 }
 
-void Visualization::ClearPreviousVisualization()
+void Visualization::ClearCurrentScene()
 {
 	m_vecObjects.clear();
+	m_pCurrentlyFocusedObject = nullptr; // just in case
+
+	m_tTopDownBVH_AABB.DeleteTree();
+	m_tBottomUpBVH_AABB.DeleteTree();
+	m_tTopDownBVH_BoundingSphere.DeleteTree();
+	m_tBottomUpBVH_BoundingSphere.DeleteTree();
 }
 
 void Visualization::InitPlaybackSpeeds()
@@ -300,5 +307,7 @@ void Visualization::InitRenderColors()
 
 	// node colors
 	m_vec4TopDownNodeRenderColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f); // red
+	m_vec4TopDownNodeRenderColor_Gradient = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // black
 	m_vec4BottomUpNodeRenderColor = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f); // purple
+	m_vec4BottomUpNodeRenderColor_Gradient = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // black
 }

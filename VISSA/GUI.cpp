@@ -273,6 +273,90 @@ void GUI::RenderSimOptions(Engine& rEngine)
 
 	ImGui::Begin("Options", &m_bShowSimulationOptions, window_flags);
 
+	ImGui::Text("Scene");
+	if (ImGui::Button("Load Scene"))
+	{
+		ImGui::OpenPopup("Select Scene");
+	}
+	{
+		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+		if (ImGui::BeginPopupModal("Select Scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			if (ImGui::Button("Default Scene", ImVec2(120, 0)))
+			{
+				rEngine.m_tVisualization.LoadDefaultScene();
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine(); HelpMarker("The scene which is loaded when you first start the Bounding Volume Hierarchy Visualization");
+
+			if (ImGui::Button("CANCEL", ImVec2(120, 0)))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
+	}
+
+	if (ImGui::Button("Add Object"))
+	{
+		m_bShowObjectCreationWindow = true;
+	}
+
+	if (ImGui::Button("Delete All Objects"))
+	{
+		ImGui::OpenPopup("CONFIRM DELETION OF ALL OBJECTS");
+	}
+	{
+		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+		if (ImGui::BeginPopupModal("CONFIRM DELETION OF ALL OBJECTS", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Are you sure?");
+			//ImGui::TextWrapped("Deleting this object will reconstruct the Bounding Volume Hierarchy and resest the simulation. It cannot be undone.");
+			if (ImGui::Button("YES", ImVec2(120, 0)))
+			{
+				rEngine.m_tVisualization.ClearCurrentScene();
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SetItemDefaultFocus();
+			ImGui::SameLine();
+			if (ImGui::Button("CANCEL", ImVec2(120, 0)))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
+	}
+
+	ImGui::Separator();
+	ImGui::Text("BVH");
+
+	ImGui::Text("BVH Bounding Volume"); ImGui::SameLine(); HelpMarker("The Hierarchy's nodes' Bounding Volume");
+	// The combo box to choose the hierarchy's node bounding volume
+	const char* pBVHBoundingVolumeItems[] = { "AABB", "Bounding Sphere" };
+	int iCurrentBVHBoundingVolumeItemIndex = static_cast<int>(rEngine.m_tVisualization.GetCurrentBVHBoundingVolume());
+	const char* sBVHBoundingVolumeComboLabel = pBVHBoundingVolumeItems[iCurrentBVHBoundingVolumeItemIndex];  // Label to preview before opening the combo (technically it could be anything)
+	if (ImGui::BeginCombo("##BVH Bounding Volume", sBVHBoundingVolumeComboLabel))
+	{
+		for (int iCurrentItem = 0; iCurrentItem < IM_ARRAYSIZE(pBVHBoundingVolumeItems); iCurrentItem++)
+		{
+			const bool bIsSelected = (iCurrentBVHBoundingVolumeItemIndex == iCurrentItem);
+			if (ImGui::Selectable(pBVHBoundingVolumeItems[iCurrentItem], bIsSelected))
+			{
+				assert(iCurrentItem <= static_cast<int>(Visualization::eBVHBoundingVolume::NUM_BVHBOUNDINGVOLUMES));
+				rEngine.m_tVisualization.SetNewBVHBoundingVolume(static_cast<Visualization::eBVHBoundingVolume>(iCurrentItem));
+			}
+
+			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+			if (bIsSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
 	ImGui::Text("Construction Strategy");
 	// The combo box to choose a BVH construction strategy
 	const char* pBVHConstructionStrategyItems[] = { "TOP DOWN", "BOTTOM UP" };
@@ -304,15 +388,23 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	if (iCurrentConstructionStrategyItemIndex == 0) 
 	{
 		ImGui::Text("TOP DOWN OPTIONS AND PARAMETERS");
-		ImGui::ColorEdit3("Node Color##TOPDOWN", (float*)&rEngine.m_tVisualization.m_vec4TopDownNodeRenderColor, iColorPickerFlags);
+		ImGui::ColorEdit3("Node Color##TOPDOWN", (float*)&rEngine.m_tVisualization.m_vec4TopDownNodeRenderColor, iColorPickerFlags); ImGui::SameLine();
+		ImGui::Checkbox("Gradient##TOPDOWN", &rEngine.m_tVisualization.m_bNodeDepthColorGrading);
+		if(rEngine.m_tVisualization.m_bNodeDepthColorGrading)
+			ImGui::ColorEdit3("Node Gradient Color##TOPDOWN", (float*)&rEngine.m_tVisualization.m_vec4TopDownNodeRenderColor_Gradient, iColorPickerFlags);
 	}
 
 	// BOTTOM UP OPTIONS
 	if (iCurrentConstructionStrategyItemIndex == 1)
 	{
 		ImGui::Text("BOTTOM UP OPTIONS AND PARAMETERS");
-		ImGui::ColorEdit3("Node Color##BOTTOMUP", (float*)&rEngine.m_tVisualization.m_vec4BottomUpNodeRenderColor, iColorPickerFlags);
+		ImGui::ColorEdit3("Node Color##BOTTOMUP", (float*)&rEngine.m_tVisualization.m_vec4BottomUpNodeRenderColor, iColorPickerFlags); ImGui::SameLine();
+		ImGui::Checkbox("Gradient##BOTTOMUP", &rEngine.m_tVisualization.m_bNodeDepthColorGrading);
+		if (rEngine.m_tVisualization.m_bNodeDepthColorGrading)
+			ImGui::ColorEdit3("Node Gradient Color##BOTTOMUP", (float*)&rEngine.m_tVisualization.m_vec4BottomUpNodeRenderColor_Gradient, iColorPickerFlags);
 	}
+
+	
 
 	//if (ImGui::Button("Rebuild BVHs"))
 	//{
@@ -322,39 +414,6 @@ void GUI::RenderSimOptions(Engine& rEngine)
 	//	rEngine.m_tVisualization.m_bBVHTreesValid = true;
 	//}
 	
-	ImGui::Separator();
-	// now follow options that are generally available in the visualization
-
-	ImGui::Text("General");
-	ImGui::Text("BVH Bounding Volume"); ImGui::SameLine(); HelpMarker("The Hierarchy's nodes' Bounding Volume");
-	// The combo box to choose the hierarchy's node bounding volume
-	const char* pBVHBoundingVolumeItems[] = { "AABB", "Bounding Sphere" };
-	int iCurrentBVHBoundingVolumeItemIndex = static_cast<int>(rEngine.m_tVisualization.GetCurrentBVHBoundingVolume());
-	const char* sBVHBoundingVolumeComboLabel = pBVHBoundingVolumeItems[iCurrentBVHBoundingVolumeItemIndex];  // Label to preview before opening the combo (technically it could be anything)
-	if (ImGui::BeginCombo("##BVH Bounding Volume", sBVHBoundingVolumeComboLabel))
-	{
-		for (int iCurrentItem = 0; iCurrentItem < IM_ARRAYSIZE(pBVHBoundingVolumeItems); iCurrentItem++)
-		{
-			const bool bIsSelected = (iCurrentBVHBoundingVolumeItemIndex == iCurrentItem);
-			if (ImGui::Selectable(pBVHBoundingVolumeItems[iCurrentItem], bIsSelected))
-			{
-				assert(iCurrentItem <= static_cast<int>(Visualization::eBVHBoundingVolume::NUM_BVHBOUNDINGVOLUMES));
-				rEngine.m_tVisualization.SetNewBVHBoundingVolume(static_cast<Visualization::eBVHBoundingVolume>(iCurrentItem));
-			}
-
-			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-			if (bIsSelected)
-				ImGui::SetItemDefaultFocus();
-		}
-		ImGui::EndCombo();
-	}
-
-
-	if (ImGui::Button("Add Object"))
-	{
-		m_bShowObjectCreationWindow = true;
-	}
-
 	ImGui::Separator();
 	
 	ImGui::Text("Object AABBs");
@@ -621,7 +680,7 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 		if (ImGui::Button("BOUNDING VOLUME HIERARCHY", ImVec2(0, 0)))
 		{
 			// CD relevant
-			rEngine.m_tVisualization.Load();	// really bad implementation of "loading"
+			rEngine.m_tVisualization.LoadDefaultScene();	// really bad implementation of "loading"
 
 			// UI relevant
 			rEngine.m_tWindow.SetHardCaptureMouse(true);

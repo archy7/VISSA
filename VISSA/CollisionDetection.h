@@ -78,11 +78,13 @@ namespace CollisionDetection {
 	};
 
 	struct BoundingVolumeHierarchy {
-		BVHTreeNode* m_pRootNode = nullptr;
 		//BoundingVolumeHierarchy();
 		//~BoundingVolumeHierarchy();
 		//BoundingVolumeHierarchy(BoundingVolumeHierarchy& rOther);
 		//BoundingVolumeHierarchy& operator=(BoundingVolumeHierarchy tOther);
+		BVHTreeNode* m_pRootNode = nullptr;
+		int16_t m_iTDeepestDepthOfNodes = 0;
+
 		void DeleteTree();
 	private:
 		
@@ -91,7 +93,7 @@ namespace CollisionDetection {
 
 	struct TreeNodeForRendering {
 		BVHTreeNode* m_pNodeToBeRendered;
-		int16_t m_iTreeDepth = 0u;
+		int16_t m_iDepthInTree = 0u;
 		int16_t m_iRenderingOrder = 0u; // when stepping through the simulation, this determines in which order node bounding volumes are rendered.
 	};
 

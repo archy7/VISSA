@@ -103,11 +103,11 @@ namespace CollisionDetection {
 		/*
 			TODO: DOC
 		*/
-		void TraverseTreeForDataForTopDownRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
+		void TraverseTreeForDataForTopDownRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth, int16_t& riTotalTreeDepth);
 		/*
 			TODO: DOC
 		*/
-		void TraverseTreeForDataForBottomUpRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth);
+		void TraverseTreeForDataForBottomUpRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth, int16_t& riTotalTreeDepth);
 		/*
 			TODO: DOC
 		*/
@@ -137,11 +137,11 @@ namespace CollisionDetection {
 		/*
 			TODO: DOC
 		*/
-		void TraverseTreeForDataForTopDownRendering_BoundingSphere(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecBoundingspheresForRendering, int16_t iTreeDepth);
+		void TraverseTreeForDataForTopDownRendering_BoundingSphere(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecBoundingspheresForRendering, int16_t iTreeDepth, int16_t& riTotalTreeDepth);
 		/*
 			TODO: DOC
 		*/
-		void TraverseTreeForDataForBottomUpRendering_BoundingSphere(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecBoundingSpheresForRendering, int16_t iTreeDepth);
+		void TraverseTreeForDataForBottomUpRendering_BoundingSphere(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecBoundingSpheresForRendering, int16_t iTreeDepth, int16_t& riTotalTreeDepth);
 		/*
 			TODO: DOC
 		*/
@@ -346,7 +346,7 @@ CollisionDetection::BoundingVolumeHierarchy CollisionDetection::ConstructTopDown
 	// But that is terrible, so data is fetched into a linear vector
 	rScene.m_vecTreeAABBsForTopDownRendering.clear();
 	rScene.m_vecTreeAABBsForTopDownRendering.reserve(rScene.m_vecObjects.size());
-	TraverseTreeForDataForTopDownRendering_AABB(tResult.m_pRootNode, rScene.m_vecTreeAABBsForTopDownRendering, 0);
+	TraverseTreeForDataForTopDownRendering_AABB(tResult.m_pRootNode, rScene.m_vecTreeAABBsForTopDownRendering, 0, tResult.m_iTDeepestDepthOfNodes);
 
 	return tResult;
 }
@@ -361,7 +361,7 @@ BoundingVolumeHierarchy CollisionDetection::ConstructBottomUpAABBBVHForScene(Vis
 
 	// the construction INCLUDING HALF THE PREPARATION OF AABB RENDERING DATA
 	tResult.m_pRootNode = BottomUpTree_AABB(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
-	TraverseTreeForDataForBottomUpRendering_AABB(tResult.m_pRootNode, rScene.m_vecTreeAABBsForBottomUpRendering, 0);
+	TraverseTreeForDataForBottomUpRendering_AABB(tResult.m_pRootNode, rScene.m_vecTreeAABBsForBottomUpRendering, 0, tResult.m_iTDeepestDepthOfNodes);
 
 	return tResult;
 }
@@ -380,16 +380,22 @@ BoundingVolumeHierarchy CollisionDetection::ConstructTopDownBoundingSphereBVHFor
 	// But that is terrible, so data is fetched into a linear vector
 	rScene.m_vecTreeBoundingSpheresForTopDownRendering.clear();
 	rScene.m_vecTreeBoundingSpheresForTopDownRendering.reserve(rScene.m_vecObjects.size());
-	TraverseTreeForDataForTopDownRendering_BoundingSphere(tResult.m_pRootNode, rScene.m_vecTreeBoundingSpheresForTopDownRendering, 0);
+	TraverseTreeForDataForTopDownRendering_BoundingSphere(tResult.m_pRootNode, rScene.m_vecTreeBoundingSpheresForTopDownRendering, 0, tResult.m_iTDeepestDepthOfNodes);
 
 	return tResult;
 }
 
 BoundingVolumeHierarchy CollisionDetection::ConstructBottomUpBoundingSphereBVHForScene(Visualization & rScene)
 {
-	assert(!"empty");
+	assert(rScene.m_vecObjects.size() > 0);
 
 	BoundingVolumeHierarchy tResult;
+	rScene.m_vecTreeBoundingSpheresForBottomUpRendering.clear();
+	rScene.m_vecTreeBoundingSpheresForBottomUpRendering.reserve(rScene.m_vecObjects.size());
+
+	// the construction INCLUDING HALF THE PREPARATION OF BOUNDING SPHERE RENDERING DATA
+	tResult.m_pRootNode = BottomUpTree_BoundingSphere(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
+	TraverseTreeForDataForBottomUpRendering_BoundingSphere(tResult.m_pRootNode, rScene.m_vecTreeBoundingSpheresForBottomUpRendering, 0, tResult.m_iTDeepestDepthOfNodes);
 
 	return tResult;
 }
@@ -428,9 +434,12 @@ void CollisionDetection::BoundingVolumeHierarchy::RecursiveDeleteTree(BVHTreeNod
 
 RayCastIntersectionResult CollisionDetection::CastRayIntoBVH(const BoundingVolumeHierarchy & rBVH, const Ray & rCastedRay)
 {
-	assert(rBVH.m_pRootNode);
+	RayCastIntersectionResult tResult;
 
-	RayCastIntersectionResult tResult = RecursiveRayCastIntoBVHTree(rBVH.m_pRootNode, rCastedRay);
+	if (rBVH.m_pRootNode) // only actually cast a ray if there are objects in the scene
+	{
+		tResult = RecursiveRayCastIntoBVHTree(rBVH.m_pRootNode, rCastedRay);
+	}
 
 	return tResult;
 }
@@ -790,10 +799,10 @@ namespace CollisionDetection {
 				pParentNode->m_tAABBForNode = MergeTwoAABBs(pTempNodes[uiMergedNodeIndex1]->m_tAABBForNode, pTempNodes[uiMergedNodeIndex2]->m_tAABBForNode);
 
 				// for visualization/rendering purposes
-				TreeNodeForRendering tNewAABBForRendering;
-				tNewAABBForRendering.m_iRenderingOrder = iNumConstructedNodes++;
-				tNewAABBForRendering.m_pNodeToBeRendered = pParentNode;
-				rVisualization.m_vecTreeAABBsForBottomUpRendering.push_back(tNewAABBForRendering);
+				TreeNodeForRendering tNewAABBNodeForRendering;
+				tNewAABBNodeForRendering.m_iRenderingOrder = iNumConstructedNodes++;
+				tNewAABBNodeForRendering.m_pNodeToBeRendered = pParentNode;
+				rVisualization.m_vecTreeAABBsForBottomUpRendering.push_back(tNewAABBNodeForRendering);
 
 				//Updating the current set of nodes accordingly
 				size_t uiMinIndex = uiMergedNodeIndex1, uiMaxIndex = uiMergedNodeIndex2;
@@ -812,11 +821,11 @@ namespace CollisionDetection {
 			return pRootNode;
 		}
 
-		void TraverseTreeForDataForTopDownRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
+		void TraverseTreeForDataForTopDownRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iDepthInTree, int16_t& riTotalTreeDepth)
 		{
 			assert(pNode);
 
-			iTreeDepth++; // we are now one level deeper. depth of root node == 1 here
+			
 
 			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
 			{
@@ -826,20 +835,23 @@ namespace CollisionDetection {
 
 				// save relevant data for rendering
 				TreeNodeForRendering tNewAABBForRendering;
-				tNewAABBForRendering.m_iTreeDepth = iTreeDepth;
+				tNewAABBForRendering.m_iDepthInTree = iDepthInTree;
 				tNewAABBForRendering.m_pNodeToBeRendered = pNode;
 				rvecAABBsForRendering.push_back(tNewAABBForRendering);
 
+				riTotalTreeDepth = std::max(riTotalTreeDepth, iDepthInTree);
+				iDepthInTree++; // we are now one level deeper
+
 				// traverse left ...
-				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
+				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pLeft, rvecAABBsForRendering, iDepthInTree, riTotalTreeDepth);
 				// ... then right
-				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
+				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rvecAABBsForRendering, iDepthInTree, riTotalTreeDepth);
 			}
 
 			// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
 		}
 
-		void TraverseTreeForDataForBottomUpRendering_AABB(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth)
+		void TraverseTreeForDataForBottomUpRendering_AABB(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iDepthInTree, int16_t& riTotalTreeDepth)
 		{
 			/*
 				This is going to be ugly.
@@ -852,7 +864,7 @@ namespace CollisionDetection {
 
 			assert(pNode);
 
-			iTreeDepth++; // we are now one level deeper. depth of root node == 1 here
+			
 
 			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
 			{
@@ -865,15 +877,18 @@ namespace CollisionDetection {
 				{
 					if (pNode == rCurrentRenderObject.m_pNodeToBeRendered)
 					{
-						rCurrentRenderObject.m_iTreeDepth = iTreeDepth;
+						rCurrentRenderObject.m_iDepthInTree = iDepthInTree;
 						break;
 					}
 				}
 
+				riTotalTreeDepth = std::max(riTotalTreeDepth, iDepthInTree);
+				iDepthInTree++; // we are now one level deeper				
+
 				// traverse left ...
-				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pLeft, rvecAABBsForRendering, iTreeDepth);
+				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pLeft, rvecAABBsForRendering, iDepthInTree, riTotalTreeDepth);
 				// ... then right
-				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pRight, rvecAABBsForRendering, iTreeDepth);
+				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pRight, rvecAABBsForRendering, iDepthInTree, riTotalTreeDepth);
 			}
 		}
 
@@ -993,11 +1008,34 @@ namespace CollisionDetection {
 			return tResult;
 		}
 
-		void TraverseTreeForDataForTopDownRendering_BoundingSphere(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecBoundingspheresForRendering, int16_t iTreeDepth)
+		BoundingSphere MergeTwoBoundingSpheres(const BoundingSphere & rBoundingSphere1, const BoundingSphere & rBoundingSphere2)
+		{
+			assert(rBoundingSphere1.m_fRadius > 0.0f);
+			assert(rBoundingSphere2.m_fRadius > 0.0f);
+
+			// initiliazing result with first bounding sphere
+			BoundingSphere tResult = rBoundingSphere1;
+
+			// we determine the distance vector to encompassed sphere from result sphere
+			const glm::vec3 vec3CenterPointsDistance = rBoundingSphere2.m_vec3Center - tResult.m_vec3Center;
+			// we construct the normalized direction of the distance ...
+			const glm::vec3 vec3NormalizedCenterPointsDirection = glm::normalize(vec3CenterPointsDistance);
+			// ...  to then scale it by the encompassed sphere's radius, resulting in a "directed" radius
+			const glm::vec3 vec3DirectedEncompassedSphereRadius = vec3NormalizedCenterPointsDirection * rBoundingSphere2.m_fRadius;
+			// we construct the point on the encompassed sphere that is the most distant to the current sphere's center
+			const glm::vec3 vec3EncompassedSphereMostDistantPoint = rBoundingSphere2.m_vec3Center + vec3DirectedEncompassedSphereRadius;
+			// we conditionally update the result sphere to encompass this most distant point
+			ConditionallyUpdateSphereToEncompassPoint(tResult, vec3EncompassedSphereMostDistantPoint);
+
+			return tResult;
+		}
+
+		void TraverseTreeForDataForTopDownRendering_BoundingSphere(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecBoundingspheresForRendering, int16_t iDepthInTree, int16_t& riTotalTreeDepth)
 		{
 			assert(pNode);
 
-			iTreeDepth++; // we are now one level deeper. depth of root node == 1 here
+			
+			
 
 			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
 			{
@@ -1007,17 +1045,59 @@ namespace CollisionDetection {
 
 				// save relevant data for rendering
 				TreeNodeForRendering tNewBoundingSphereForRendering;
-				tNewBoundingSphereForRendering.m_iTreeDepth = iTreeDepth;
+				tNewBoundingSphereForRendering.m_iDepthInTree = iDepthInTree;
 				tNewBoundingSphereForRendering.m_pNodeToBeRendered = pNode;
 				rvecBoundingspheresForRendering.push_back(tNewBoundingSphereForRendering);
 
+				riTotalTreeDepth = std::max(riTotalTreeDepth, iDepthInTree);
+				iDepthInTree++; // we are now one level deeper
+
 				// traverse left ...
-				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pLeft, rvecBoundingspheresForRendering, iTreeDepth);
+				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pLeft, rvecBoundingspheresForRendering, iDepthInTree, riTotalTreeDepth);
 				// ... then right
-				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rvecBoundingspheresForRendering, iTreeDepth);
+				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rvecBoundingspheresForRendering, iDepthInTree, riTotalTreeDepth);
 			}
 
 			// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
+		}
+
+		void TraverseTreeForDataForBottomUpRendering_BoundingSphere(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecBoundingSpheresForRendering, int16_t iDepthInTree, int16_t& riDeepestDepthOfNodes)
+		{
+			/*
+				This is going to be ugly.
+				We are facing a problem here: For Bottom up construction of a BVH, the order in which AABBs are constructed is not the same as the tree is later being traversed.
+				That means, there is no information in the tree, in which order its nodes were constructed.
+				Also, i want to keep this information outside of the tree, since it is really only relevant for rendering/visualizing.
+				So, in an effort to keep the visualization only data out of the tree, we have to now do something very ugly.
+				Order of construction can only be determined during construction. Tree depth of a given node and its associated AABB can only be determined during traversal.
+			*/
+
+			assert(pNode);
+
+			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
+			{
+				// if it is a node, there was a partitioning step, which means there have to be two children
+				assert(pNode->m_pLeft);
+				assert(pNode->m_pRight);
+
+				// the ugly part. finding the appropriate rendering object to assign it its true tree depth.
+				for (TreeNodeForRendering& rCurrentRenderObject : rvecBoundingSpheresForRendering)
+				{
+					if (pNode == rCurrentRenderObject.m_pNodeToBeRendered)
+					{
+						rCurrentRenderObject.m_iDepthInTree = iDepthInTree;
+						break;
+					}
+				}
+
+				riDeepestDepthOfNodes = std::max(riDeepestDepthOfNodes, iDepthInTree);
+				iDepthInTree++; // we are now one level deeper
+
+				// traverse left ...
+				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pLeft, rvecBoundingSpheresForRendering, iDepthInTree, riDeepestDepthOfNodes);
+				// ... then right
+				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pRight, rvecBoundingSpheresForRendering, iDepthInTree, riDeepestDepthOfNodes);
+			}
 		}
 
 		BoundingSphere CreateBoundingSphereForMultipleObjects(const SceneObject * pSceneObjects, size_t uiNumSceneObjects)
@@ -1286,6 +1366,104 @@ namespace CollisionDetection {
 
 				// move on with "right" side
 				RecursiveTopDownTree_BoundingSphere(&(pNewNode->m_pRight), pSceneObjects + uiPartitioningIndex, uiNumSceneObjects - uiPartitioningIndex);
+			}
+		}
+
+		BVHTreeNode * BottomUpTree_BoundingSphere(SceneObject * pSceneObjects, size_t uiNumSceneObjects, Visualization & rVisualization)
+		{
+			assert(uiNumSceneObjects > 0);
+
+			BVHTreeNode** pTempNodes = new BVHTreeNode*[uiNumSceneObjects]; // careful: these are pointers to pointers
+
+			// creating all leaf nodes: number leaves == number objects
+			for (size_t uiCurrentNewLeafNode = 0u; uiCurrentNewLeafNode < uiNumSceneObjects; uiCurrentNewLeafNode++)
+			{
+				pTempNodes[uiCurrentNewLeafNode] = new BVHTreeNode;	// assigning the adress of the new leaf node to the pointer pointed at by pTempNodes[current]
+				pTempNodes[uiCurrentNewLeafNode]->m_uiNumOjbects = 1u;
+				pTempNodes[uiCurrentNewLeafNode]->m_pObjects = &pSceneObjects[uiCurrentNewLeafNode];
+				pTempNodes[uiCurrentNewLeafNode]->m_tBoundingSphereForNode = pTempNodes[uiCurrentNewLeafNode]->m_pObjects->m_tWorldSpaceBoundingSphere;
+			}
+
+			// for visualization purposes
+			int16_t iNumConstructedNodes = 0;
+
+			// merging leaves into nodes until root node is constructed
+			while (uiNumSceneObjects > 1) {
+				// Pick two volumes to pair together
+				size_t uiMergedNodeIndex1 = 0, uiMergedNodeIndex2 = 0;
+				FindBottomUpNodesToMerge_BoundingSphere(pTempNodes, uiNumSceneObjects, uiMergedNodeIndex1, uiMergedNodeIndex2);
+
+				// Pair them in new parent node
+				BVHTreeNode* pParentNode = new BVHTreeNode;
+				pParentNode->m_pLeft = pTempNodes[uiMergedNodeIndex1];
+				pParentNode->m_pRight = pTempNodes[uiMergedNodeIndex2];
+				// construct AABB for that parent node (adaption from orginal code)
+				pParentNode->m_tBoundingSphereForNode = MergeTwoBoundingSpheres(pTempNodes[uiMergedNodeIndex1]->m_tBoundingSphereForNode, pTempNodes[uiMergedNodeIndex2]->m_tBoundingSphereForNode);
+
+				// for visualization/rendering purposes
+				TreeNodeForRendering tNewBoundingSphereNodeForRendering;
+				tNewBoundingSphereNodeForRendering.m_iRenderingOrder = iNumConstructedNodes++;
+				tNewBoundingSphereNodeForRendering.m_pNodeToBeRendered = pParentNode;
+				rVisualization.m_vecTreeBoundingSpheresForBottomUpRendering.push_back(tNewBoundingSphereNodeForRendering);
+
+				//Updating the current set of nodes accordingly
+				size_t uiMinIndex = uiMergedNodeIndex1, uiMaxIndex = uiMergedNodeIndex2;
+				if (uiMergedNodeIndex1 > uiMergedNodeIndex2)
+				{
+					uiMinIndex = uiMergedNodeIndex2;
+					uiMaxIndex = uiMergedNodeIndex1;
+				}
+				pTempNodes[uiMinIndex] = pParentNode;
+				pTempNodes[uiMaxIndex] = pTempNodes[uiNumSceneObjects - 1];
+				uiNumSceneObjects--;
+			}
+
+			BVHTreeNode* pRootNode = pTempNodes[0]; // careful: getting the pointer to root by dereferencing the pointer to pointer
+			delete[] pTempNodes;
+			return pRootNode;
+		}
+
+		void FindBottomUpNodesToMerge_BoundingSphere(BVHTreeNode ** pNode, size_t uiNumNodes, size_t & rNodeIndex1, size_t & rNodeIndex2)
+		{
+			float fCurrentlySmallestBoundingSphereDiameter = std::numeric_limits<float>::max();
+
+			// testing every current node...
+			for (size_t uiCurrentMergePartnerIndex1 = 0; uiCurrentMergePartnerIndex1 < uiNumNodes; uiCurrentMergePartnerIndex1++)
+			{
+				// ... against every other node
+				for (size_t uiCurrentMergePartnerIndex2 = uiCurrentMergePartnerIndex1 + 1; uiCurrentMergePartnerIndex2 < uiNumNodes; uiCurrentMergePartnerIndex2++)
+				{
+					//  determine the size of the bounding volume that would result from the two current 
+					const BoundingSphere& rBoundingSphere1 = pNode[uiCurrentMergePartnerIndex1]->m_tBoundingSphereForNode;
+					const BoundingSphere& rBoundingSphere2 = pNode[uiCurrentMergePartnerIndex2]->m_tBoundingSphereForNode;
+
+					// we determine the distance vector to sphere2 from sphere1
+					const glm::vec3 vec3CenterPointsDistance = rBoundingSphere2.m_vec3Center - rBoundingSphere1.m_vec3Center;
+					// we construct the normalized direction of the distance ...
+					const glm::vec3 vec3NormalizedCenterPointsDirection = glm::normalize(vec3CenterPointsDistance);
+					// ... to then scale it by the second sphere's radius, resulting in a "directed radius"
+					const glm::vec3 vec3DirectedSecondSphereRadius = vec3NormalizedCenterPointsDirection * rBoundingSphere2.m_fRadius;
+					// ... we also scale its inverse with the first sphere's radius, resulting in a "radius" directed in the opposite direction
+					const glm::vec3 vec3DirectedFirstSphereRadius = -vec3NormalizedCenterPointsDirection * rBoundingSphere1.m_fRadius;
+
+					// we construct the point on the second sphere that is the most distant to the first sphere's center
+					const glm::vec3 vec3SecondSphereMostDistantPoint = rBoundingSphere2.m_vec3Center + vec3DirectedSecondSphereRadius;
+					// we construct the point on the first sphere that is the most distant to the second sphere's center
+					const glm::vec3 vec3FirstSphereMostDistantPoint = rBoundingSphere1.m_vec3Center + vec3DirectedFirstSphereRadius;
+
+					// having constructed the two most distant points, we can now simply determine their distance
+					const glm::vec3 vec3DistanceBetweenMostDistantPoints = vec3SecondSphereMostDistantPoint - vec3FirstSphereMostDistantPoint;
+					// which effectively is the diameter of the bounding sphere that would encompass both spheres.
+					const float fMergedBoundingSphereDiameter = glm::length(vec3DistanceBetweenMostDistantPoints);
+
+					// update results conditionally
+					if (fMergedBoundingSphereDiameter < fCurrentlySmallestBoundingSphereDiameter)
+					{
+						fCurrentlySmallestBoundingSphereDiameter = fMergedBoundingSphereDiameter;
+						rNodeIndex1 = uiCurrentMergePartnerIndex1;
+						rNodeIndex2 = uiCurrentMergePartnerIndex2;
+					}
+				}
 			}
 		}
 

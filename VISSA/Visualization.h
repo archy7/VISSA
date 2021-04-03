@@ -50,7 +50,9 @@ public:
 	glm::vec4 m_vec4AABBDefaultColor;
 	glm::vec4 m_vec4BoundingSphereDefaultColor;
 	glm::vec4 m_vec4TopDownNodeRenderColor;
+	glm::vec4 m_vec4TopDownNodeRenderColor_Gradient;
 	glm::vec4 m_vec4BottomUpNodeRenderColor;
+	glm::vec4 m_vec4BottomUpNodeRenderColor_Gradient;
 	glm::vec4 m_vec4CrossHairColor;
 	glm::vec3 m_vec3GridPositionsOnAxes;
 	float m_fCrossHairScaling;
@@ -60,7 +62,7 @@ public:
 	float m_fAccumulatedTimeSinceLastUpdateStep;
 
 	int16_t m_iMaximumRenderedTreeDepth;
-	int m_iNumberStepsRendered; // the number of Tree node AABBs that is rendered. They are ordered by which was one was contructed first.
+	int m_iNumberStepsRendered; // the number of Tree nodes that is rendered. They are ordered by which was one was contructed first.
 	ePresentationMode m_ePresentationMode;
 	
 
@@ -69,8 +71,9 @@ public:
 	bool m_bRenderGridXPlane;
 	bool m_bRenderGridYPlane;
 	bool m_bRenderGridZPlane;	
+	bool m_bNodeDepthColorGrading;
 	
-	void Load();
+	void LoadDefaultScene();
 	void ReconstructAllTrees();
 	void UpdateAfterObjectPropertiesChange();
 	void Update(float fDeltaTime);
@@ -94,12 +97,11 @@ public:
 	SceneObject* GetCurrentlyFocusedObject();
 	void DeleteCurrentlyFocusedObject();
 	void AddNewSceneObject(SceneObject& rNewSceneObject);
+	void ClearCurrentScene();
 
 private:
 	eBVHConstructionStrategy m_eConstructionStrategy;
 	eBVHBoundingVolume m_eBVHBoundingVolume;
-
-	void ClearPreviousVisualization();
 
 	void InitPlaybackSpeeds();
 	void InitRenderColors();
