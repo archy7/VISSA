@@ -985,6 +985,9 @@ void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window &
 	auto InterpolateRenderColorForTreeNode = [](const glm::vec4& rColor1, const glm::vec4& rColor2, int16_t iDepthInTree, int16_t iDeepestDepthOfNodes) {
 		assert(iDepthInTree >= 0);
 
+		if (iDeepestDepthOfNodes == 0)
+			return rColor1;
+
 		const float fWeightPerDepthLevel = 1.0f / static_cast<float>(iDeepestDepthOfNodes); // OK
 		const float fWeightColor1 = 1.0f - fWeightPerDepthLevel * static_cast<float>(iDepthInTree);
 		const float fWeightColor2 = 1.0f - fWeightColor1;
