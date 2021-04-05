@@ -81,14 +81,16 @@ void Engine::ProcessKeyboardInput()
 		{
 			// discrete, non-continuous inputs
 			{
-				int iCurrentKey = GLFW_KEY_ESCAPE;
-
-				if (IsDiscreteKeyReady(iCurrentKey))
+				if (IsDiscreteKeyReady(GLFW_KEY_ESCAPE))
 				{
 					m_tGUI.ShowMenu(!m_tGUI.IsMenuActive());
-					//m_tWindow.ChangeMouseShowingStack(m_tGUI.IsMenuActive() ? 1: -1); // mouse wants to show when menu is active
 					m_tWindow.SetHardCaptureMouse(!m_tGUI.IsMenuActive());
 					m_tGUI.SetCaptureMouse(m_tGUI.IsMenuActive());	// the GUI captures mouse input when the menu is active
+				}
+
+				if (IsDiscreteKeyReady(GLFW_KEY_H))
+				{
+					m_tGUI.ToggleHelpWindow();
 				}
 			}
 		}

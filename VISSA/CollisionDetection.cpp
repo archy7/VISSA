@@ -1614,6 +1614,7 @@ namespace CollisionDetection {
 			assert(rIntersectingRay.m_vec3Direction.length() == glm::normalize(rIntersectingRay.m_vec3Direction).length());
 
 			rfIntersectionDistanceMin = std::numeric_limits<float>::lowest();
+			//rfIntersectionDistanceMin = 0.0f;
 			float fIntersectionDistanceMax = std::numeric_limits<float>::max();
 
 			// for all three slabs of the given AABB

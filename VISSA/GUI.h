@@ -14,6 +14,7 @@ public:
 	void InitForWindow(Window& rWindow);
 	void ShowMenu(bool bShowMenu);
 	void ShowObjectPropertiesWindow(bool bShowIt);
+	void ToggleHelpWindow();
 	bool IsMenuActive() const;
 	bool IsMouseCaptured() const;
 	void SetCaptureMouse(bool bIsCapturedNow);
@@ -25,6 +26,7 @@ public:
 	void RenderSimOptions(Engine& rEngine);
 	void RenderObjectPropertiesWindow(Engine& rEngine);
 	void RenderObjectCreationWindow(Engine& rEngine);
+	void RenderHelpWindow(Engine& rEngine);
 	void ConditionallyRenderQuitConfirmation(Engine& rEngine);
 	void ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine);
 	void ConditionallyRenderOptions(Engine& rEngine);
@@ -36,6 +38,7 @@ private:
 	bool m_bShowSimulationOptions;
 	bool m_bShowObjectPropertiesWindow;
 	bool m_bShowObjectCreationWindow;
+	bool m_bShowHelpWindow;
 	bool m_bDisplayObjectPropertiesChangesWereMade;
 	bool m_bCaptureMouse;
 };

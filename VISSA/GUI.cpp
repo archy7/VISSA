@@ -66,6 +66,7 @@ GUI::GUI():
 	m_bCaptureMouse(true),
 	m_bShowObjectPropertiesWindow(false),
 	m_bShowObjectCreationWindow(false),
+	m_bShowHelpWindow(false),
 	m_bDisplayObjectPropertiesChangesWereMade(false)
 {
 
@@ -101,6 +102,11 @@ void GUI::ShowObjectPropertiesWindow(bool bShowIt)
 
 	// tell the backup that it needs an update
 	tObjectPropertiesBackup.m_bValid = false;
+}
+
+void GUI::ToggleHelpWindow()
+{
+	m_bShowHelpWindow = !m_bShowHelpWindow;
 }
 
 bool GUI::IsMenuActive() const
@@ -145,6 +151,8 @@ void GUI::Render(Engine& rEngine)
 	if (m_bShowObjectCreationWindow)
 		RenderObjectCreationWindow(rEngine);
 
+	if (m_bShowHelpWindow)
+		RenderHelpWindow(rEngine);
 
 	// Rendering
 	ImGui::Render();
@@ -180,10 +188,10 @@ void GUI::RenderMainMenu(Engine& rEngine)
 	{
 		ImGui::OpenPopup("VISUALIZATIONS");
 	}
-	if (ImGui::Button("OPTIONS"))
-	{
-		ImGui::OpenPopup("OPTIONS");
-	}
+	//if (ImGui::Button("OPTIONS"))
+	//{
+	//	ImGui::OpenPopup("OPTIONS");
+	//}
 	if (ImGui::Button("QUIT"))
 	{
 		ImGui::OpenPopup("CONFIRM QUIT");
@@ -202,7 +210,7 @@ void GUI::RenderMainMenu(Engine& rEngine)
 void GUI::RenderSimControlPanel(Engine& rEngine)
 {
 	// configure window
-	ImVec2 simControlWindowSize(500, 100);
+	ImVec2 simControlWindowSize(500, 120);
 	float fSimControlWindowPaddingBot = 0.0f;
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + main_viewport->Size.x * 0.5f - simControlWindowSize.x * 0.5f, main_viewport->WorkPos.y + main_viewport->Size.y - simControlWindowSize.y - fSimControlWindowPaddingBot), ImGuiCond_Always);
@@ -215,7 +223,35 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	if(m_bCaptureMouse == false)
 		window_flags |= ImGuiWindowFlags_NoMouseInputs;
 	
-	ImGui::Begin("CONTROLS", nullptr, window_flags);
+	std::string sControlPanelName("CONTROLS for: ");
+
+	switch (rEngine.m_tVisualization.GetCurrenBVHConstructionStrategy())
+	{
+	case Visualization::eBVHConstructionStrategy::TOPDOWN:
+		sControlPanelName.append("TOP DOWN ");
+		break;
+	case Visualization::eBVHConstructionStrategy::BOTTOMUP:
+		sControlPanelName.append("BOTTOM UP ");
+		break;
+	default:
+		assert(!"disaster");
+		break;
+	}
+
+	switch (rEngine.m_tVisualization.GetCurrentBVHBoundingVolume())
+	{
+	case Visualization::eBVHBoundingVolume::AABB:
+		sControlPanelName.append("AABBs");
+		break;
+	case Visualization::eBVHBoundingVolume::BOUNDING_SPHERE:
+		sControlPanelName.append("Bounding Spheres");
+		break;
+	default:
+		assert(!"disaster");
+		break;
+	}
+
+	ImGui::Begin(sControlPanelName.c_str(), nullptr, window_flags);
 
 	if (ImGui::Button("RESET"))
 		rEngine.m_tVisualization.ResetSimulation();
@@ -247,9 +283,13 @@ void GUI::RenderSimControlPanel(Engine& rEngine)
 	ImGui::SameLine();
 	if (ImGui::Button("FASTER"))
 		rEngine.m_tVisualization.IncreaseSimulationSpeed();
-	
+
+	ImGui::Separator();
 	if (ImGui::Button("SIMULATION OPTIONS"))
 		m_bShowSimulationOptions = !m_bShowSimulationOptions;
+	ImGui::SameLine();
+	if (ImGui::Button("HELP"))
+		ToggleHelpWindow();
 
 	ImGui::End();
 }
@@ -647,6 +687,46 @@ void GUI::RenderObjectCreationWindow(Engine & rEngine)
 	ImGui::End();
 }
 
+void GUI::RenderHelpWindow(Engine & rEngine)
+{
+	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+
+	// configure window
+	ImVec2 objectPropertiesWindowSize(400, 400);
+
+	ImGui::SetNextWindowPos(main_viewport->GetWorkCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(objectPropertiesWindowSize, ImGuiCond_Always);
+
+	ImGuiWindowFlags window_flags = 0;
+	window_flags |= ImGuiWindowFlags_NoResize;
+	window_flags |= ImGuiWindowFlags_NoCollapse;
+	if (m_bCaptureMouse == false)
+		window_flags |= ImGuiWindowFlags_NoMouseInputs;
+
+	ImGui::Begin("Help", &m_bShowHelpWindow, window_flags);
+	ImGui::SetWindowFocus();
+
+	ImGui::Text("Visualization for Bounding Volume Hierarchies");
+	ImGui::Separator();
+	ImGui::Text("Controls");
+	ImGui::Text("[ESC] : Opens Main Menu");
+	ImGui::Text("[W][A][S][D] : Move Camera [FORWARD][LEFT][BACK][RIGHT]");
+	ImGui::Text("[Q],[E] : Move Camera [UP][DOWN]");
+	ImGui::Text("[MOVE MOUSE] : Look around (when mouse is hidden)");
+	ImGui::Text("[M] : Toggle between mouse cursor and camera control");
+	ImGui::Text("[LEFT MOUSE] : Select object and show its properties");
+	ImGui::Text("[H] : Show this Help Window");
+	ImGui::Separator();
+	ImGui::TextWrapped("At the bottom of the screen, you can find the control panel for the visualization. From there, you can also open further visualization options and this window.");
+
+	if (ImGui::Button("OK"))
+	{
+		m_bShowHelpWindow = false;
+	}
+
+	ImGui::End();
+}
+
 void GUI::ConditionallyRenderQuitConfirmation(Engine& rEngine)
 {
 	// Always center this window when appearing
@@ -684,10 +764,11 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 			rEngine.m_tVisualization.LoadDefaultScene();	// really bad implementation of "loading"
 
 			// UI relevant
-			rEngine.m_tWindow.SetHardCaptureMouse(true);
+			//rEngine.m_tWindow.SetHardCaptureMouse(true);
 			ShowMenu(false);
+			ToggleHelpWindow();
 			m_bShowSimulationControlPanel = true;
-			m_bCaptureMouse = false;
+			//m_bCaptureMouse = false;
 			ImGui::CloseCurrentPopup();
 		}
 

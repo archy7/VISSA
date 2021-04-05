@@ -88,19 +88,20 @@ void Visualization::LoadDefaultScene()
 	assert(vecNewObjectsScales.size() == vecNewObjectsRotations.size());
 
 	for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
-	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < 2; uiCurrentNewObject++)
+	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < 1; uiCurrentNewObject++)
 	{
 		SceneObject tNewObject;
 		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[uiCurrentNewObject];
 		tNewObject.m_tTransform.m_tRotation = vecNewObjectsRotations[uiCurrentNewObject];
 		tNewObject.m_tTransform.m_vec3Scale = vecNewObjectsScales[uiCurrentNewObject];
-		if (uiCurrentNewObject % 2 == 0)
+		//if (uiCurrentNewObject % 2 == 0)
+		if (uiCurrentNewObject == 0)
 		{
-			tNewObject.m_eType = SceneObject::eType::SPHERE;
+			tNewObject.m_eType = SceneObject::eType::CUBE;
 		}
 		else
 		{
-			tNewObject.m_eType = SceneObject::eType::CUBE;
+			tNewObject.m_eType = SceneObject::eType::SPHERE;
 		}
 
 		m_vecObjects.push_back(tNewObject);
