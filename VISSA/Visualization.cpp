@@ -275,11 +275,19 @@ void Visualization::ClearCurrentScene()
 {
 	m_vecObjects.clear();
 	m_pCurrentlyFocusedObject = nullptr; // just in case
+	ResetSimulation();
 
+	// deleting the trees too
 	m_tTopDownBVH_AABB.DeleteTree();
 	m_tBottomUpBVH_AABB.DeleteTree();
 	m_tTopDownBVH_BoundingSphere.DeleteTree();
 	m_tBottomUpBVH_BoundingSphere.DeleteTree();
+
+	// also deleting the rendering data
+	m_vecTreeAABBsForTopDownRendering.clear();
+	m_vecTreeAABBsForBottomUpRendering.clear();
+	m_vecTreeBoundingSpheresForTopDownRendering.clear();
+	m_vecTreeBoundingSpheresForBottomUpRendering.clear();
 }
 
 void Visualization::InitPlaybackSpeeds()

@@ -757,13 +757,13 @@ namespace CollisionDetection {
 				//pNewNode->m_tBoundingSphereForNode = CreateBoundingSphereForMultipleObjects(pSceneObjects, uiNumSceneObjects);
 
 				// partition current set into subsets IN PLACE!!!
-				size_t uiPartitioningIndex = PartitionSceneObjectsInPlace_AABB(pSceneObjects, uiNumSceneObjects);
+				size_t uiNumLeftchildren = PartitionSceneObjectsInPlace_AABB(pSceneObjects, uiNumSceneObjects);
 
 				// move on with "left" side
-				RecursiveTopDownTree_AABB(&(pNewNode->m_pLeft), pSceneObjects, uiPartitioningIndex);
+				RecursiveTopDownTree_AABB(&(pNewNode->m_pLeft), pSceneObjects, uiNumLeftchildren);
 
 				// move on with "right" side
-				RecursiveTopDownTree_AABB(&(pNewNode->m_pRight), pSceneObjects + uiPartitioningIndex, uiNumSceneObjects - uiPartitioningIndex);
+				RecursiveTopDownTree_AABB(&(pNewNode->m_pRight), pSceneObjects + uiNumLeftchildren, uiNumSceneObjects - uiNumLeftchildren);
 			}
 		}
 
@@ -823,9 +823,7 @@ namespace CollisionDetection {
 
 		void TraverseTreeForDataForTopDownRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iDepthInTree, int16_t& riTotalTreeDepth)
 		{
-			assert(pNode);
-
-			
+			assert(pNode);			
 
 			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
 			{
@@ -1174,64 +1172,102 @@ namespace CollisionDetection {
 			const float fYTotalExtent = fYMaxExtent - fYMinExtent;
 			const float fZTotalExtent = fZMaxExtent - fZMinExtent;
 
+			// """sorting""" the axes by their extents
+			const int iNumSplittingAxes = 3;
 			const int x = 0, y = 1, z = 2;
-			int iSplittingAxis = x;
+			int iSplittingAxes[iNumSplittingAxes];
+			iSplittingAxes[0] = x;
 
 			if (fYTotalExtent > fXTotalExtent && fYTotalExtent > fZTotalExtent)
-				iSplittingAxis = y;
+				iSplittingAxes[0] = y;
 
 			if (fZTotalExtent > fXTotalExtent && fZTotalExtent > fYTotalExtent)
-				iSplittingAxis = z;
+				iSplittingAxes[0] = z;
 
-			// axis now stores the index of the longest axis in the 3 dimensional coordinate vector
+			// first axis now stores the index of the longest axis in the 3 dimensional coordinate vector
+			// now for the other two
+			iSplittingAxes[1] = y;
+			iSplittingAxes[2] = z;
+			if (fZTotalExtent > fYTotalExtent)
+				std::swap(iSplittingAxes[1], iSplittingAxes[2]);
 
-			// 2. Finding the splitting point on the axis
-			// done by using the object mean (mean of the object centroids)
+			// Next step: try to partition objects along the longest axis, if that doesn't work (all objects in one child), try next best
 
-			float fObjectCentroidsMean = 0.0f;
-			const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
-
-			// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
-			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-			{
-				const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceBoundingSphere.m_vec3Center;
-				fObjectCentroidsMean += rCurrentSceneObjectCenter[iSplittingAxis] * fPreDivisionFactor;
-			}
-
-			// 3. partitioning the scene objects:
+			size_t uiNumLeftChildren = uiNumSceneObjects; // intentionally initiliazed to an invalid index for when every partitioning axis fails
 			SceneObject* pCopiedArray = new SceneObject[uiNumSceneObjects];
-
-			// two passes: one for determination of bucket sizes, the second for sorting into buckets
-			// first pass
-			const size_t uiNumBuckets = 2u;
-			size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
-			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+			for (int iCurrentSplittingAxisIndex = 0; iCurrentSplittingAxisIndex < iNumSplittingAxes; iCurrentSplittingAxisIndex++)
 			{
-				// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
-				const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceBoundingSphere.m_vec3Center[iSplittingAxis] >= fObjectCentroidsMean);
-				uiNumElementsPerBucket[uiBucketIndex]++;
+				// 2. Finding the splitting point on the current axis
+				// done by using the object mean (mean of the object centroids)
+
+				float fObjectCentroidsMean = 0.0f;
+				const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
+				const int iCurrentSplittingAxis = iSplittingAxes[iCurrentSplittingAxisIndex];
+
+				// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
+				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+				{
+					const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center;
+					fObjectCentroidsMean += rCurrentSceneObjectCenter[iCurrentSplittingAxis] * fPreDivisionFactor;
+				}
+
+				// 3. partitioning the scene objects:				
+
+				// two passes: one for determination of bucket sizes, the second for sorting into buckets
+				// first pass
+				const size_t uiNumBuckets = 2u;
+				size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
+				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+				{
+					// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+					const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
+					uiNumElementsPerBucket[uiBucketIndex]++;
+				}
+
+				assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
+
+				// second pass
+				size_t uiBucketInsertionIndices[uiNumBuckets];
+				uiBucketInsertionIndices[0u] = 0u;
+				uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
+
+				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+				{
+					// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+					const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
+					const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
+					pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
+				}
+
+				memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
+
+
+				if (uiNumElementsPerBucket[0] > 0 && uiNumElementsPerBucket[1] > 0) // if the objects were actually partitioned
+				{
+					uiNumLeftChildren = uiNumElementsPerBucket[0]; // number of left children = partitioning index
+					break;	// no need to consider the other axes
+				}
 			}
 
-			assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
+			delete[] pCopiedArray;
 
-			// second pass
-			size_t uiBucketInsertionIndices[uiNumBuckets];
-			uiBucketInsertionIndices[0u] = 0u;
-			uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
+			/*
+				Now, there is still one edge case left: what if one were to add two identical objects to the tree?
+				identical = their two bounding volumes are identical.
+				There is no proper way to partition these objects, but they have to be partitioned. Otherwise,
+				tree construction would endlessly try to partition them in the "next" child.
+				Solution: just partition them "randomly" -> equal number of both objects on both sides
+			*/
 
-			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-			{
-				// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
-				const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceBoundingSphere.m_vec3Center[iSplittingAxis] >= fObjectCentroidsMean);
-				const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
-				pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
-			}
+			if (uiNumLeftChildren == uiNumSceneObjects) // the invalid index from before partitioning was attempted
+				uiNumLeftChildren = uiNumSceneObjects / 2u;	// partition all identical objects evenly
 
-			memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
+			/*
+				another note: since the objects were "fake" sorted already anyway, no need to sort them again.
+				It doesn't matter if they would have been all left or all right, they are still identical and sorted.
+			*/
 
-			const size_t uiPartitioningIndex = uiNumElementsPerBucket[0]; // number of left children = partitioning index
-
-			return uiPartitioningIndex;
+			return uiNumLeftChildren;
 		}
 
 		size_t PartitionSceneObjectsInPlace_AABB(SceneObject * pSceneObjects, size_t uiNumSceneObjects)
@@ -1276,64 +1312,102 @@ namespace CollisionDetection {
 			const float fYTotalExtent = fYMaxExtent - fYMinExtent;
 			const float fZTotalExtent = fZMaxExtent - fZMinExtent;
 
+			// """sorting""" the axes by their extents
+			const int iNumSplittingAxes = 3;
 			const int x = 0, y = 1, z = 2;
-			int iSplittingAxis = x;
+			int iSplittingAxes[iNumSplittingAxes];
+			iSplittingAxes[0] = x;
 
 			if (fYTotalExtent > fXTotalExtent && fYTotalExtent > fZTotalExtent)
-				iSplittingAxis = y;
+				iSplittingAxes[0] = y;
 
 			if (fZTotalExtent > fXTotalExtent && fZTotalExtent > fYTotalExtent)
-				iSplittingAxis = z;
+				iSplittingAxes[0] = z;
 
-			// axis now stores the index of the longest axis in the 3 dimensional coordinate vector
+			// first axis now stores the index of the longest axis in the 3 dimensional coordinate vector
+			// now for the other two
+			iSplittingAxes[1] = y;
+			iSplittingAxes[2] = z;
+			if (fZTotalExtent > fYTotalExtent)
+				std::swap(iSplittingAxes[1], iSplittingAxes[2]);
 
-			// 2. Finding the splitting point on the axis
-			// done by using the object mean (mean of the object centroids)
+			// Next step: try to partition objects along the longest axis, if that doesn't work (all objects in one child), try next best
 
-			float fObjectCentroidsMean = 0.0f;
-			const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
-
-			// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
-			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-			{
-				const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center;
-				fObjectCentroidsMean += rCurrentSceneObjectCenter[iSplittingAxis] * fPreDivisionFactor;
-			}
-
-			// 3. partitioning the scene objects:
+			size_t uiNumLeftChildren = uiNumSceneObjects; // intentionally initiliazed to an invalid index for when every axis fails
 			SceneObject* pCopiedArray = new SceneObject[uiNumSceneObjects];
-
-			// two passes: one for determination of bucket sizes, the second for sorting into buckets
-			// first pass
-			const size_t uiNumBuckets = 2u;
-			size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
-			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+			for (int iCurrentSplittingAxisIndex = 0; iCurrentSplittingAxisIndex < iNumSplittingAxes; iCurrentSplittingAxisIndex++)
 			{
-				// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
-				const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iSplittingAxis] >= fObjectCentroidsMean);
-				uiNumElementsPerBucket[uiBucketIndex]++;
+				// 2. Finding the splitting point on the current axis
+				// done by using the object mean (mean of the object centroids)
+
+				float fObjectCentroidsMean = 0.0f;
+				const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
+				const int iCurrentSplittingAxis = iSplittingAxes[iCurrentSplittingAxisIndex];
+
+				// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
+				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+				{
+					const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center;
+					fObjectCentroidsMean += rCurrentSceneObjectCenter[iCurrentSplittingAxis] * fPreDivisionFactor;
+				}
+
+				// 3. partitioning the scene objects:				
+
+				// two passes: one for determination of bucket sizes, the second for sorting into buckets
+				// first pass
+				const size_t uiNumBuckets = 2u;
+				size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
+				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+				{
+					// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+					const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
+					uiNumElementsPerBucket[uiBucketIndex]++;
+				}
+
+				assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
+
+				// second pass
+				size_t uiBucketInsertionIndices[uiNumBuckets];
+				uiBucketInsertionIndices[0u] = 0u;
+				uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
+
+				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+				{
+					// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+					const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
+					const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
+					pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
+				}
+
+				memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
+				
+
+				if (uiNumElementsPerBucket[0] > 0 && uiNumElementsPerBucket[1] > 0) // if the objects were actually partitioned
+				{
+					uiNumLeftChildren = uiNumElementsPerBucket[0]; // number of left children = partitioning index
+					break;	// no need to consider the other axes
+				}
 			}
 
-			assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
+			delete[] pCopiedArray;
 
-			// second pass
-			size_t uiBucketInsertionIndices[uiNumBuckets];
-			uiBucketInsertionIndices[0u] = 0u;
-			uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
+			/*
+				Now, there is still one edge case left: what if one were to add two identical objects to the tree?
+				identical = their two bounding volumes are identical.
+				There is no proper way to partition these objects, but they have to be partitioned. Otherwise, 
+				tree construction would endlessly try to partition them in the "next" child.
+				Solution: just partition them "randomly" -> equal number of both objects on both sides
+			*/
 
-			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-			{
-				// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
-				const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iSplittingAxis] >= fObjectCentroidsMean);
-				const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
-				pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
-			}
+			if (uiNumLeftChildren == uiNumSceneObjects) // the invalid index from before partitioning was attempted
+				uiNumLeftChildren = uiNumSceneObjects / 2u;	// partition all identical objects evenly
 
-			memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
+			/*
+				another note: since the objects were "fake" sorted already anyway, no need to sort them again.
+				It doesn't matter if they would have been all left or all right, they are still identical and sorted.
+			*/
 
-			const size_t uiPartitioningIndex = uiNumElementsPerBucket[0]; // number of left children = partitioning index
-
-			return uiPartitioningIndex;
+			return uiNumLeftChildren;
 		}
 
 		void RecursiveTopDownTree_BoundingSphere(BVHTreeNode ** pNode, SceneObject * pSceneObjects, size_t uiNumSceneObjects)

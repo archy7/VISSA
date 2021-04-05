@@ -319,6 +319,7 @@ void GUI::RenderSimOptions(Engine& rEngine)
 			if (ImGui::Button("YES", ImVec2(120, 0)))
 			{
 				rEngine.m_tVisualization.ClearCurrentScene();
+				m_bShowObjectPropertiesWindow = false;
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::SetItemDefaultFocus();
