@@ -7,6 +7,7 @@
 class Visualization;
 struct SceneObject;
 
+
 namespace CollisionDetection {
 	struct AABB {
 		glm::vec3 m_vec3Center;
@@ -102,4 +103,5 @@ namespace CollisionDetection {
 	BoundingVolumeHierarchy ConstructTopDownBoundingSphereBVHForScene(Visualization& rScene);
 	BoundingVolumeHierarchy ConstructBottomUpBoundingSphereBVHForScene(Visualization& rScene);
 	RayCastIntersectionResult CastRayIntoBVH(const BoundingVolumeHierarchy& rBVH, const Ray& rCastedRay);
+	RayCastIntersectionResult BruteForceRayIntoObjects(std::vector<SceneObject>& rvecObjects, const Ray& rCastedRay);
 }

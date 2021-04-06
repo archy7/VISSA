@@ -1,5 +1,7 @@
 #include "Engine.h"
 
+#include "SceneObject.h"
+
 Engine* Engine::sm_pEngine = nullptr;
 
 Engine::Engine() :
@@ -242,7 +244,8 @@ void Engine::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 					CollisionDetection::Ray tRay(pEngine->m_tCamera.GetCurrentPosition(), pEngine->m_tCamera.GetFrontVector());
 
 					// check for intersections with ray
-					CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tVisualization.m_tTopDownBVH_AABB, tRay);
+					//CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tVisualization.m_tTopDownBVH_AABB, tRay);
+					CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::BruteForceRayIntoObjects(pEngine->m_tVisualization.m_vecObjects, tRay);
 
 					// execute orders in accordance with the result
 					if (tResult.IntersectionWithObjectOccured())
@@ -265,7 +268,8 @@ void Engine::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 					CollisionDetection::Ray tRay(pEngine->m_tCamera.GetCurrentPosition(), vec3RayDirection);
 
 					// check for intersections with ray
-					CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tVisualization.m_tTopDownBVH_AABB, tRay);
+					//CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tVisualization.m_tTopDownBVH_AABB, tRay);
+					CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::BruteForceRayIntoObjects(pEngine->m_tVisualization.m_vecObjects, tRay);
 
 					// execute orders in accordance with the result
 					if (tResult.IntersectionWithObjectOccured())

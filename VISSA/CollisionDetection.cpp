@@ -162,7 +162,7 @@ namespace CollisionDetection {
 		/*
 			TODO: DOC
 		*/
-		int IntersectRayAABB(const Ray& rIntersectingRay, const AABB& rAABB, float& rfIntersectionDistance, glm::vec3 rvec3IntersectionPoint);
+		int IntersectRayAABB(const Ray& rIntersectingRay, const AABB& rAABB, float& rfIntersectionDistance, glm::vec3& rvec3IntersectionPoint);
 	}
 	
 };
@@ -439,6 +439,28 @@ RayCastIntersectionResult CollisionDetection::CastRayIntoBVH(const BoundingVolum
 	if (rBVH.m_pRootNode) // only actually cast a ray if there are objects in the scene
 	{
 		tResult = RecursiveRayCastIntoBVHTree(rBVH.m_pRootNode, rCastedRay);
+	}
+
+	return tResult;
+}
+
+RayCastIntersectionResult CollisionDetection::BruteForceRayIntoObjects(std::vector<SceneObject>& rvecObjects, const Ray & rCastedRay)
+{
+	RayCastIntersectionResult tResult;
+
+	for (SceneObject& rCurrentSceneObject : rvecObjects)
+	{
+		glm::vec3 vec3CurrentPointOfIntersection;
+		float fCurrentIntersectionDistance = 0.0f;
+		if (IntersectRayAABB(rCastedRay, rCurrentSceneObject.m_tWorldSpaceAABB, fCurrentIntersectionDistance, vec3CurrentPointOfIntersection))
+		{
+			if (fCurrentIntersectionDistance < tResult.m_fIntersectionDistance)
+			{
+				tResult.m_fIntersectionDistance = fCurrentIntersectionDistance;
+				tResult.m_vec3PointOfIntersection = vec3CurrentPointOfIntersection;
+				tResult.m_pFirstIntersectedSceneObject = &rCurrentSceneObject;
+			}
+		}
 	}
 
 	return tResult;
@@ -1608,7 +1630,7 @@ namespace CollisionDetection {
 			return tResultForNodeAndAllItsChilren;
 		}
 
-		int IntersectRayAABB(const Ray & rIntersectingRay, const AABB& rAABB, float & rfIntersectionDistanceMin, glm::vec3 rvec3IntersectionPoint)
+		int IntersectRayAABB(const Ray & rIntersectingRay, const AABB& rAABB, float & rfIntersectionDistanceMin, glm::vec3& rvec3IntersectionPoint)
 		{
 			// assert that the direction vector of the ray is normalized. relevant for: see end of function
 			assert(rIntersectingRay.m_vec3Direction.length() == glm::normalize(rIntersectingRay.m_vec3Direction).length());
