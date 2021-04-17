@@ -67,7 +67,7 @@ GUI::GUI():
 	m_bShowObjectPropertiesWindow(false),
 	m_bShowObjectCreationWindow(false),
 	m_bShowHelpWindow(false),
-	m_bDisplayObjectPropertiesChangesWereMade(false)
+	m_bObjectPropertiesPendingChanges(false)
 {
 
 }
@@ -127,6 +127,28 @@ void GUI::SetCaptureMouse(bool bIsCapturedNow)
 void GUI::SetObjectPropertiesWindowPosition(float fXPosition, float fYPosition)
 {
 	m_vec2ObjectPropertiesWindowPosition = ImVec2(fXPosition, fYPosition);
+}
+
+void GUI::SetFocusedObject(SceneObject * pFocusedObject)
+{
+	// nullptr for paramenter is valid -> no object in focus
+	m_pCurrentlyFocusedObject = pFocusedObject;
+}
+
+SceneObject * GUI::GetFocusedObject()
+{
+	return m_pCurrentlyFocusedObject;
+}
+
+void GUI::CancelObjectPropertiesChanges()
+{
+	assert(m_pCurrentlyFocusedObject);
+	if(m_bObjectPropertiesPendingChanges)
+		m_pCurrentlyFocusedObject->m_tTransform = tObjectPropertiesBackup.m_tBackedupData;
+
+	m_bShowObjectPropertiesWindow = false; // closes this window
+	tObjectPropertiesBackup.m_bValid = false; // future backup data will need to be fetched again
+	m_bObjectPropertiesPendingChanges = false; // reset this flag
 }
 
 void GUI::Render(Engine& rEngine)
@@ -354,8 +376,7 @@ void GUI::RenderSimOptions(Engine& rEngine)
 
 		if (ImGui::BeginPopupModal("CONFIRM DELETION OF ALL OBJECTS", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 		{
-			ImGui::Text("Are you sure?");
-			//ImGui::TextWrapped("Deleting this object will reconstruct the Bounding Volume Hierarchy and resest the simulation. It cannot be undone.");
+			ImGui::Text("Are you sure?"); ImGui::SameLine(); HelpMarker("Deleting all objects will reconstruct the Bounding Volume Hierarchy and resest the simulation.");
 			if (ImGui::Button("YES", ImVec2(120, 0)))
 			{
 				rEngine.m_tVisualization.ClearCurrentScene();
@@ -520,9 +541,9 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 
 	ImGui::Begin("Object Properties", nullptr, window_flags);
 
-	SceneObject* pCurrentlyFocusedObject = rEngine.m_tVisualization.GetCurrentlyFocusedObject();
+	assert(m_pCurrentlyFocusedObject);
 	
-	switch (pCurrentlyFocusedObject->m_eType)
+	switch (m_pCurrentlyFocusedObject->m_eType)
 	{
 	case SceneObject::eType::CUBE: {
 		ImGui::Text("Type: CUBE");
@@ -538,18 +559,20 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 
 	if (tObjectPropertiesBackup.m_bValid == false) // if the backup still holds data of an old object, update it
 	{
-		tObjectPropertiesBackup.m_tBackedupData = pCurrentlyFocusedObject->m_tTransform;
+		tObjectPropertiesBackup.m_tBackedupData = m_pCurrentlyFocusedObject->m_tTransform;
 		tObjectPropertiesBackup.m_bValid = true;
 	}	
 
-	ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue;
-	if (ImGui::InputFloat3("Position", &(pCurrentlyFocusedObject->m_tTransform.m_vec3Position.x), "%.2f", flags))
-		m_bDisplayObjectPropertiesChangesWereMade = true;
-	if(ImGui::InputFloat3("Scale", &(pCurrentlyFocusedObject->m_tTransform.m_vec3Scale.x), "%.2f", flags))
-		m_bDisplayObjectPropertiesChangesWereMade = true;
-	if(ImGui::InputFloat4("Rotation", &(pCurrentlyFocusedObject->m_tTransform.m_tRotation.m_vec3Axis.x), "%.2f", flags))
-		m_bDisplayObjectPropertiesChangesWereMade = true;
-	ImGui::SameLine(); HelpMarker("[X][Y][Z][angle]");	
+	ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsDecimal;// | ImGuiInputTextFlags_EnterReturnsTrue;
+	if (ImGui::InputFloat3("Position", &(m_pCurrentlyFocusedObject->m_tTransform.m_vec3Position.x), "%.2f", flags))
+		m_bObjectPropertiesPendingChanges = true;
+	ImGui::SameLine(); HelpMarker("[X][Y][Z]");
+	if(ImGui::InputFloat3("Scale", &(m_pCurrentlyFocusedObject->m_tTransform.m_vec3Scale.x), "%.2f", flags))
+		m_bObjectPropertiesPendingChanges = true;
+	ImGui::SameLine(); HelpMarker("[X][Y][Z]");
+	if(ImGui::InputFloat4("Rotation", &(m_pCurrentlyFocusedObject->m_tTransform.m_tRotation.m_vec3Axis.x), "%.2f", flags))
+		m_bObjectPropertiesPendingChanges = true;
+	ImGui::SameLine(); HelpMarker("[X][Y][Z][angle]");
 	if (ImGui::Button("DELETE OBJECT"))
 	{
 		ImGui::OpenPopup("CONFIRM OBJECT DELETION");
@@ -560,13 +583,12 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 
 		if (ImGui::BeginPopupModal("CONFIRM OBJECT DELETION", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 		{
-			ImGui::Text("Are you sure?");
-			//ImGui::TextWrapped("Deleting this object will reconstruct the Bounding Volume Hierarchy and resest the simulation. It cannot be undone.");
+			ImGui::Text("Are you sure?"); ImGui::SameLine(); HelpMarker("Deleting this object will reconstruct the Bounding Volume Hierarchy and resest the simulation. It cannot be undone.");
 			if (ImGui::Button("YES", ImVec2(120, 0)))
 			{
 				m_bShowObjectPropertiesWindow = false; // closes the window
 
-				rEngine.m_tVisualization.DeleteCurrentlyFocusedObject();
+				rEngine.m_tVisualization.DeleteGivenObject(m_pCurrentlyFocusedObject);
 			}
 			ImGui::SetItemDefaultFocus();
 			ImGui::SameLine();
@@ -579,7 +601,7 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 	}
 
 	
-	if (m_bDisplayObjectPropertiesChangesWereMade)
+	if (m_bObjectPropertiesPendingChanges)
 		ImGui::TextWrapped("Applying changes to object properties [OK] will invalidate the BVH. It will automatically be reconstructed and the visualization reset. Clicking [CANCEL] will discard all changes.");
 
 	if (ImGui::Button("OK"))
@@ -587,24 +609,23 @@ void GUI::RenderObjectPropertiesWindow(Engine & rEngine)
 		m_bShowObjectPropertiesWindow = false; // closes this window
 		tObjectPropertiesBackup.m_bValid = false; // backup data will need to be fetched again
 
-		if (m_bDisplayObjectPropertiesChangesWereMade) // only update the trees if changes were commited
+		if (m_bObjectPropertiesPendingChanges) // only update the trees if changes were commited
 		{
 			rEngine.m_tVisualization.UpdateAfterObjectPropertiesChange();
 		}
 
-		m_bDisplayObjectPropertiesChangesWereMade = false; // reset this flag
+		m_bObjectPropertiesPendingChanges = false; // reset this flag
 		
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("CANCEL"))
 	{
-		m_bShowObjectPropertiesWindow = false; // closes this window
-		tObjectPropertiesBackup.m_bValid = false; // future backup data will need to be fetched again
-
+		
 		// rolling back changes
-		pCurrentlyFocusedObject->m_tTransform = tObjectPropertiesBackup.m_tBackedupData;
+		CancelObjectPropertiesChanges();
+		
 
-		m_bDisplayObjectPropertiesChangesWereMade = false; // reset this flag
+		
 	}
 
 	ImGui::End();
@@ -664,7 +685,9 @@ void GUI::RenderObjectCreationWindow(Engine & rEngine)
 
 	ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsDecimal;
 	ImGui::InputFloat3("Position", &(pObjectCreationData->m_tTransform.m_vec3Position.x), "%.2f", flags);
+	ImGui::SameLine(); HelpMarker("[X][Y][Z]");
 	ImGui::InputFloat3("Scale", &(pObjectCreationData->m_tTransform.m_vec3Scale.x), "%.2f", flags);
+	ImGui::SameLine(); HelpMarker("[X][Y][Z]");
 	ImGui::InputFloat4("Rotation", &(pObjectCreationData->m_tTransform.m_tRotation.m_vec3Axis.x), "%.2f", flags);
 	ImGui::SameLine(); HelpMarker("[X][Y][Z][angle]");
 	
@@ -692,7 +715,7 @@ void GUI::RenderHelpWindow(Engine & rEngine)
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 
 	// configure window
-	ImVec2 objectPropertiesWindowSize(400, 400);
+	ImVec2 objectPropertiesWindowSize(450, 450);
 
 	ImGui::SetNextWindowPos(main_viewport->GetWorkCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	ImGui::SetNextWindowSize(objectPropertiesWindowSize, ImGuiCond_Always);
@@ -704,7 +727,7 @@ void GUI::RenderHelpWindow(Engine & rEngine)
 		window_flags |= ImGuiWindowFlags_NoMouseInputs;
 
 	ImGui::Begin("Help", &m_bShowHelpWindow, window_flags);
-	ImGui::SetWindowFocus();
+	//ImGui::SetWindowFocus();
 
 	ImGui::Text("Visualization for Bounding Volume Hierarchies");
 	ImGui::Separator();
@@ -712,12 +735,17 @@ void GUI::RenderHelpWindow(Engine & rEngine)
 	ImGui::Text("[ESC] : Opens Main Menu");
 	ImGui::Text("[W][A][S][D] : Move Camera [FORWARD][LEFT][BACK][RIGHT]");
 	ImGui::Text("[Q],[E] : Move Camera [UP][DOWN]");
-	ImGui::Text("[MOVE MOUSE] : Look around (when mouse is hidden)");
-	ImGui::Text("[M] : Toggle between mouse cursor and camera control");
+	ImGui::Text("[M] : Toggle between mouse cursor and camera control mode");
+	ImGui::Text("[MOVE MOUSE] : Look around (in camera control mode)");	
 	ImGui::Text("[LEFT MOUSE] : Select object and show its properties");
 	ImGui::Text("[H] : Show this Help Window");
 	ImGui::Separator();
+	ImGui::Text("Context");
+	ImGui::TextWrapped("If you need a quick introduction or refresher to Bounding Volume Hierarchies on what they are and what they are good for, you may at any time refer to VISSA's user manual and knowledge base. This visualization's focus is to show a few ways how BVH's can be constructed for a given scene.");
+	ImGui::TextWrapped("Feel free to explore: Edit the scene, delete objects, create new objects... and see how the resulting BVH changes.");
 	ImGui::TextWrapped("At the bottom of the screen, you can find the control panel for the visualization. From there, you can also open further visualization options and this window.");
+	ImGui::Separator();
+	ImGui::TextWrapped("Have Fun and Good Learning!");
 
 	if (ImGui::Button("OK"))
 	{
@@ -764,7 +792,7 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 			rEngine.m_tVisualization.LoadDefaultScene();	// really bad implementation of "loading"
 
 			// UI relevant
-			//rEngine.m_tWindow.SetHardCaptureMouse(true);
+			//rEngine.m_tMainWindow.SetHardCaptureMouse(true);
 			ShowMenu(false);
 			ToggleHelpWindow();
 			m_bShowSimulationControlPanel = true;

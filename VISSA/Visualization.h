@@ -34,7 +34,7 @@ public:
 
 	std::vector<SceneObject> m_vecObjects;
 private:
-	SceneObject* m_pCurrentlyFocusedObject;
+	
 public:
 	CollisionDetection::BoundingVolumeHierarchy m_tTopDownBVH_AABB;
 	CollisionDetection::BoundingVolumeHierarchy m_tBottomUpBVH_AABB;
@@ -93,9 +93,8 @@ public:
 	void SetNewBVHConstructionStrategy(eBVHConstructionStrategy eNewStrategy);
 	eBVHBoundingVolume GetCurrentBVHBoundingVolume() const;
 	void SetNewBVHBoundingVolume(eBVHBoundingVolume eNewBoundingVolume);
-	void SetFocusedObject(SceneObject* pFocusedObject);
-	SceneObject* GetCurrentlyFocusedObject();
-	void DeleteCurrentlyFocusedObject();
+	
+	void DeleteGivenObject(SceneObject* pToBeDeletedObject);
 	void AddNewSceneObject(SceneObject& rNewSceneObject);
 	void ClearCurrentScene();
 

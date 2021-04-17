@@ -14,7 +14,6 @@ Visualization::Visualization() :
 	m_ePresentationMode(DISCRETE),
 	m_eConstructionStrategy(TOPDOWN),
 	m_eBVHBoundingVolume(AABB),
-	m_pCurrentlyFocusedObject(nullptr),
 	m_fCrossHairScaling(1.0f),
 	m_uiCurrentPlayBackSpeedIndex(0u),
 	m_iSimulationDirectionSign(0),
@@ -67,11 +66,11 @@ void Visualization::LoadDefaultScene()
 	vecNewObjectsScales.push_back(glm::vec3(0.9f, 0.9f, 0.9f));
 	vecNewObjectsScales.push_back(glm::vec3(3.0f, 1.0f, 2.0f));
 	vecNewObjectsScales.push_back(glm::vec3(2.0f, 2.0f, 2.0f));
-	vecNewObjectsScales.push_back(glm::vec3(0.2f, 0.2f, 0.2f));
+	vecNewObjectsScales.push_back(glm::vec3(0.4f, 0.4f, 0.4f));
 
 	// make new rotations
 	SceneObject::Transform::Rotation tNewRotation;
-	tNewRotation.m_fAngle = 45.0f;
+	tNewRotation.m_fAngle = 0.0f;
 	tNewRotation.m_vec3Axis = glm::vec3(0.0f, 1.0f, 0.0f);
 	vecNewObjectsRotations.push_back(tNewRotation);
 	vecNewObjectsRotations.push_back(tNewRotation);
@@ -94,8 +93,8 @@ void Visualization::LoadDefaultScene()
 		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[uiCurrentNewObject];
 		tNewObject.m_tTransform.m_tRotation = vecNewObjectsRotations[uiCurrentNewObject];
 		tNewObject.m_tTransform.m_vec3Scale = vecNewObjectsScales[uiCurrentNewObject];
-		//if (uiCurrentNewObject % 2 == 0)
-		if (uiCurrentNewObject == 0)
+		if (uiCurrentNewObject % 2 == 0)
+		//if (uiCurrentNewObject == 0)
 		{
 			tNewObject.m_eType = SceneObject::eType::CUBE;
 		}
@@ -227,38 +226,24 @@ void Visualization::SetNewBVHBoundingVolume(eBVHBoundingVolume eNewBoundingVolum
 	m_eBVHBoundingVolume = eNewBoundingVolume;
 }
 
-void Visualization::SetFocusedObject(SceneObject * pFocusedObject)
+void Visualization::DeleteGivenObject(SceneObject* pToBeDeletedObject)
 {
-	assert(pFocusedObject);
-
-	m_pCurrentlyFocusedObject = pFocusedObject;
-}
-
-SceneObject * Visualization::GetCurrentlyFocusedObject()
-{
-	assert(m_pCurrentlyFocusedObject);		// u are asking for something that is not there. your logic is flawed
-
-	return m_pCurrentlyFocusedObject;
-}
-
-void Visualization::DeleteCurrentlyFocusedObject()
-{
-	assert(m_pCurrentlyFocusedObject);	// no object currently focused. your logic is flawed
+	assert(pToBeDeletedObject);
 
 	for (auto it = m_vecObjects.begin(); it != m_vecObjects.end(); it++)
 	{
-		if (&(*it) == m_pCurrentlyFocusedObject)
+		if (&(*it) == pToBeDeletedObject)
 		{
 			m_vecObjects.erase(it);
-			m_pCurrentlyFocusedObject = nullptr;
 			break;
 		}
 	}
 
 	// all updates and reset the sim
-	CollisionDetection::UpdateBoundingVolumesForScene(*this);
-	ReconstructAllTrees();
+	//CollisionDetection::UpdateBoundingVolumesForScene(*this);
 	ResetSimulation();
+	if(!m_vecObjects.empty())
+		ReconstructAllTrees();
 }
 
 void Visualization::AddNewSceneObject(SceneObject & rNewSceneObject)
@@ -275,7 +260,6 @@ void Visualization::AddNewSceneObject(SceneObject & rNewSceneObject)
 void Visualization::ClearCurrentScene()
 {
 	m_vecObjects.clear();
-	m_pCurrentlyFocusedObject = nullptr; // just in case
 	ResetSimulation();
 
 	// deleting the trees too

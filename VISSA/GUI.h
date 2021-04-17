@@ -6,6 +6,7 @@
 
 class Engine;
 struct Window;
+struct SceneObject;
 
 class GUI {
 public:
@@ -19,6 +20,9 @@ public:
 	bool IsMouseCaptured() const;
 	void SetCaptureMouse(bool bIsCapturedNow);
 	void SetObjectPropertiesWindowPosition(float fXPosition, float fYPosition);
+	void SetFocusedObject(SceneObject* pFocusedObject);
+	SceneObject* GetFocusedObject();
+	void CancelObjectPropertiesChanges();
 
 	void Render(Engine& rEngine);
 	void RenderMainMenu(Engine& rEngine);
@@ -33,12 +37,14 @@ public:
 private:
 	ImVec2 m_vec2ObjectPropertiesWindowPosition;
 
+	SceneObject* m_pCurrentlyFocusedObject;
+
 	bool m_bShowMainMenu;
 	bool m_bShowSimulationControlPanel;
 	bool m_bShowSimulationOptions;
 	bool m_bShowObjectPropertiesWindow;
 	bool m_bShowObjectCreationWindow;
 	bool m_bShowHelpWindow;
-	bool m_bDisplayObjectPropertiesChangesWereMade;
+	bool m_bObjectPropertiesPendingChanges;
 	bool m_bCaptureMouse;
 };

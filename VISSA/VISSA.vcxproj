@@ -190,7 +190,7 @@ xcopy /E /Y "$(MSBuildProjectDirectory)\resources\*" "$(SolutionDir)x64\Release\
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\Libraries\OpenGL\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -198,6 +198,7 @@ xcopy /E /Y "$(MSBuildProjectDirectory)\resources\*" "$(SolutionDir)x64\Release\
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <AdditionalOptions>/VERBOSE:LIB %(AdditionalOptions)</AdditionalOptions>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /E /Y "$(MSBuildProjectDirectory)\resources\*" "$(SolutionDir)x64\Debug\resources"

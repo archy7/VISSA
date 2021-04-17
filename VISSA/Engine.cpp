@@ -7,7 +7,7 @@ Engine* Engine::sm_pEngine = nullptr;
 Engine::Engine() :
 	m_tWindow(),
 	m_tRenderer(),
-	m_tCamera(glm::vec3(0.0f, 100.0f, 400.0f)),
+	m_tCamera(glm::vec3(0.0f, 0.0f, 0.0f)),
 	m_tGUI(),
 	m_tVisualization(),
 	m_iDiscreteKeysStates(),
@@ -34,7 +34,7 @@ void Engine::InitEngine()
 	m_tWindow.InitWindow();
 	m_tRenderer.InitRenderer();
 	glAssert();
-	// camera is already ready
+	m_tCamera.SetToPosition(glm::vec3(0.0f, 0.0f, 1500.0f));
 	m_tGUI.InitForWindow(m_tWindow);
 	// scene is alreay ready (but empty)
 	// collision detection not called when scene is empty
@@ -95,6 +95,25 @@ void Engine::ProcessKeyboardInput()
 					m_tGUI.ToggleHelpWindow();
 				}
 			}
+
+			// camera control
+			{
+				Camera& rCamera = m_tCamera;
+
+				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_W) == GLFW_PRESS)
+					rCamera.ProcessKeyboard(FORWARD, m_fDeltaTime);
+				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_S) == GLFW_PRESS)
+					rCamera.ProcessKeyboard(BACKWARD, m_fDeltaTime);
+				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_A) == GLFW_PRESS)
+					rCamera.ProcessKeyboard(LEFT, m_fDeltaTime);
+				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_D) == GLFW_PRESS)
+					rCamera.ProcessKeyboard(RIGHT, m_fDeltaTime);
+
+				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_Q) == GLFW_PRESS)
+					rCamera.ProcessKeyboard(UP, m_fDeltaTime);
+				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_E) == GLFW_PRESS)
+					rCamera.ProcessKeyboard(DOWN, m_fDeltaTime);
+			}
 		}
 
 		/*
@@ -120,21 +139,7 @@ void Engine::ProcessKeyboardInput()
 			*/
 			if (m_tWindow.IsMouseCaptured())
 			{
-				Camera& rCamera = m_tCamera;
-
-				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_W) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(FORWARD, m_fDeltaTime);
-				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_S) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(BACKWARD, m_fDeltaTime);
-				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_A) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(LEFT, m_fDeltaTime);
-				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_D) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(RIGHT, m_fDeltaTime);
-
-				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_Q) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(UP, m_fDeltaTime);
-				if (glfwGetKey(m_tWindow.m_pGLFWwindow, GLFW_KEY_E) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(DOWN, m_fDeltaTime);
+				
 
 			}
 			else // inputs that are only available when the mouse is freely moving in an active scene
@@ -247,16 +252,21 @@ void Engine::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 					//CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tVisualization.m_tTopDownBVH_AABB, tRay);
 					CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::BruteForceRayIntoObjects(pEngine->m_tVisualization.m_vecObjects, tRay);
 
+					SceneObject* pPreviouslyFocusedObject = pEngine->m_tGUI.GetFocusedObject();
+					if (pPreviouslyFocusedObject)
+						pEngine->m_tGUI.CancelObjectPropertiesChanges();
+
 					// execute orders in accordance with the result
 					if (tResult.IntersectionWithObjectOccured())
 					{
-						pEngine->m_tVisualization.SetFocusedObject(tResult.m_pFirstIntersectedSceneObject);
+						pEngine->m_tGUI.SetFocusedObject(tResult.m_pFirstIntersectedSceneObject);
 						pEngine->m_tGUI.SetObjectPropertiesWindowPosition(static_cast<float>(pEngine->m_tWindow.m_iWindowWidth * 0.5f), static_cast<float>(pEngine->m_tWindow.m_iWindowHeight *0.5f)); // center of window						
 						pEngine->m_tGUI.ShowObjectPropertiesWindow(true);
 					}
 					else
 					{
-						pEngine->m_tGUI.ShowObjectPropertiesWindow(false);
+						
+						pEngine->m_tGUI.SetFocusedObject(nullptr); // no object in focus now
 					}
 				}
 				else	// reacting to clicks of a freely moving cursor
@@ -271,17 +281,21 @@ void Engine::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 					//CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tVisualization.m_tTopDownBVH_AABB, tRay);
 					CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::BruteForceRayIntoObjects(pEngine->m_tVisualization.m_vecObjects, tRay);
 
+					SceneObject* pPreviouslyFocusedObject = pEngine->m_tGUI.GetFocusedObject();
+					if (pPreviouslyFocusedObject)
+						pEngine->m_tGUI.CancelObjectPropertiesChanges();
+
 					// execute orders in accordance with the result
 					if (tResult.IntersectionWithObjectOccured())
 					{
-						pEngine->m_tVisualization.SetFocusedObject(tResult.m_pFirstIntersectedSceneObject);
+						pEngine->m_tGUI.SetFocusedObject(tResult.m_pFirstIntersectedSceneObject);
 						Window::MousePositionInWindow tCurrentMousePosition = pEngine->m_tWindow.GetCurrentMousePosition();
 						pEngine->m_tGUI.SetObjectPropertiesWindowPosition(tCurrentMousePosition.m_fXPosition, tCurrentMousePosition.m_fYPosition); // center of window						
 						pEngine->m_tGUI.ShowObjectPropertiesWindow(true);
 					}
 					else
 					{
-						pEngine->m_tGUI.ShowObjectPropertiesWindow(false);
+						pEngine->m_tGUI.SetFocusedObject(nullptr); // no object in focus now
 					}
 				}
 			}
