@@ -40,10 +40,6 @@ Renderer::Renderer() :
 	m_mat4PerspectiveProjection(glm::mat4(1.0f)), // identity matrix for starters
 	m_mat4OrthographicProjection(glm::mat4(1.0f)), // identity matrix for starters
 	// members defining the view frustums
-	m_fOrthoLeft(0.0f),
-	m_fOrthoRight(1280.0f),
-	m_fOrthoBottom(0.0f),
-	m_fOrthoTop(720.0f),
 	m_fNearPlane(0.1f),
 	m_fFarPlane(10000.0f),
 	// clear color: a light grey
@@ -272,9 +268,9 @@ void Renderer::LoadShaders()
 	assert(m_tMaskedColorShader.IsInitialized());
 
 	// A crosshair (hud component) shader
-	Shader tCrossHairShader("resources/shaders/crosshair.vs", "resources/shaders/crosshair.frag");
-	m_tCrosshairShader = tCrossHairShader;
-	assert(m_tCrosshairShader.IsInitialized());
+	Shader tMaskedColorShader2D("resources/shaders/MaskedColor2D.vs", "resources/shaders/MaskedColor2D.frag");
+	m_tMaskedColorShader2D = tMaskedColorShader2D;
+	assert(m_tMaskedColorShader2D.IsInitialized());
 }
 
 void Renderer::LoadTextures()
@@ -551,20 +547,25 @@ void Renderer::UpdateProjectionMatrices(const Camera& rCamera, const Window& rWi
 	m_mat4PerspectiveProjection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
 
 	// orthographic projection matrix
-	m_mat4OrthographicProjection = glm::ortho(m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop, m_fNearPlane, m_fFarPlane);
+	m_mat4OrthographicProjection = glm::ortho(0.0f, static_cast<float>(rWindow.m_iWindowWidth), 0.0f, static_cast<float>(rWindow.m_iWindowHeight), m_fNearPlane, m_fFarPlane);
 }
 
-void Renderer::Render(const Camera & rCamera, Window & rWindow, const Visualization& rScene)
+void Renderer::Render(const Camera & rMainCamera, Window & rMainWindow, const Visualization& rScene)
 {
-	if (rWindow.IsMinimized()) // hot fix to stop crashes when minimizing the window. needs proper handling in the future: https://www.glfw.org/docs/3.3/window_guide.html
-		return;
+	assert(glfwGetCurrentContext() == rMainWindow.m_pGLFWwindow); // this makes sure contexts are handled correctly.
+	// When u are done rendering to other windows than the main window, set context back to the main window.
 
+	if (rMainWindow.IsMinimized()) // hot fix to stop crashes when minimizing the window. needs proper handling in the future: https://www.glfw.org/docs/3.3/window_guide.html
+		return;
+	
 	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	UpdateFrameConstants(rCamera, rWindow);
-	UpdateProjectionMatrices(rCamera, rWindow);
-	RenderVisualization(rCamera, rWindow, rScene);
+	UpdateFrameConstants(rMainCamera, rMainWindow);
+	UpdateProjectionMatrices(rMainCamera, rMainWindow);
+	RenderVisualization(rMainCamera, rMainWindow, rScene);
+
+	rScene.RenderAdditionalWindows(*this);
 }
 
 glm::vec3 Renderer::ConstructRayDirectionFromMousePosition(const Window& rWindow) const
@@ -603,7 +604,7 @@ void Renderer::RenderVisualization(const Camera& rCamera, const Window& rWindow,
 	
 	
 	RenderRealObjects(rCamera, rWindow, rScene);
-	//RenderRealObjectsOLD(rCamera, rWindow, rVisualization);
+	//RenderRealObjectsOLD(rMainCamera, rMainWindow, rVisualization);
 	RenderDataStructureObjects(rCamera, rWindow, rScene);
 	Render3DSceneConstants(rCamera, rWindow, rScene);
 	RenderHUDComponents(rCamera, rWindow, rScene);
@@ -686,7 +687,7 @@ void Renderer::RenderHUDComponents(const Camera & rCamera, const Window & rWindo
 	// Crosshair
 	{
 		glAssert();
-		Shader& rCurrentShader = m_tCrosshairShader;
+		Shader& rCurrentShader = m_tMaskedColorShader2D;
 		rCurrentShader.use();
 		glAssert();
 		rCurrentShader.setInt("transparencyMask", 0);
@@ -704,7 +705,7 @@ void Renderer::RenderHUDComponents(const Camera & rCamera, const Window & rWindo
 		glm::vec3 vec3CrosshairTranslationVector(static_cast<float>(rWindow.m_iWindowWidth) * 0.5f, static_cast<float>(rWindow.m_iWindowHeight) * 0.5f, -(m_fNearPlane + 0.0f)); // in the middle of the window, within the near plane of the view frustum
 		mat4World = glm::translate(mat4World, vec3CrosshairTranslationVector);
 		mat4World = glm::scale(mat4World, glm::vec3(rVisualization.m_fCrossHairScaling, rVisualization.m_fCrossHairScaling, 1.0f));
-		mat4World = glm::rotate(mat4World, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f)); // default plane/quad is defined as lying face up flat on the floor. this makes it "stand up" and face the camera
+		mat4World = glm::rotate(mat4World, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f)); // default plane/quad is defined as lying face up flat on the floor. this makes it "stand up" and face the camera. TODO: use "HUD" plane that is facing the camra
 		rCurrentShader.setMat4("world", mat4World);
 
 		// no camera matrix for hud components!

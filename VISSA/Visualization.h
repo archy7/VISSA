@@ -4,8 +4,11 @@
 
 #include "SceneObject.h"
 #include "CollisionDetection.h"
+#include "Shader.h"
 
 class Engine;
+struct Window;
+class Renderer;
 
 /*
 	This class needs the most reworking to be practically usable. instead of primitives, actual models should be saved here.
@@ -14,6 +17,7 @@ class Engine;
 class Visualization {
 public:
 	Visualization();
+	~Visualization();
 
 	enum ePresentationMode {
 		DISCRETE = 0,
@@ -36,6 +40,7 @@ public:
 private:
 	
 public:
+	Window* m_p2DGraphWindow;
 	CollisionDetection::BoundingVolumeHierarchy m_tTopDownBVH_AABB;
 	CollisionDetection::BoundingVolumeHierarchy m_tBottomUpBVH_AABB;
 	CollisionDetection::BoundingVolumeHierarchy m_tTopDownBVH_BoundingSphere;
@@ -44,6 +49,9 @@ public:
 	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeAABBsForBottomUpRendering;
 	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeBoundingSpheresForTopDownRendering;
 	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeBoundingSpheresForBottomUpRendering;
+	Shader m_tMaskedColorShader2D;
+	GLuint m_uiTexturedPlaneVBO, m_uiTexturedPlaneVAO, m_uiTexturedPlaneEBO;
+	GLuint m_ui2DCircleTexture;
 	glm::vec4 m_vec4GridColorX;
 	glm::vec4 m_vec4GridColorY;
 	glm::vec4 m_vec4GridColorZ;
@@ -73,10 +81,12 @@ public:
 	bool m_bRenderGridZPlane;	
 	bool m_bNodeDepthColorGrading;
 	
+	void Load();
 	void LoadDefaultScene();
 	void ReconstructAllTrees();
 	void UpdateAfterObjectPropertiesChange();
 	void Update(float fDeltaTime);
+	void RenderAdditionalWindows(Renderer& rRenderer) const;	// TODO: const Renderer?
 
 	// simulation controls
 	void ResetSimulation();

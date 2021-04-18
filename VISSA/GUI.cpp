@@ -766,7 +766,7 @@ void GUI::ConditionallyRenderQuitConfirmation(Engine& rEngine)
 		ImGui::Text("Are you sure?");
 		if (ImGui::Button("YES", ImVec2(120, 0)))
 		{
-			glfwSetWindowShouldClose(rEngine.m_tWindow.m_pGLFWwindow, true);	// it's all ogre now
+			glfwSetWindowShouldClose(rEngine.m_pMainWindow->m_pGLFWwindow, true);	// it's all ogre now
 		}
 		ImGui::SetItemDefaultFocus();
 		ImGui::SameLine();
@@ -789,7 +789,7 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 		if (ImGui::Button("BOUNDING VOLUME HIERARCHY", ImVec2(0, 0)))
 		{
 			// CD relevant
-			rEngine.m_tVisualization.LoadDefaultScene();	// really bad implementation of "loading"
+			rEngine.m_tVisualization.Load();	// really bad implementation of "loading"
 
 			// UI relevant
 			//rEngine.m_tMainWindow.SetHardCaptureMouse(true);

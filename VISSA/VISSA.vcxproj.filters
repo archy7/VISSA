@@ -166,10 +166,10 @@
     <None Include="resources\shaders\MaskedColor.vs">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="resources\shaders\crosshair.frag">
+    <None Include="resources\shaders\MaskedColor2D.frag">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="resources\shaders\crosshair.vs">
+    <None Include="resources\shaders\MaskedColor2D.vs">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

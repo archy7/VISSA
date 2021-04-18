@@ -22,12 +22,14 @@ public:
 	~Engine();
 
 	void MainLoop();
+	Window* GetMainWindow();
 	
 	void ProcessKeyboardInput();
 	bool IsDiscreteKeyReady(int iKey);
 
 	// Globals
 	static Engine* GetGlobalEngine();
+	static Window* MakeWindow(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, Window* pContextSharingWindow = nullptr);
 
 	// Callbacks
 	static void ResizeWindowCallback(GLFWwindow* pWindow, int fNewWidth, int fNewHeight);
@@ -38,7 +40,7 @@ public:
 	
 private:
 	// Members
-	Window m_tWindow;
+	Window* m_pMainWindow;
 	Renderer m_tRenderer;
 	Camera m_tCamera;
 	GUI m_tGUI;
@@ -50,4 +52,5 @@ private:
 	static Engine* sm_pEngine;
 
 	void InitEngine();
+	
 };

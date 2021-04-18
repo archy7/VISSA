@@ -1,20 +1,23 @@
 #include "Window.h"
 
+
 #include <assert.h>
 #include <stdio.h>
 #include "Engine.h"
 
-Window::Window():
+Window::Window(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, Window* pContextSharingWindow):
 	m_pGLFWwindow(nullptr),
-	m_iWindowWidth(1280),
-	m_iWindowHeight(720),
+	m_pContextSharingWindow(pContextSharingWindow),
+	m_iWindowWidth(iWindowWidth),
+	m_iWindowHeight(iWindowHeight),
+	m_sWindowName(sWindowName),
 	m_fLastXOfMouse(m_iWindowWidth/ 2.0f),
 	m_fLastYOfMouse(m_iWindowHeight / 2.0f),
 	m_bFirstMouse(true),
 	m_iMouseShowingStack(1),
 	m_bIsInitialized(false)
 {
-	
+	RecreateWindow();
 }
 
 Window::~Window()
@@ -22,26 +25,25 @@ Window::~Window()
 	
 }
 
-void Window::InitWindow()
+//void Window::InitWindow()
+//{
+//
+//	//glViewport(0, 0, m_iWindowWidth, m_iWindowHeight);
+//	//glfwSetFramebufferSizeCallback(m_pGLFWwindow, Engine::ResizeWindowCallback);
+//	//glfwSetCursorPosCallback(m_pGLFWwindow, Engine::MouseMoveCallBack);
+//	//glfwSetScrollCallback(m_pGLFWwindow, Engine::MouseScrollCallBack);
+//	//glfwSetMouseButtonCallback(m_pGLFWwindow, Engine::MouseClickCallBack);
+//
+//	//m_iMouseShowingStack = 1;
+//
+//	//// mark as ready
+//	//m_bIsInitialized = true;
+//}
+
+void Window::SetAsCurrentContext()
 {
-	RecreateWindow();
-
-	// Load GL functions
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-	{
-		assert(!"Failed to initialize GLAD");
-	}
-
-	glViewport(0, 0, m_iWindowWidth, m_iWindowHeight);
-	glfwSetFramebufferSizeCallback(m_pGLFWwindow, Engine::ResizeWindowCallback);
-	glfwSetCursorPosCallback(m_pGLFWwindow, Engine::MouseMoveCallBack);
-	glfwSetScrollCallback(m_pGLFWwindow, Engine::MouseScrollCallBack);
-	glfwSetMouseButtonCallback(m_pGLFWwindow, Engine::MouseClickCallBack);
-
-	m_iMouseShowingStack = 1;
-
-	// mark as ready
-	m_bIsInitialized = true;
+	assert(m_pGLFWwindow);
+	glfwMakeContextCurrent(m_pGLFWwindow);
 }
 
 void Window::CleanUpSequence()
@@ -55,34 +57,32 @@ inline void Window::ReInitializationSequence()
 	assert(!"TODO: Window::ReInit()");
 }
 
-
-
 void Window::RecreateWindow()
 {
 	assert(m_iWindowWidth > 0);
 	assert(m_iWindowHeight > 0);
 
-	glfwSetErrorCallback(Engine::GLFWErrorCallBack);
-
-	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_SAMPLES, 4);
 	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 #ifdef __APPLE__
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-
-	m_pGLFWwindow = glfwCreateWindow(m_iWindowWidth, m_iWindowHeight, "VISSA", NULL, NULL);
+	if(m_pContextSharingWindow)
+		m_pGLFWwindow = glfwCreateWindow(m_iWindowWidth, m_iWindowHeight, m_sWindowName.c_str(), NULL, m_pContextSharingWindow->m_pGLFWwindow);
+	else
+		m_pGLFWwindow = glfwCreateWindow(m_iWindowWidth, m_iWindowHeight, m_sWindowName.c_str(), NULL, NULL);
+	
 	if (m_pGLFWwindow == NULL)
 	{
 		assert(!"Failed to create GFLW window\n");
 		glfwTerminate();
 	}
-	glfwMakeContextCurrent(m_pGLFWwindow);
 }
 
 int Window::WindowShouldClose()

@@ -44,7 +44,7 @@ private:
 	glm::mat4 m_mat4OrthographicProjection;
 public:
 	// shader handles
-	Shader m_tColorShader, m_tTextureShader, m_tMaskedColorShader, m_tCrosshairShader;
+	Shader m_tColorShader, m_tTextureShader, m_tMaskedColorShader, m_tMaskedColorShader2D;
 	// Buffer Handles
 	GLuint m_uiCameraProjectionUBO;
 	GLuint m_uiTexturedCubeVBO, m_uiTexturedCubeVAO, m_uiTexturedCubeEBO;
@@ -54,9 +54,8 @@ public:
 	GLuint m_uiTexturedSphereVBO, m_uiTexturedSphereVAO;// m_uiTexturedSphereEBO;
 	GLuint m_uiGridPlaneVBO, m_uiGridPlaneVAO, m_uiGridPlaneEBO;
 	// Texture Handles
-	GLuint m_uiTexture1, m_uiGridMaskTexture, m_uiCrosshairTexture;
+	GLuint m_uiTexture1, m_uiGridMaskTexture, m_uiCrosshairTexture, m_ui2DCircleTexture;
 	// View space information
-	float m_fOrthoLeft, m_fOrthoRight, m_fOrthoBottom, m_fOrthoTop;
 	float m_fNearPlane, m_fFarPlane;
 	glm::vec4 m_vec4fClearColor;
 
@@ -69,7 +68,7 @@ public:
 	void Render(const Camera& rCamera, Window& rWindow, const Visualization& rScene);
 
 	glm::vec3 ConstructRayDirectionFromMousePosition(const Window& rWindow) const;
-
+	static GLuint LoadTextureFromFile(const char* sPath);
 	// Getters
 	const glm::mat4& GetCameraMatrix() const;
 	const glm::mat4& GetPerspectiveProjectionMatrix() const;
@@ -77,7 +76,6 @@ private:
 	SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
 	void LoadShaders();
 	void LoadTextures();
-	GLuint LoadTextureFromFile(const char* sPath);
 	void LoadPrimitivesToGPU();
 	void InitUniformBuffers();
 	void SetInitialOpenGLState();

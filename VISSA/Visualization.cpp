@@ -6,9 +6,12 @@
 
 #include "glm/glm.hpp"
 
+#include "Engine.h"
 #include "GeometricPrimitiveData.h"
+#include "Renderer.h"
 
 Visualization::Visualization() : 
+	m_p2DGraphWindow(nullptr),
 	m_iMaximumRenderedTreeDepth(),
 	m_iNumberStepsRendered(0),
 	m_ePresentationMode(DISCRETE),
@@ -28,6 +31,66 @@ Visualization::Visualization() :
 	InitPlaybackSpeeds();
 	InitRenderColors();
 	ResetSimulation();
+}
+
+Visualization::~Visualization()
+{
+	delete m_p2DGraphWindow;
+
+	m_tTopDownBVH_AABB.DeleteTree();
+	m_tBottomUpBVH_AABB.DeleteTree();
+	m_tTopDownBVH_BoundingSphere.DeleteTree();
+	m_tBottomUpBVH_BoundingSphere.DeleteTree();
+}
+
+void Visualization::Load()
+{
+	//Engine* pEngine = Engine::GetGlobalEngine();
+	//m_p2DGraphWindow = Engine::MakeWindow(640, 480, "BVH Tree", pEngine->GetMainWindow());
+	m_p2DGraphWindow = Engine::MakeWindow(640, 480, "BVH Tree");
+	GLFWwindow* pPreviousContext = glfwGetCurrentContext();
+	m_p2DGraphWindow->SetAsCurrentContext();
+
+	// create all gl relevant resources for the context of the second window
+	// which is all container objects, since those cannot be shared from the main window. -> VAOs https://www.khronos.org/opengl/wiki/OpenGL_Object#Container_objects
+
+	// shaders
+	Shader tMaskedColorShader2D("resources/shaders/MaskedColor2D.vs", "resources/shaders/MaskedColor2D.frag");
+	m_tMaskedColorShader2D = tMaskedColorShader2D;
+	assert(m_tMaskedColorShader2D.IsInitialized());
+
+	// textures
+	m_ui2DCircleTexture = Renderer::LoadTextureFromFile("resources/textures/2Dcircle.png");
+
+	// objects.. buffer, VAO
+	GLuint &rTexturedPlaneVBO = m_uiTexturedPlaneVBO, &rTexturedPlaneVAO = m_uiTexturedPlaneVAO, &rTexturedPlaneEBO = m_uiTexturedPlaneEBO;
+	glGenVertexArrays(1, &rTexturedPlaneVAO);
+	glGenBuffers(1, &rTexturedPlaneVBO);
+	glGenBuffers(1, &rTexturedPlaneEBO);
+
+	glBindVertexArray(rTexturedPlaneVAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, rTexturedPlaneVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Plane::VertexData), Primitives::Plane::VertexData, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rTexturedPlaneEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::IndexData), Primitives::Plane::IndexData, GL_STATIC_DRAW);
+
+	// position attribute
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	// normals attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	// texture coord attribute
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+
+
+	glfwMakeContextCurrent(pPreviousContext);
+
+	LoadDefaultScene();
 }
 
 void Visualization::LoadDefaultScene()
@@ -145,6 +208,55 @@ void Visualization::Update(float fDeltaTime)
 			MoveToNextSimulationStep();
 			m_fAccumulatedTimeSinceLastUpdateStep -= 1.0f;
 		}
+	}
+}
+
+void Visualization::RenderAdditionalWindows(Renderer& rRenderer) const
+{
+	if (m_p2DGraphWindow)
+	{
+		GLFWwindow* pPreviousContext = glfwGetCurrentContext();
+
+		glfwMakeContextCurrent(m_p2DGraphWindow->m_pGLFWwindow);
+
+		glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		/////////////////////////////////////////////////////////
+
+		glAssert();
+		const Shader& rCurrentShader = m_tMaskedColorShader2D;
+		rCurrentShader.use();
+		glAssert();
+		rCurrentShader.setInt("transparencyMask", 0);
+		glAssert();
+		glBindTexture(GL_TEXTURE_2D, m_ui2DCircleTexture);
+
+		glBindVertexArray(m_uiTexturedPlaneVAO);
+		glAssert();
+
+		// world matrix
+		glm::mat4 mat4World = glm::mat4(1.0f); // init to identity
+		glm::vec3 vec3CircleTranslationVector(static_cast<float>(m_p2DGraphWindow->m_iWindowWidth) * 0.5f, static_cast<float>(m_p2DGraphWindow->m_iWindowHeight) * 0.5f, -(rRenderer.m_fNearPlane + 0.0f)); // in the middle of the window, within the near plane of the view frustum
+		mat4World = glm::translate(mat4World, vec3CircleTranslationVector);
+		mat4World = glm::scale(mat4World, glm::vec3(1.0f, 1.0f, 1.0f));
+		mat4World = glm::rotate(mat4World, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f)); // default plane/quad is defined as lying face up flat on the floor. this makes it "stand up" and face the camera. TODO: use "HUD" plane that is facing the camra
+		rCurrentShader.setMat4("world", mat4World);
+
+		// projection matrix
+		glm::mat4 mat4OrthoProjection2DWindow = glm::ortho(0.0f, static_cast<float>(m_p2DGraphWindow->m_iWindowWidth), 0.0f, static_cast<float>(m_p2DGraphWindow->m_iWindowHeight), 0.1f, 10.0f);
+		rCurrentShader.setMat4("orthoProjection", mat4OrthoProjection2DWindow);
+
+		// setting the color ret
+		rCurrentShader.setVec4("color", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+
+		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+
+		/////////////////////////////////////////////////////////
+
+		glfwSwapBuffers(m_p2DGraphWindow->m_pGLFWwindow);
+
+		glfwMakeContextCurrent(pPreviousContext);
 	}
 }
 
