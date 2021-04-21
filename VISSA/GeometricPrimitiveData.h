@@ -81,6 +81,12 @@ namespace Primitives {
 		static GLfloat ColoredLineVertexData[6];
 	};
 
+	namespace TwoDimensional{
+		struct UniformPlane {
+			static GLfloat VertexData[32];
+		};
+	}
+
 	namespace Specials {
 		struct GridPlane {
 			static GLfloat VertexData[32];	// 8 floats/Vertex, 4 vertices/face = 32 floats

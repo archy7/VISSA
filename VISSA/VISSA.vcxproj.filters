@@ -172,5 +172,11 @@
     <None Include="resources\shaders\MaskedColor2D.vs">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="resources\shaders\Colored2DLine.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="resources\shaders\Colored2DLine.vs">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

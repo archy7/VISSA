@@ -124,6 +124,14 @@ GLfloat Primitives::Line::ColoredLineVertexData[] = {
 	0.0f, 1.0f, 0.0f
 };
 
+GLfloat Primitives::TwoDimensional::UniformPlane::VertexData[] = {
+	//position				normals					texcoords
+	-0.5f,	-0.5f,	0.0f,	0.0f, 0.0f, -1.0f,		0.0f, 0.0f,	// bottom left
+	0.5f,	-0.5f,	0.0f,	0.0f, 0.0f, -1.0f,		1.0f, 0.0f,	// bottom right
+	-0.5f,	0.5f,	0.0f,	0.0f, 0.0f, -1.0f,		0.0f, 1.0f,	// top left
+	0.5f,	0.5f,	0.0f,	0.0f, 0.0f, -1.0f,		1.0f, 1.0f,	// top right
+};
+
 GLfloat Primitives::Specials::GridPlane::VertexData[] = {
 	// Position						// Normals				// Texture Coordinates
 	-5000.0f,	0.0f, 5000.0f,		0.0f, 1.0f, 0.0f,		0.0f, 0.0f,	// left front

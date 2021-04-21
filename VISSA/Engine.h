@@ -29,7 +29,7 @@ public:
 
 	// Globals
 	static Engine* GetGlobalEngine();
-	static Window* MakeWindow(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, Window* pContextSharingWindow = nullptr);
+	static Window* MakeWindow(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, Window* pContextSharingWindow = nullptr); // TODO: remove the last parameter, decision has been made that no GPU resources are shared
 
 	// Callbacks
 	static void ResizeWindowCallback(GLFWwindow* pWindow, int fNewWidth, int fNewHeight);

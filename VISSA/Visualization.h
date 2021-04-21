@@ -45,13 +45,14 @@ public:
 	CollisionDetection::BoundingVolumeHierarchy m_tBottomUpBVH_AABB;
 	CollisionDetection::BoundingVolumeHierarchy m_tTopDownBVH_BoundingSphere;
 	CollisionDetection::BoundingVolumeHierarchy m_tBottomUpBVH_BoundingSphere;
-	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeAABBsForTopDownRendering;
+	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeAABBsForTopDownRendering; // TODO: move these into the BVH objects
 	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeAABBsForBottomUpRendering;
 	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeBoundingSpheresForTopDownRendering;
 	std::vector<CollisionDetection::TreeNodeForRendering> m_vecTreeBoundingSpheresForBottomUpRendering;
-	Shader m_tMaskedColorShader2D;
+	Shader m_tMaskedColorShader2D, m_tColoredLineShader2D;
 	GLuint m_uiTexturedPlaneVBO, m_uiTexturedPlaneVAO, m_uiTexturedPlaneEBO;
-	GLuint m_ui2DCircleTexture;
+	GLuint m_ui2DLineVBO, m_ui2DLineVAO;
+	GLuint m_ui2DCircleTexture, m_ui2DOBJTexture;
 	glm::vec4 m_vec4GridColorX;
 	glm::vec4 m_vec4GridColorY;
 	glm::vec4 m_vec4GridColorZ;
@@ -69,6 +70,8 @@ public:
 	int8_t m_iSimulationDirectionSign; // a value of 1 or -1, 
 	float m_fAccumulatedTimeSinceLastUpdateStep;
 
+	mutable float m_f2DGraphNodeSize;
+	mutable float m_f2DGraphVerticalScreenSpaceReductionPerTreeLevel;
 	int16_t m_iMaximumRenderedTreeDepth;
 	int m_iNumberStepsRendered; // the number of Tree nodes that is rendered. They are ordered by which was one was contructed first.
 	ePresentationMode m_ePresentationMode;
@@ -98,6 +101,8 @@ public:
 	void InvertSimulationProgression();			// instead of advancing "forward", the simulation now rolls "back", and vice versa
 	void MoveToNextSimulationStep();
 
+	
+
 	// options, parameters and manipulation
 	eBVHConstructionStrategy GetCurrenBVHConstructionStrategy() const;
 	void SetNewBVHConstructionStrategy(eBVHConstructionStrategy eNewStrategy);
@@ -109,9 +114,26 @@ public:
 	void ClearCurrentScene();
 
 private:
+
+	struct ScreenSpaceForGraphRendering {
+		float m_fWidthStart;
+		float m_fWidthEnd;
+		float m_fHeightStart;
+		float m_fHeightEnd;
+	};
+
 	eBVHConstructionStrategy m_eConstructionStrategy;
 	eBVHBoundingVolume m_eBVHBoundingVolume;
 
 	void InitPlaybackSpeeds();
 	void InitRenderColors();
+
+	glm::vec4 InterpolateRenderColorForTreeNode(const glm::vec4& rColor1, const glm::vec4& rColor2, int16_t iDepthInTree, int16_t iDeepestDepthOfNodes) const;
+
+	// 2D graph
+	void DrawBVHTreeGraph(const CollisionDetection::BoundingVolumeHierarchy& rBVH) const;
+	void RecursiveDrawTreeGraph(const CollisionDetection::BVHTreeNode* pCurrentNode, ScreenSpaceForGraphRendering tScreenSpaceForThisNode, glm::vec2 vec2PreviousDrawPosition) const;
+	void DrawNodeAtPosition(glm::vec2 vec2ScreenSpacePosition) const;
+	void DrawLineFromTo(glm::vec2 vec2From, glm::vec2 vec2To) const;
+	void Draw2DObjectAtPosition(glm::vec2 vec2ScreenSpacePosition) const;
 };

@@ -702,7 +702,7 @@ void Renderer::RenderHUDComponents(const Camera & rCamera, const Window & rWindo
 
 		// world matrix
 		glm::mat4 mat4World = glm::mat4(1.0f); // init to identity
-		glm::vec3 vec3CrosshairTranslationVector(static_cast<float>(rWindow.m_iWindowWidth) * 0.5f, static_cast<float>(rWindow.m_iWindowHeight) * 0.5f, -(m_fNearPlane + 0.0f)); // in the middle of the window, within the near plane of the view frustum
+		glm::vec3 vec3CrosshairTranslationVector(static_cast<float>(rWindow.m_iWindowWidth) * 0.5f, static_cast<float>(rWindow.m_iWindowHeight) * 0.5f, -(m_fNearPlane + 0.1f)); // in the middle of the window, within the near plane of the view frustum
 		mat4World = glm::translate(mat4World, vec3CrosshairTranslationVector);
 		mat4World = glm::scale(mat4World, glm::vec3(rVisualization.m_fCrossHairScaling, rVisualization.m_fCrossHairScaling, 1.0f));
 		mat4World = glm::rotate(mat4World, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f)); // default plane/quad is defined as lying face up flat on the floor. this makes it "stand up" and face the camera. TODO: use "HUD" plane that is facing the camra
