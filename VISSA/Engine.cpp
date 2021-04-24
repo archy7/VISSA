@@ -7,9 +7,8 @@ Engine* Engine::sm_pEngine = nullptr;
 Engine::Engine() :
 	m_pMainWindow(nullptr),
 	m_tRenderer(),
-	m_tCamera(glm::vec3(0.0f, 0.0f, 0.0f)),
 	m_tGUI(),
-	m_tVisualization(),
+	m_pVisualization(nullptr),
 	m_iDiscreteKeysStates(),
 	m_fDeltaTime(0.0f),
 	m_fLastFrame(0.0f),
@@ -20,6 +19,7 @@ Engine::Engine() :
 
 Engine::~Engine()
 {
+	delete m_pVisualization;
 	delete m_pMainWindow;
 	glfwTerminate();
 }
@@ -33,33 +33,32 @@ Engine * Engine::GetGlobalEngine()
 void Engine::InitEngine()
 {
 	assert(sm_pEngine == nullptr); // protection from multiple calls
-
-	m_pMainWindow = MakeWindow(1280, 720, "VISSA");
-	m_pMainWindow->SetAsCurrentContext();
-
-	m_tRenderer.InitRenderer();
-	glAssert();
-	m_tCamera.SetToPosition(glm::vec3(0.0f, 0.0f, 1500.0f));
-	m_tGUI.InitForWindow(*m_pMainWindow);
-	// scene is alreay ready (but empty)
-	// collision detection not called when scene is empty
-
 	Engine::sm_pEngine = this;	// globally accesible pointer for callback functions
-}
-
-Window* Engine::MakeWindow(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, Window* pContextSharingWindow)
-{
-	
 
 	// Load GLFW
 	glfwSetErrorCallback(Engine::GLFWErrorCallBack);
 	glfwInit();
 
-	GLFWwindow* pPreviousContext = glfwGetCurrentContext();
+	m_pMainWindow = MakeWindowAndSetAsContext(1280, 720, "VISSA");
+	glAssert();
+	m_pMainWindow->SetAsCurrentRenderContext();
+
+	m_tRenderer.InitRenderer();
+	glAssert();
+	GUI::InitForWindow(*m_pMainWindow);
+}
+
+Window* Engine::MakeWindowAndSetAsContext(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName)
+{
+	//GLFWwindow* pPreviousContext = glfwGetCurrentContext();
 
 	// create window and GL context
-	Window* pNewWindow = new Window(iWindowWidth, iWindowHeight, sWindowName, pContextSharingWindow);
-	pNewWindow->SetAsCurrentContext();	// for GLAD loading if it is the first window. actual context handling is done outside
+	Window* pNewWindow;
+	if(!Engine::MainWindowCreated())
+		pNewWindow = new Window(iWindowWidth, iWindowHeight, sWindowName, nullptr);
+	else
+		pNewWindow = new Window(iWindowWidth, iWindowHeight, sWindowName, Engine::GetGlobalEngine()->GetMainWindow()->m_pGLFWwindow);
+	glfwMakeContextCurrent(pNewWindow->m_pGLFWwindow); // for GLAD loading if it is the first window. actual context handling is done outside
 
 	// Load GLAD
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -67,21 +66,43 @@ Window* Engine::MakeWindow(int32_t iWindowWidth, int32_t iWindowHeight, std::str
 		assert(!"Failed to initialize GLAD");
 	}
 
+#ifdef _DEBUG
+	int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+	if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
+	{
+		glEnable(GL_DEBUG_OUTPUT);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageCallback(Renderer::glDebugOutput, nullptr);
+		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+	}
+#endif // _DEBUG
+
+	
+
 	glViewport(0, 0, pNewWindow->m_iWindowWidth, pNewWindow->m_iWindowHeight);
 	glfwSetFramebufferSizeCallback(pNewWindow->m_pGLFWwindow, Engine::ResizeWindowCallback);
 	glfwSetCursorPosCallback(pNewWindow->m_pGLFWwindow, Engine::MouseMoveCallBack);
 	glfwSetScrollCallback(pNewWindow->m_pGLFWwindow, Engine::MouseScrollCallBack);
 	glfwSetMouseButtonCallback(pNewWindow->m_pGLFWwindow, Engine::MouseClickCallBack);
+	glAssert();
 
 	pNewWindow->m_iMouseShowingStack = 1;
+	glAssert();
 
 	// mark as ready
 	pNewWindow->m_bIsInitialized = true;
+	glAssert();
 
 	// reset to previous context
-	glfwMakeContextCurrent(pPreviousContext);
+	/*glfwMakeContextCurrent(pPreviousContext);
+	glAssert();*/
 
 	return pNewWindow;
+}
+
+bool Engine::MainWindowCreated()
+{
+	return Engine::GetGlobalEngine()->m_pMainWindow;
 }
 
 void Engine::MainLoop()
@@ -98,13 +119,29 @@ void Engine::MainLoop()
 		ProcessKeyboardInput();
 
 		// update
-		m_tVisualization.Update(m_fDeltaTime);
+		if(m_pVisualization)
+			m_pVisualization->Update(m_fDeltaTime);
 
-		// rendering
+		// main window
 		// 3D
-		m_tRenderer.Render(m_tCamera, *m_pMainWindow, m_tVisualization);
+		m_tRenderer.RenderIntoMainWindow(*m_pMainWindow);
 		// GUI
+		m_pMainWindow->SetAsCurrentRenderContext();
+		// Start the Dear ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		
+		// visualization
+		if (m_pVisualization)
+			m_pVisualization->Render();
+		
 		m_tGUI.Render(*this);
+
+		// Rendering
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		// glfw: swap buffers
 		glfwSwapBuffers(m_pMainWindow->m_pGLFWwindow);
@@ -113,9 +150,9 @@ void Engine::MainLoop()
 
 Window * Engine::GetMainWindow()
 {
-	assert(m_pMainWindow);
+	assert(Engine::GetGlobalEngine()->m_pMainWindow);
 
-	return m_pMainWindow;
+	return Engine::GetGlobalEngine()->m_pMainWindow;
 }
 
 void Engine::ProcessKeyboardInput()
@@ -127,93 +164,59 @@ void Engine::ProcessKeyboardInput()
 	{
 
 		/*
-			generally available inputs
+			inputs for the engine itself
 		*/
 		{
 			// discrete, non-continuous inputs
 			{
-				if (IsDiscreteKeyReady(GLFW_KEY_ESCAPE))
+				if (IsDiscreteKeyReadyForWindow(m_pMainWindow->m_pGLFWwindow, GLFW_KEY_ESCAPE))
 				{
-					m_tGUI.ShowMenu(!m_tGUI.IsMenuActive());
-					m_pMainWindow->SetHardCaptureMouse(!m_tGUI.IsMenuActive());
-					m_tGUI.SetCaptureMouse(m_tGUI.IsMenuActive());	// the GUI captures mouse input when the menu is active
-				}
-
-				if (IsDiscreteKeyReady(GLFW_KEY_H))
-				{
-					m_tGUI.ToggleHelpWindow();
+					if (m_pVisualization) // only when a vis loaded, can the main menu be closed with ESC
+					{
+						m_tGUI.ShowMenu(!m_tGUI.IsMenuActive());
+						m_pMainWindow->SetHardCaptureMouse(!m_tGUI.IsMenuActive());
+						m_tGUI.SetCaptureMouse(m_tGUI.IsMenuActive());	// the GUI captures mouse input when the menu is active
+					}
 				}
 			}
 
-			// camera control
-			{
-				Camera& rCamera = m_tCamera;
-
-				if (glfwGetKey(m_pMainWindow->m_pGLFWwindow, GLFW_KEY_W) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(FORWARD, m_fDeltaTime);
-				if (glfwGetKey(m_pMainWindow->m_pGLFWwindow, GLFW_KEY_S) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(BACKWARD, m_fDeltaTime);
-				if (glfwGetKey(m_pMainWindow->m_pGLFWwindow, GLFW_KEY_A) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(LEFT, m_fDeltaTime);
-				if (glfwGetKey(m_pMainWindow->m_pGLFWwindow, GLFW_KEY_D) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(RIGHT, m_fDeltaTime);
-
-				if (glfwGetKey(m_pMainWindow->m_pGLFWwindow, GLFW_KEY_Q) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(UP, m_fDeltaTime);
-				if (glfwGetKey(m_pMainWindow->m_pGLFWwindow, GLFW_KEY_E) == GLFW_PRESS)
-					rCamera.ProcessKeyboard(DOWN, m_fDeltaTime);
-			}
-		}
-
-		/*
-			inputs that are only available when the menu is not active and the scene is running
-		*/
-		if (!m_tGUI.IsMenuActive())
-		{
-			/*
-				generally available inputs when the scene is running
-			*/
-			{
-				int iCurrentKey = GLFW_KEY_M;
-
-				if (IsDiscreteKeyReady(iCurrentKey))
-				{
-					m_pMainWindow->SetHardCaptureMouse(!m_pMainWindow->IsMouseCaptured());	// toggle between captured mouse or a cursor
-					m_tGUI.SetCaptureMouse(!m_pMainWindow->IsMouseCaptured());			// control GUI behaviour
-				}
-			}
-
-			/*
-				inputs that are only available when the mouse is captured/the camera controlled
-			*/
-			if (m_pMainWindow->IsMouseCaptured())
-			{
-				
-
-			}
-			else // inputs that are only available when the mouse is freely moving in an active scene
+			// continuous inputs
 			{
 				// empty
 			}
 		}
+
+		/*
+			every other keyboard input will be handled by the current visualization
+		*/
+		if (m_pVisualization)
+		{
+			m_pVisualization->ProcessKeyboardInput();
+		}
 	}
 }
 
-bool Engine::IsDiscreteKeyReady(int iKey)
+bool Engine::IsDiscreteKeyReadyForWindow(GLFWwindow* pWindow, int iKey)
 {
-	const int iKeyState = glfwGetKey(m_pMainWindow->m_pGLFWwindow, iKey);
+	assert(Engine::GetMainWindow()->m_pGLFWwindow == pWindow);	// if you land here, it is becuase only the main window supports discrete keys as of now. TODO!
+
+	Engine* pEngine =  Engine::GetGlobalEngine();
+
+	const int iKeyState = glfwGetKey(pEngine->m_pMainWindow->m_pGLFWwindow, iKey);
 
 	// this translates to: if a key is pressed this frame AND was not pressed the frame before
-	bool bResult = (iKeyState && m_iDiscreteKeysStates[iKey] == GLFW_RELEASE);
+	bool bResult = (iKeyState && pEngine->m_iDiscreteKeysStates[iKey] == GLFW_RELEASE);
 
 	// remember the current state for the next time we check it (which very well could be the very next frame)
-	m_iDiscreteKeysStates[iKey] = iKeyState;
+	pEngine->m_iDiscreteKeysStates[iKey] = iKeyState;
 
 	return bResult;
 }
 
 void Engine::ResizeWindowCallback(GLFWwindow* pWindow, int iNewWidth, int iNewHeight)
 {
+	assert(!"window resizing currently not accounted for and is disabled in general. You should not land here.");
+
 	Engine* pEngine = GetGlobalEngine();
 
 	// TODO: this is not clean. needs proper handling on window per window basis
@@ -235,51 +238,23 @@ void Engine::MouseScrollCallBack(GLFWwindow* pWindow, double fXOffset, double fY
 
 void Engine::MouseMoveCallBack(GLFWwindow* pWindow, double dXPosition, double dYPosition)
 {
-	Engine* pEngine = GetGlobalEngine();
-
-	if (pWindow == pEngine->m_pMainWindow->m_pGLFWwindow) // if input is for main window, proceed
+	/*
+		only reacting to mouse moving that does not concern the GUI
+	*/
+	if (!ImGui::GetIO().WantCaptureMouse)
 	{
+		Engine* pEngine = Engine::GetGlobalEngine();
+
 		/*
-			only reacting to mouse moving that does not concern the GUI
+			inputs for the engine itself
 		*/
-		if (!ImGui::GetIO().WantCaptureMouse)
 		{
-			const float fXPosition = static_cast<float>(dXPosition);
-			const float fYPosition = static_cast<float>(dYPosition);
-
-			/*
-				inputs that are available only when the scene is active
-			*/
-			if (!pEngine->m_tGUI.IsMenuActive())
-			{
-				Window& rWindow = *(pEngine->m_pMainWindow);
-				if (rWindow.IsMouseCaptured()) // Control the camera only when mouse is captured
-				{
-					if (rWindow.m_bFirstMouse)
-					{
-						rWindow.m_fLastXOfMouse = fXPosition;
-						rWindow.m_fLastYOfMouse = fYPosition;
-						rWindow.m_bFirstMouse = false;
-					}
-
-					float xoffset = fXPosition - rWindow.m_fLastXOfMouse;
-					float yoffset = rWindow.m_fLastYOfMouse - fYPosition; // reversed since y-coordinates go from bottom to top
-
-					rWindow.m_fLastXOfMouse = fXPosition;
-					rWindow.m_fLastYOfMouse = fYPosition;
-
-					Camera& rCamera = pEngine->m_tCamera;
-
-					rCamera.ProcessMouseMovement(xoffset, yoffset);
-
-
-				}
-				else	// reacting to mouse movement when the camera is not active
-				{
-					// empty
-				}
-			}
+			// empty
 		}
+
+		// also forwarding the mouse move to the current visualization to handle it
+		if (pEngine->m_pVisualization)
+			pEngine->m_pVisualization->ProcessMouseMovement(pWindow, dXPosition, dYPosition);
 	}
 }
 
@@ -287,79 +262,18 @@ void Engine::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 {
 	Engine* pEngine = Engine::GetGlobalEngine();
 
-	if (pWindow == pEngine->m_pMainWindow->m_pGLFWwindow) // if input is for main window, proceed
+	if (!ImGui::GetIO().WantCaptureMouse)
 	{
 		/*
-			reacting only to clicks that do not concern the UI
+			inputs for the engine itself
 		*/
-		if (!ImGui::GetIO().WantCaptureMouse)
 		{
-			GUI& rGUI = pEngine->m_tGUI;
-			if (!rGUI.IsMenuActive()) // scene only reacting to clicks when the menu is not active
-			{
-				if (iButton == GLFW_MOUSE_BUTTON_LEFT && iAction == GLFW_PRESS) // single click of left mouse button
-				{
-					// TODO: yes, there is code duplication going on here. however, the entire scope of how clicks are handled is unclear. that is why improving this might be pointless
-
-					Window& rWindow = *(pEngine->m_pMainWindow);
-					if (rWindow.IsMouseCaptured())	// reacting to clicks made while camera control is active
-					{
-						// construct ray
-						CollisionDetection::Ray tRay(pEngine->m_tCamera.GetCurrentPosition(), pEngine->m_tCamera.GetFrontVector());
-
-						// check for intersections with ray
-						//CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tVisualization.m_tTopDownBVH_AABB, tRay);
-						CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::BruteForceRayIntoObjects(pEngine->m_tVisualization.m_vecObjects, tRay);
-
-						SceneObject* pPreviouslyFocusedObject = pEngine->m_tGUI.GetFocusedObject();
-						if (pPreviouslyFocusedObject)
-							pEngine->m_tGUI.CancelObjectPropertiesChanges();
-
-						// execute orders in accordance with the result
-						if (tResult.IntersectionWithObjectOccured())
-						{
-							pEngine->m_tGUI.SetFocusedObject(tResult.m_pFirstIntersectedSceneObject);
-							pEngine->m_tGUI.SetObjectPropertiesWindowPosition(static_cast<float>(pEngine->m_pMainWindow->m_iWindowWidth * 0.5f), static_cast<float>(pEngine->m_pMainWindow->m_iWindowHeight *0.5f)); // center of window						
-							pEngine->m_tGUI.ShowObjectPropertiesWindow(true);
-						}
-						else
-						{
-
-							pEngine->m_tGUI.SetFocusedObject(nullptr); // no object in focus now
-						}
-					}
-					else	// reacting to clicks of a freely moving cursor
-					{
-						// extra step: the freely moving cursor position is, in world space, not aligned with the camera position. needs adjustment!
-						const glm::vec3 vec3RayDirection = pEngine->m_tRenderer.ConstructRayDirectionFromMousePosition(rWindow);
-
-						// construct ray
-						CollisionDetection::Ray tRay(pEngine->m_tCamera.GetCurrentPosition(), vec3RayDirection);
-
-						// check for intersections with ray
-						//CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::CastRayIntoBVH(pEngine->m_tVisualization.m_tTopDownBVH_AABB, tRay);
-						CollisionDetection::RayCastIntersectionResult tResult = CollisionDetection::BruteForceRayIntoObjects(pEngine->m_tVisualization.m_vecObjects, tRay);
-
-						SceneObject* pPreviouslyFocusedObject = pEngine->m_tGUI.GetFocusedObject();
-						if (pPreviouslyFocusedObject)
-							pEngine->m_tGUI.CancelObjectPropertiesChanges();
-
-						// execute orders in accordance with the result
-						if (tResult.IntersectionWithObjectOccured())
-						{
-							pEngine->m_tGUI.SetFocusedObject(tResult.m_pFirstIntersectedSceneObject);
-							Window::MousePositionInWindow tCurrentMousePosition = pEngine->m_pMainWindow->GetCurrentMousePosition();
-							pEngine->m_tGUI.SetObjectPropertiesWindowPosition(tCurrentMousePosition.m_fXPosition, tCurrentMousePosition.m_fYPosition); // center of window						
-							pEngine->m_tGUI.ShowObjectPropertiesWindow(true);
-						}
-						else
-						{
-							pEngine->m_tGUI.SetFocusedObject(nullptr); // no object in focus now
-						}
-					}
-				}
-			}
+			// empty
 		}
+
+		// also forwarding the mouse click to the current visualization to handle it
+		if (pEngine->m_pVisualization)
+			pEngine->m_pVisualization->ProcessMouseClick(pWindow, iButton, iAction, iModifiers);
 	}
 }
 

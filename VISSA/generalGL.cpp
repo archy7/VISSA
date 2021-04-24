@@ -21,21 +21,25 @@ void glAssertAllIsFine(const char* sFile, int iLine)
 #ifdef _DEBUG
 
 	GLenum uiErrorCode = glGetError();
-
-	switch (uiErrorCode)
+	while (uiErrorCode != GL_NO_ERROR)
 	{
-	case GL_NO_ERROR: {/* do nothing*/break; };
-	case GL_INVALID_ENUM: printf("GL_ERROR:: GL_INVALID_ENUM "); break;
-	case GL_INVALID_VALUE: printf("GL_ERROR:: GL_INVALID_VALUE "); break;
-	case GL_INVALID_OPERATION: printf("GL_ERROR:: GL_INVALID_OPERATION "); break;
-	case GL_INVALID_FRAMEBUFFER_OPERATION: printf("GL_ERROR:: GL_INVALID_FRAMEBUFFER_OPERATION "); break;
-	case GL_OUT_OF_MEMORY: printf("GL_ERROR:: GL_OUT_OF_MEMORY "); break;
-	default: assert(!"ERROR: DEFAULT CASE HIT IN glCheckError!");
-	}
+		switch (uiErrorCode)
+		{
+		case GL_NO_ERROR: {/* do nothing*/break; };
+		case GL_INVALID_ENUM: printf("GL_ERROR:: GL_INVALID_ENUM "); break;
+		case GL_INVALID_VALUE: printf("GL_ERROR:: GL_INVALID_VALUE "); break;
+		case GL_INVALID_OPERATION: printf("GL_ERROR:: GL_INVALID_OPERATION "); break;
+		case GL_INVALID_FRAMEBUFFER_OPERATION: printf("GL_ERROR:: GL_INVALID_FRAMEBUFFER_OPERATION "); break;
+		case GL_OUT_OF_MEMORY: printf("GL_ERROR:: GL_OUT_OF_MEMORY "); break;
+		default: assert(!"ERROR: DEFAULT CASE HIT IN glCheckError!");
+		}
 
-	if (uiErrorCode != GL_NO_ERROR)
-	{
-		printf("at %d in %s\n", iLine, sFile);
+		if (uiErrorCode != GL_NO_ERROR)
+		{
+			printf("at %d in %s\n", iLine, sFile);
+		}
+
+		uiErrorCode = glGetError();
 	}
 
 #endif // _DEBUG

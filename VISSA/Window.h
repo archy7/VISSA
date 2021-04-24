@@ -4,12 +4,13 @@
 
 #include "generalGL.h"
 
-struct GLFWWindowAndOjbectTuple;
+
 class Camera;
 class GUI;
+struct ImGuiContext;
 
 struct Window {
-	Window(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, Window* pContextSharingWindow = nullptr); // TODO: clean this whole context sharing mess up
+	Window(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, GLFWwindow* pContextSharingWindow); // todo: refactor: factory method + private constructor?
 	~Window();
 
 	struct MousePositionInWindow {
@@ -18,7 +19,8 @@ struct Window {
 	};
 
 	GLFWwindow* m_pGLFWwindow;
-	Window* m_pContextSharingWindow;
+	GLFWwindow* m_pContextSharingWindow;
+	ImGuiContext* m_pImGuiContext;
 	int32_t m_iWindowWidth, m_iWindowHeight;
 	std::string m_sWindowName;
 	float m_fLastXOfMouse, m_fLastYOfMouse;
@@ -29,7 +31,8 @@ public:
 	bool m_bIsInitialized;
 
 	//void InitWindow();
-	void SetAsCurrentContext();
+	void SetAsCurrentRenderContext();
+	void SetAsCurrentGUIContext();
 	void ReInitializationSequence();
 	void CleanUpSequence();
 	void RecreateWindow();

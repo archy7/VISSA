@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <iostream>
 
 #include "generalGL.h"
 #include "Shader.h"
@@ -22,28 +23,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-struct TriangularFace {
-	struct Vertex{
-		glm::vec3 vec3Position;
-		glm::vec3 vec3Normal;
-		glm::vec2 vec2UVs;
-	};
-
-	Vertex vertex1;
-	Vertex vertex2;
-	Vertex vertex3;
-};
-
 Renderer::Renderer() :
 	// frame constant matrices
 	m_mat4Camera(glm::mat4(1.0f)), // identity matrix for starters
 	m_mat4PerspectiveProjection(glm::mat4(1.0f)), // identity matrix for starters
 	m_mat4OrthographicProjection(glm::mat4(1.0f)), // identity matrix for starters
-	// members defining the view frustums
-	m_fNearPlane(0.1f),
-	m_fFarPlane(10000.0f),
-	// clear color: a light grey
-	m_vec4fClearColor(0.3f, 0.3f, 0.3f, 1.0f)
+	m_vec4fMainWindowClearColor(0.9f, 0.9f, 0.9f, 1.0f)
 {
 	
 }
@@ -55,26 +40,8 @@ Renderer::~Renderer()
 
 void Renderer::InitRenderer()
 {
-	LoadShaders();
-	glAssert();
-	LoadTextures();
-	glAssert();
-	InitUniformBuffers();
-	glAssert();
-	LoadPrimitivesToGPU();
-	glAssert();
 	SetInitialOpenGLState();
 	glAssert();
-}
-
-const glm::mat4 & Renderer::GetCameraMatrix() const
-{
-	return m_mat4Camera;
-}
-
-const glm::mat4 & Renderer::GetPerspectiveProjectionMatrix() const
-{
-	return m_mat4PerspectiveProjection;
 }
 
 /*
@@ -240,45 +207,12 @@ Renderer::SphereTrianglesGenerationResult Renderer::GenerateSphereVertexData(flo
 			// vertex 3
 			pWriteBuffer[iCurrentTriangleWritingIndex].vertex3 = ConstructVertexFromNormalizedSpherePoint(newPoint_3_1_normalized);
 			iCurrentTriangleWritingIndex++;
-		}
-
-		
+		}		
 	}
 
 	tResultStruct.m_pTriangleData = pWriteBuffer;
 	delete[] pReadBuffer;
 	return tResultStruct;
-}
-
-void Renderer::LoadShaders()
-{
-	// A simple color shader
-	Shader tColorShader("resources/shaders/Color.vs", "resources/shaders/Color.frag");
-	m_tColorShader = tColorShader;
-	assert(m_tColorShader.IsInitialized());
-
-	// A flat texture shader
-	Shader tTextureShader("resources/shaders/FlatTexture.vs", "resources/shaders/FlatTexture.frag");
-	m_tTextureShader = tTextureShader;
-	assert(m_tTextureShader.IsInitialized());
-
-	// A masked color shader
-	Shader tMaskedColorShader("resources/shaders/MaskedColor.vs", "resources/shaders/MaskedColor.frag");
-	m_tMaskedColorShader = tMaskedColorShader;
-	assert(m_tMaskedColorShader.IsInitialized());
-
-	// A crosshair (hud component) shader
-	Shader tMaskedColorShader2D("resources/shaders/MaskedColor2D.vs", "resources/shaders/MaskedColor2D.frag");
-	m_tMaskedColorShader2D = tMaskedColorShader2D;
-	assert(m_tMaskedColorShader2D.IsInitialized());
-}
-
-void Renderer::LoadTextures()
-{
-	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-	m_uiTexture1 = LoadTextureFromFile("resources/textures/cobblestone_floor_13_diff_1k.jpg");
-	m_uiGridMaskTexture = LoadTextureFromFile("resources/textures/grid_mask_transparent.png");
-	m_uiCrosshairTexture = LoadTextureFromFile("resources/textures/crosshair.png");
 }
 
 GLuint Renderer::LoadTextureFromFile(const char * sPath)
@@ -318,257 +252,44 @@ GLuint Renderer::LoadTextureFromFile(const char * sPath)
 	return uiTextureID;
 }
 
-void Renderer::LoadPrimitivesToGPU()
-{
-	// textured cube
-	{
-		GLuint &rTexturedCubeVBO = m_uiTexturedCubeVBO, &rTexturedCubeVAO = m_uiTexturedCubeVAO, &rTexturedCubeEBO = m_uiTexturedCubeEBO;
-		glGenVertexArrays(1, &rTexturedCubeVAO);
-		glGenBuffers(1, &rTexturedCubeVBO);
-		glGenBuffers(1, &rTexturedCubeEBO);
-
-		glBindVertexArray(rTexturedCubeVAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, rTexturedCubeVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Cube::VertexData), Primitives::Cube::VertexData, GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rTexturedCubeEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Cube::IndexData), Primitives::Cube::IndexData, GL_STATIC_DRAW);
-
-		// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		// normals attribute
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		// texture coord attribute
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-	}
-
-	// colored cube
-	{
-		GLuint &rColoredCubeVBO = m_uiColoredCubeVBO, &rColoredCubeVAO = m_uiColoredCubeVAO, &rColoredCubeEBO = m_uiColoredCubeEBO;
-		glGenVertexArrays(1, &rColoredCubeVAO);
-		glGenBuffers(1, &rColoredCubeVBO);
-		glGenBuffers(1, &rColoredCubeEBO);
-
-		glBindVertexArray(rColoredCubeVAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, rColoredCubeVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Cube::SimpleVertexData), Primitives::Cube::SimpleVertexData, GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rColoredCubeEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Cube::SimpleIndexData), Primitives::Cube::SimpleIndexData, GL_STATIC_DRAW);
-
-		// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-	}
-
-	// textured plane
-	{
-		GLuint &rTexturedPlaneVBO = m_uiTexturedPlaneVBO, &rTexturedPlaneVAO = m_uiTexturedPlaneVAO, &rTexturedPlaneEBO = m_uiTexturedPlaneEBO;
-		glGenVertexArrays(1, &rTexturedPlaneVAO);
-		glGenBuffers(1, &rTexturedPlaneVBO);
-		glGenBuffers(1, &rTexturedPlaneEBO);
-
-		glBindVertexArray(rTexturedPlaneVAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, rTexturedPlaneVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Plane::VertexData), Primitives::Plane::VertexData, GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rTexturedPlaneEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::IndexData), Primitives::Plane::IndexData, GL_STATIC_DRAW);
-
-		// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		// normals attribute
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		// texture coord attribute
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-	}
-
-	// colored plane
-	{
-		GLuint &rColoredPlaneVBO = m_uiColoredPlaneVBO, &rColoredPlaneVAO = m_uiColoredPlaneVAO, &rColoredPlaneEBO = m_uiColoredPlaneEBO;
-		glGenVertexArrays(1, &rColoredPlaneVAO);
-		glGenBuffers(1, &rColoredPlaneVBO);
-		glGenBuffers(1, &rColoredPlaneEBO);
-
-		glBindVertexArray(rColoredPlaneVAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, rColoredPlaneVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Plane::SimpleVertexData), Primitives::Plane::SimpleVertexData, GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rColoredPlaneEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::SimpleIndexData), Primitives::Plane::SimpleIndexData, GL_STATIC_DRAW);
-
-		// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-	}
-
-	// a textured sphere
-	{
-		// generate vertex data first.
-		const int iNumberOfIterations = 2;
-		SphereTrianglesGenerationResult tResult = GenerateSphereVertexData(Primitives::Sphere::SphereDefaultRadius, iNumberOfIterations);
-		Primitives::Sphere::NumberOfTrianglesInSphere = tResult.m_uiNumberOfTriangles;
-
-		GLuint &rTexturedSphereVBO = m_uiTexturedSphereVBO, &rTexturedSphereVAO = m_uiTexturedSphereVAO;// &rTexturedSphereEBO = m_uiTexturedSphereEBO;
-		glGenVertexArrays(1, &rTexturedSphereVAO);
-		glGenBuffers(1, &rTexturedSphereVBO);
-		//glGenBuffers(1, &rTexturedSphereEBO);
-
-		glBindVertexArray(rTexturedSphereVAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, rTexturedSphereVBO);
-		glBufferData(GL_ARRAY_BUFFER, Primitives::Sphere::NumberOfTrianglesInSphere * sizeof(TriangularFace), tResult.m_pTriangleData, GL_STATIC_DRAW);
-
-		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rTexturedSphereEBO);
-		//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::IndexData), Primitives::Plane::IndexData, GL_STATIC_DRAW);
-
-		// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		// normals attribute
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		// texture coord attribute
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-
-		//delete[] tResult.m_pTriangleData;
-		Primitives::Sphere::VertexData = &tResult.m_pTriangleData->vertex1.vec3Position.x;//reinterpret_cast<GLfloat*>(tResult.m_pTriangleData);
-	}
-	
-
-	// plane for uniform grid display
-	{
-		GLuint &rGridPlaneVBO = m_uiGridPlaneVBO, &rGridPlaneVAO = m_uiGridPlaneVAO, &rGridPlaneEBO = m_uiGridPlaneEBO;
-		glGenVertexArrays(1, &rGridPlaneVAO);
-		glGenBuffers(1, &rGridPlaneVBO);
-		glGenBuffers(1, &rGridPlaneEBO);
-
-		glBindVertexArray(rGridPlaneVAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, rGridPlaneVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Primitives::Specials::GridPlane::VertexData), Primitives::Specials::GridPlane::VertexData, GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rGridPlaneEBO); // index data is equal to that of a normal plane
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Primitives::Plane::IndexData), Primitives::Plane::IndexData, GL_STATIC_DRAW);
-
-		// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		// normals attribute
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		// texture coord attribute
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-	}
-}
-
-void Renderer::InitUniformBuffers()
-{
-	assert(m_tColorShader.IsInitialized() && m_tTextureShader.IsInitialized()); // need constructed shaders to link
-
-	GLuint& rCameraProjectionUBO = m_uiCameraProjectionUBO;
-	glGenBuffers(1, &rCameraProjectionUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, rCameraProjectionUBO);
-	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_DYNAMIC_DRAW);	// dynamic draw because the camera matrix will change every frame
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	// defining the range of the buffer, which is 2 mat4s
-	glBindBufferRange(GL_UNIFORM_BUFFER, 0, rCameraProjectionUBO, 0, 2 * sizeof(glm::mat4));
-}
-
 void Renderer::SetInitialOpenGLState()
 {
-	// configure global opengl state
-	glEnable(GL_DEPTH_TEST);
+	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis. This is here for now until I find a better place to put it
+}
 
-	glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK);
+void Renderer::RenderIntoMainWindow(Window & rWindow)
+{
+	rWindow.SetAsCurrentRenderContext();
 
-	glEnable(GL_MULTISAMPLE);
+	glAssert();
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glClearColor(m_vec4fMainWindowClearColor.r, m_vec4fMainWindowClearColor.g, m_vec4fMainWindowClearColor.b, m_vec4fMainWindowClearColor.a);
+	glClear(GL_COLOR_BUFFER_BIT);
 
-	glLineWidth(2.0f);
-	glEnable(GL_LINE_SMOOTH);
+	glAssert();
 }
 
 void Renderer::FreeGPUResources()
 {
-	// Vertex Buffers and Vertey Arrays
-	glDeleteVertexArrays(1, &m_uiTexturedCubeVAO);
-	glDeleteBuffers(1, &m_uiTexturedCubeVBO);
-	glDeleteBuffers(1, &m_uiTexturedCubeEBO);
-
-	glDeleteVertexArrays(1, &m_uiColoredCubeVAO);
-	glDeleteBuffers(1, &m_uiColoredCubeVBO);
-	glDeleteBuffers(1, &m_uiColoredCubeEBO);
-
-	glDeleteVertexArrays(1, &m_uiTexturedPlaneVAO);
-	glDeleteBuffers(1, &m_uiTexturedPlaneVBO);
-	glDeleteBuffers(1, &m_uiTexturedPlaneEBO);
-
-	glDeleteVertexArrays(1, &m_uiColoredPlaneVAO);
-	glDeleteBuffers(1, &m_uiColoredPlaneVBO);
-	glDeleteBuffers(1, &m_uiColoredPlaneEBO);
-
-	glDeleteVertexArrays(1, &m_uiTexturedSphereVAO);
-	glDeleteBuffers(1, &m_uiTexturedSphereVBO);
-	//glDeleteBuffers(1, &m_uiTexturedSphereEBO);
-
-	// Uniform Buffers
-	glDeleteBuffers(1, &m_uiCameraProjectionUBO);
-
-	// Textures
-	glDeleteTextures(1, &m_uiTexture1);
-	glDeleteTextures(1, &m_uiGridMaskTexture);
+	
 }
 
 void Renderer::UpdateFrameConstants(const Camera& rCamera, const Window& rWindow)
 {
 	// camera matrix
-	m_mat4Camera = rCamera.GetViewMatrix();
+	//m_mat4Camera = rCamera.GetViewMatrix();
 }
 
 void Renderer::UpdateProjectionMatrices(const Camera& rCamera, const Window& rWindow)
 {
 	// perspective projection matrix
-	m_mat4PerspectiveProjection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
+	//m_mat4PerspectiveProjection = glm::perspective(glm::radians(rCamera.Zoom), (float)rWindow.m_iWindowWidth / (float)rWindow.m_iWindowHeight, m_fNearPlane, m_fFarPlane);
 
 	// orthographic projection matrix
-	m_mat4OrthographicProjection = glm::ortho(0.0f, static_cast<float>(rWindow.m_iWindowWidth), 0.0f, static_cast<float>(rWindow.m_iWindowHeight), m_fNearPlane, m_fFarPlane);
+	//m_mat4OrthographicProjection = glm::ortho(0.0f, static_cast<float>(rWindow.m_iWindowWidth), 0.0f, static_cast<float>(rWindow.m_iWindowHeight), m_fNearPlane, m_fFarPlane);
 }
 
-void Renderer::Render(const Camera & rMainCamera, Window & rMainWindow, const Visualization& rScene)
-{
-	assert(glfwGetCurrentContext() == rMainWindow.m_pGLFWwindow); // this makes sure contexts are handled correctly.
-	// When u are done rendering to other windows than the main window, set context back to the main window.
-
-	if (rMainWindow.IsMinimized()) // hot fix to stop crashes when minimizing the window. needs proper handling in the future: https://www.glfw.org/docs/3.3/window_guide.html
-		return;
-	
-	glClearColor(m_vec4fClearColor.r, m_vec4fClearColor.g, m_vec4fClearColor.b, m_vec4fClearColor.a);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	UpdateFrameConstants(rMainCamera, rMainWindow);
-	UpdateProjectionMatrices(rMainCamera, rMainWindow);
-	RenderVisualization(rMainCamera, rMainWindow, rScene);
-
-	rScene.RenderAdditionalWindows(*this);
-}
-
-glm::vec3 Renderer::ConstructRayDirectionFromMousePosition(const Window& rWindow) const
+glm::vec3 Renderer::ConstructRayDirectionFromMousePosition(const Window& rWindow, const glm::mat4& rmat4PerspectiveProjection, const glm::mat4& rmat4Camera)
 {
 	// from: https://antongerdelan.net/opengl/raycasting.html
 
@@ -583,643 +304,240 @@ glm::vec3 Renderer::ConstructRayDirectionFromMousePosition(const Window& rWindow
 	// clip space
 	glm::vec4 ray_clip = glm::vec4(ray_nds.x, ray_nds.y, -1.0, 1.0);
 	// camera space
-	glm::vec4 ray_eye = glm::inverse(m_mat4PerspectiveProjection) * ray_clip;
+	glm::vec4 ray_eye = glm::inverse(rmat4PerspectiveProjection) * ray_clip;
 	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
 	// world space
-	glm::vec3 ray_world = glm::vec3(glm::inverse(m_mat4Camera) * ray_eye);
+	glm::vec3 ray_world = glm::vec3(glm::inverse(rmat4Camera) * ray_eye);
 	// don't forget to normalise the vector at some point
 	ray_world = glm::normalize(ray_world);
 	return ray_world;
 }
 
-void Renderer::RenderVisualization(const Camera& rCamera, const Window& rWindow, const Visualization& rScene)
+//void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWindow, const Visualization& rScene)
+//{
+//	// textured cube
+//	{
+//		glAssert();
+//
+//		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
+//		// -------------------------------------------------------------------------------------------
+//		m_tFlatTextureShader.use();
+//		glAssert();
+//		m_tFlatTextureShader.setInt("texture1", 0);
+//		m_tFlatTextureShader.setInt("texture2", 1);
+//
+//		glAssert();
+//
+//		// bind textures on corresponding texture units
+//		glActiveTexture(GL_TEXTURE0);
+//		glBindTexture(GL_TEXTURE_2D, m_uiObjectDiffuseTexture);;
+//
+//		glAssert();
+//
+//		// calculate the model matrix for each object and pass it to shader before drawing
+//		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+//		world = glm::translate(world, glm::vec3(0.0f, -150.0f, 0.0f));
+//		m_tFlatTextureShader.setMat4("world", world);
+//
+//		glAssert();
+//
+//		// render cube
+//		glBindVertexArray(m_uiTexturedCubeVAO);
+//		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+//
+//		glAssert();
+//	}
+//
+//	// textured plane
+//	{
+//		glAssert();
+//
+//		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
+//		// -------------------------------------------------------------------------------------------
+//		m_tFlatTextureShader.use();
+//		glAssert();
+//		m_tFlatTextureShader.setInt("texture1", 0);
+//		m_tFlatTextureShader.setInt("texture2", 1);
+//
+//		glAssert();
+//
+//		// bind textures on corresponding texture units
+//		glActiveTexture(GL_TEXTURE0);
+//		glBindTexture(GL_TEXTURE_2D, m_uiObjectDiffuseTexture);
+//
+//		glAssert();
+//
+//		// calculate the model matrix for each object and pass it to shader before drawing
+//		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+//		world = glm::translate(world, glm::vec3(-150.0f, -100.0f, 0.0f));
+//		m_tFlatTextureShader.setMat4("world", world);
+//
+//		glAssert();
+//
+//		// render cube
+//		glBindVertexArray(m_uiTexturedPlaneVAO);
+//		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+//
+//		glAssert();
+//	}
+//
+//	// a textured sphere
+//	{
+//		glAssert();
+//
+//		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
+//		// -------------------------------------------------------------------------------------------
+//		m_tFlatTextureShader.use();
+//		glAssert();
+//		m_tFlatTextureShader.setInt("texture1", 0);
+//		m_tFlatTextureShader.setInt("texture2", 1);
+//
+//		glAssert();
+//
+//		// bind textures on corresponding texture units
+//		glActiveTexture(GL_TEXTURE0);
+//		glBindTexture(GL_TEXTURE_2D, m_uiObjectDiffuseTexture);
+//
+//		glAssert();
+//
+//		// calculate the model matrix for each object and pass it to shader before drawing
+//		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+//		world = glm::translate(world, glm::vec3(-150.0f, 0.0f, 0.0f));
+//		m_tFlatTextureShader.setMat4("world", world);
+//
+//		glAssert();
+//
+//		// render cube
+//		glBindVertexArray(m_uiTexturedSphereVAO);
+//		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
+//
+//		glAssert();
+//	}
+//}
+//
+//void Renderer::RenderDataStructureObjectsOLD(const Camera & rCamera, const Window & rWindow)
+//{
+//	// colored line cube
+//	{
+//		glAssert();
+//
+//		m_tColorShader.use();
+//
+//		glAssert();
+//
+//		// calculate the model matrix for each object and pass it to shader before drawing
+//		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+//		world = glm::translate(world, glm::vec3(0.0f, 150.0f, 0.0f));
+//		m_tColorShader.setMat4("world", world);
+//
+//		// pass color
+//		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
+//		m_tColorShader.setVec4("color", vec4FullGreenColor);
+//
+//		glAssert();
+//
+//		// render the colored lined cube with GL_LINE_STRIP
+//		glBindVertexArray(m_uiColoredCubeVAO);
+//		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+//
+//		glAssert();
+//	}
+//
+//	// colored line plane
+//	{
+//		glAssert();
+//
+//		m_tColorShader.use();
+//
+//		glAssert();
+//
+//		// calculate the model matrix for each object and pass it to shader before drawing
+//		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+//		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 0.0f));
+//		m_tColorShader.setMat4("world", world);
+//
+//		// pass color
+//		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
+//		m_tColorShader.setVec4("color", vec4FullGreenColor);
+//
+//		glAssert();
+//
+//		// render the colored lined cube with GL_LINE_STRIP
+//		glBindVertexArray(m_uiColoredPlaneVAO);
+//		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Plane::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
+//
+//		glAssert();
+//	}
+//
+//	// colored line sphere
+//	{
+//		glAssert();
+//
+//		m_tColorShader.use();
+//
+//		glAssert();
+//
+//		// calculate the model matrix for each object and pass it to shader before drawing
+//		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+//		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 150.0f));
+//		m_tColorShader.setMat4("world", world);
+//
+//		// pass color
+//		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
+//		m_tColorShader.setVec4("color", vec4FullGreenColor);
+//
+//		glAssert();
+//
+//		// render the colored lined cube with GL_LINE_STRIP
+//		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//		glBindVertexArray(m_uiTexturedSphereVAO);
+//		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
+//		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//
+//
+//		glAssert();
+//	}
+//}
+
+#ifdef _DEBUG
+void Renderer::glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length, const char * message, const void * userParam)
 {
-	// start by updating the uniform buffer containing the camera and projection matrices
-	glBindBuffer(GL_UNIFORM_BUFFER, m_uiCameraProjectionUBO);
-		// camera
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(m_mat4Camera), glm::value_ptr(m_mat4Camera));
-		// perspective projection
-		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(m_mat4Camera), sizeof(m_mat4PerspectiveProjection), glm::value_ptr(m_mat4PerspectiveProjection));
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	
-	
-	RenderRealObjects(rCamera, rWindow, rScene);
-	//RenderRealObjectsOLD(rMainCamera, rMainWindow, rVisualization);
-	RenderDataStructureObjects(rCamera, rWindow, rScene);
-	Render3DSceneConstants(rCamera, rWindow, rScene);
-	RenderHUDComponents(rCamera, rWindow, rScene);
+	// ignore non-significant error/warning codes
+	if (id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
+
+	std::cout << "---------------" << std::endl;
+	std::cout << "Debug message (" << id << "): " << message << std::endl;
+
+	switch (source)
+	{
+	case GL_DEBUG_SOURCE_API:             std::cout << "Source: API"; break;
+	case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   std::cout << "Source: Window System"; break;
+	case GL_DEBUG_SOURCE_SHADER_COMPILER: std::cout << "Source: Shader Compiler"; break;
+	case GL_DEBUG_SOURCE_THIRD_PARTY:     std::cout << "Source: Third Party"; break;
+	case GL_DEBUG_SOURCE_APPLICATION:     std::cout << "Source: Application"; break;
+	case GL_DEBUG_SOURCE_OTHER:           std::cout << "Source: Other"; break;
+	} std::cout << std::endl;
+
+	switch (type)
+	{
+	case GL_DEBUG_TYPE_ERROR:               std::cout << "Type: Error"; break;
+	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: std::cout << "Type: Deprecated Behaviour"; break;
+	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  std::cout << "Type: Undefined Behaviour"; break;
+	case GL_DEBUG_TYPE_PORTABILITY:         std::cout << "Type: Portability"; break;
+	case GL_DEBUG_TYPE_PERFORMANCE:         std::cout << "Type: Performance"; break;
+	case GL_DEBUG_TYPE_MARKER:              std::cout << "Type: Marker"; break;
+	case GL_DEBUG_TYPE_PUSH_GROUP:          std::cout << "Type: Push Group"; break;
+	case GL_DEBUG_TYPE_POP_GROUP:           std::cout << "Type: Pop Group"; break;
+	case GL_DEBUG_TYPE_OTHER:               std::cout << "Type: Other"; break;
+	} std::cout << std::endl;
+
+	switch (severity)
+	{
+	case GL_DEBUG_SEVERITY_HIGH:         std::cout << "Severity: high"; break;
+	case GL_DEBUG_SEVERITY_MEDIUM:       std::cout << "Severity: medium"; break;
+	case GL_DEBUG_SEVERITY_LOW:          std::cout << "Severity: low"; break;
+	case GL_DEBUG_SEVERITY_NOTIFICATION: std::cout << "Severity: notification"; break;
+	} std::cout << std::endl;
+	std::cout << std::endl;
 }
-
-void Renderer::Render3DSceneConstants(const Camera & rCamera, const Window & rWindow, const Visualization& rScene)
-{
-	// uniform grid
-	{
-		glAssert();
-
-		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-		// -------------------------------------------------------------------------------------------
-		Shader& rCurrentShader = m_tMaskedColorShader;
-		rCurrentShader.use();
-		glAssert();
-		rCurrentShader.setInt("transparencyMask", 0);
-
-		glAssert();
-
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_uiGridMaskTexture);
-
-		glAssert();
-
-		glDisable(GL_CULL_FACE);
-
-		glBindVertexArray(m_uiGridPlaneVAO);
-
-		if (rScene.m_bRenderGridXPlane)
-		{
-			// calculate the model matrix for each object and pass it to shader before drawing
-			glm::mat4 mat4WorldXPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-			mat4WorldXPlane = glm::translate(mat4WorldXPlane, glm::vec3(rScene.m_vec3GridPositionsOnAxes.x, 0.0f, 0.0f));
-			mat4WorldXPlane = glm::rotate(mat4WorldXPlane, glm::pi<float>() * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f));
-			rCurrentShader.setMat4("world", mat4WorldXPlane);
-
-			// setting the color
-			rCurrentShader.setVec4("color", rScene.m_vec4GridColorX);
-
-			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-		}
-
-		if (rScene.m_bRenderGridYPlane)
-		{
-			// calculate the model matrix for each object and pass it to shader before drawing
-			glm::mat4 mat4WorldYPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-			mat4WorldYPlane = glm::translate(mat4WorldYPlane, glm::vec3(0.0f, rScene.m_vec3GridPositionsOnAxes.y, 0.0f));
-			rCurrentShader.setMat4("world", mat4WorldYPlane);
-			// no rotation needed since the default rendered plane is defined as lying flat on the "ground", facing upwards
-
-			// setting the color			
-			rCurrentShader.setVec4("color", rScene.m_vec4GridColorY);
-
-			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-		}
-
-		if (rScene.m_bRenderGridZPlane)
-		{
-			glm::mat4 mat4WorldZPlane = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-			mat4WorldZPlane = glm::translate(mat4WorldZPlane, glm::vec3(0.0f, 0.0f, -rScene.m_vec3GridPositionsOnAxes.z));
-			mat4WorldZPlane = glm::rotate(mat4WorldZPlane, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f));
-			rCurrentShader.setMat4("world", mat4WorldZPlane);
-
-			// setting the color
-			rCurrentShader.setVec4("color", rScene.m_vec4GridColorZ);
-
-			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-		}	
-
-		glEnable(GL_CULL_FACE);
-
-		glAssert();
-	}
-}
-
-void Renderer::RenderHUDComponents(const Camera & rCamera, const Window & rWindow, const Visualization & rVisualization)
-{
-	// Crosshair
-	{
-		glAssert();
-		Shader& rCurrentShader = m_tMaskedColorShader2D;
-		rCurrentShader.use();
-		glAssert();
-		rCurrentShader.setInt("transparencyMask", 0);
-
-		glAssert();
-
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_uiCrosshairTexture);
-
-		glBindVertexArray(m_uiTexturedPlaneVAO);
-
-		// world matrix
-		glm::mat4 mat4World = glm::mat4(1.0f); // init to identity
-		glm::vec3 vec3CrosshairTranslationVector(static_cast<float>(rWindow.m_iWindowWidth) * 0.5f, static_cast<float>(rWindow.m_iWindowHeight) * 0.5f, -(m_fNearPlane + 0.1f)); // in the middle of the window, within the near plane of the view frustum
-		mat4World = glm::translate(mat4World, vec3CrosshairTranslationVector);
-		mat4World = glm::scale(mat4World, glm::vec3(rVisualization.m_fCrossHairScaling, rVisualization.m_fCrossHairScaling, 1.0f));
-		mat4World = glm::rotate(mat4World, glm::pi<float>() * 0.5f, glm::vec3(1.0f, 0.0f, 0.0f)); // default plane/quad is defined as lying face up flat on the floor. this makes it "stand up" and face the camera. TODO: use "HUD" plane that is facing the camra
-		rCurrentShader.setMat4("world", mat4World);
-
-		// no camera matrix for hud components!
-
-		// projection matrix
-		rCurrentShader.setMat4("orthoProjection", m_mat4OrthographicProjection);
-
-		// setting the color
-		rCurrentShader.setVec4("color", rVisualization.m_vec4CrossHairColor);
-
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-	}
-}
-
-void Renderer::RenderRealObjects(const Camera & rCamera, const Window & rWindow, const Visualization & rScene)
-{
-	glAssert();
-	m_tTextureShader.use();
-	glAssert();
-	m_tTextureShader.setInt("texture1", 0);
-
-	// bind textures on corresponding texture units
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-
-	for (const SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
-	{
-		const SceneObject::Transform& rCurrentTransform = rCurrentSceneObject.m_tTransform;
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
-		// translation
-		world = glm::translate(world, rCurrentTransform.m_vec3Position);
-		// rotation
-		world = glm::rotate(world, glm::radians(rCurrentTransform.m_tRotation.m_fAngle), rCurrentTransform.m_tRotation.m_vec3Axis);
-		// scale
-		world = glm::scale(world, rCurrentTransform.m_vec3Scale);
-		m_tTextureShader.setMat4("world", world);
-
-		glAssert();
-
-		// render
-		if (rCurrentSceneObject.m_eType == SceneObject::eType::CUBE) 
-		{
-			glBindVertexArray(m_uiTexturedCubeVAO);
-			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-		}
-		else if (rCurrentSceneObject.m_eType == SceneObject::eType::SPHERE)
-		{
-			glBindVertexArray(m_uiTexturedSphereVAO);
-			glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
-		}
-		else
-		{
-			assert(!"disaster :)");
-		}
-	}
-}
-
-void Renderer::RenderRealObjectsOLD(const Camera & rCamera, const Window & rWindow, const Visualization& rScene)
-{
-	// textured cube
-	{
-		glAssert();
-
-		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-		// -------------------------------------------------------------------------------------------
-		m_tTextureShader.use();
-		glAssert();
-		m_tTextureShader.setInt("texture1", 0);
-		m_tTextureShader.setInt("texture2", 1);
-
-		glAssert();
-
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);;
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(0.0f, -150.0f, 0.0f));
-		m_tTextureShader.setMat4("world", world);
-
-		glAssert();
-
-		// render cube
-		glBindVertexArray(m_uiTexturedCubeVAO);
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Cube::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glAssert();
-	}
-
-	// textured plane
-	{
-		glAssert();
-
-		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-		// -------------------------------------------------------------------------------------------
-		m_tTextureShader.use();
-		glAssert();
-		m_tTextureShader.setInt("texture1", 0);
-		m_tTextureShader.setInt("texture2", 1);
-
-		glAssert();
-
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(-150.0f, -100.0f, 0.0f));
-		m_tTextureShader.setMat4("world", world);
-
-		glAssert();
-
-		// render cube
-		glBindVertexArray(m_uiTexturedPlaneVAO);
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glAssert();
-	}
-
-	// a textured sphere
-	{
-		glAssert();
-
-		// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-		// -------------------------------------------------------------------------------------------
-		m_tTextureShader.use();
-		glAssert();
-		m_tTextureShader.setInt("texture1", 0);
-		m_tTextureShader.setInt("texture2", 1);
-
-		glAssert();
-
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_uiTexture1);
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(-150.0f, 0.0f, 0.0f));
-		m_tTextureShader.setMat4("world", world);
-
-		glAssert();
-
-		// render cube
-		glBindVertexArray(m_uiTexturedSphereVAO);
-		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
-
-		glAssert();
-	}
-}
-
-void Renderer::RenderDataStructureObjectsOLD(const Camera & rCamera, const Window & rWindow)
-{
-	// colored line cube
-	{
-		glAssert();
-
-		m_tColorShader.use();
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(0.0f, 150.0f, 0.0f));
-		m_tColorShader.setMat4("world", world);
-
-		// pass color
-		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
-		m_tColorShader.setVec4("color", vec4FullGreenColor);
-
-		glAssert();
-
-		// render the colored lined cube with GL_LINE_STRIP
-		glBindVertexArray(m_uiColoredCubeVAO);
-		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glAssert();
-	}
-
-	// colored line plane
-	{
-		glAssert();
-
-		m_tColorShader.use();
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 0.0f));
-		m_tColorShader.setMat4("world", world);
-
-		// pass color
-		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
-		m_tColorShader.setVec4("color", vec4FullGreenColor);
-
-		glAssert();
-
-		// render the colored lined cube with GL_LINE_STRIP
-		glBindVertexArray(m_uiColoredPlaneVAO);
-		glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Plane::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-		glAssert();
-	}
-
-	// colored line sphere
-	{
-		glAssert();
-
-		m_tColorShader.use();
-
-		glAssert();
-
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 world = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		world = glm::translate(world, glm::vec3(150.0f, -100.0f, 150.0f));
-		m_tColorShader.setMat4("world", world);
-
-		// pass color
-		glm::vec4 vec4FullGreenColor(0.0f, 1.0f, 0.0f, 1.0f);
-		m_tColorShader.setVec4("color", vec4FullGreenColor);
-
-		glAssert();
-
-		// render the colored lined cube with GL_LINE_STRIP
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glBindVertexArray(m_uiTexturedSphereVAO);
-		glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-
-		glAssert();
-	}
-}
-
-void Renderer::RenderDataStructureObjects(const Camera & rCamera, const Window & rWindow, const Visualization& rVisualization)
-{
-	Shader& rCurrentShader = m_tColorShader;
-	rCurrentShader.use();
-	glAssert();
-
-	glDisable(GL_CULL_FACE);
-	
-	// AABBs
-	if (rVisualization.m_bRenderObjectAABBs)
-	{
-		// render colour yellow for AABBs
-		glm::vec4 vec4AABBRenderColor(1.0f, 1.0f, 0.0f, 1.0f);
-		rCurrentShader.setVec4("color", rVisualization.m_vec4AABBDefaultColor);
-
-		for (const SceneObject& rCurrentSceneObject : rVisualization.m_vecObjects)
-		{
-			RenderAABBOfSceneObject(rCurrentSceneObject, rCurrentShader);
-		}
-	}
-
-	// Bounding Spheres
-	if (rVisualization.m_bRenderObjectBoundingSpheres)
-	{
-		rCurrentShader.setVec4("color", rVisualization.m_vec4BoundingSphereDefaultColor);
-
-		for (const SceneObject& rCurrentSceneObject : rVisualization.m_vecObjects)
-		{
-			RenderBoundingSphereOfSceneObject(rCurrentSceneObject, rCurrentShader);
-		}
-	}
-
-	auto InterpolateRenderColorForTreeNode = [](const glm::vec4& rColor1, const glm::vec4& rColor2, int16_t iDepthInTree, int16_t iDeepestDepthOfNodes) {
-		assert(iDepthInTree >= 0);
-
-		if (iDeepestDepthOfNodes == 0)
-			return rColor1;
-
-		const float fWeightPerDepthLevel = 1.0f / static_cast<float>(iDeepestDepthOfNodes); // OK
-		const float fWeightColor1 = 1.0f - fWeightPerDepthLevel * static_cast<float>(iDepthInTree);
-		const float fWeightColor2 = 1.0f - fWeightColor1;
-	
-		return rColor1 * fWeightColor1 + rColor2 * fWeightColor2;
-	};
-
-	if (rVisualization.GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::AABB) 
-	{
-		// rendering the AABBs of tree nodes in the BVH
-		if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
-		{
-			int16_t iAlreadyRenderedConstructionSteps = 0;
-			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForTopDownRendering)
-			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iDepthInTree <= rVisualization.m_iMaximumRenderedTreeDepth);
-				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
-
-				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-				if (bShallRender)
-				{
-					glm::vec4 vec4NodeRenderColor = rVisualization.m_vec4TopDownNodeRenderColor;
-					if (rVisualization.m_bNodeDepthColorGrading)
-					{
-						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(rVisualization.m_vec4TopDownNodeRenderColor,
-							rVisualization.m_vec4TopDownNodeRenderColor_Gradient,
-							rCurrentRenderedBVHAABB.m_iDepthInTree,
-							rVisualization.m_tTopDownBVH_AABB.m_iTDeepestDepthOfNodes
-						);
-					}
-
-					rCurrentShader.setVec4("color", vec4NodeRenderColor);
-					RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
-				}
-
-				iAlreadyRenderedConstructionSteps++;
-			}
-		}
-
-		if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
-		{
-			int16_t iAlreadyRenderedConstructionSteps = 0;
-			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHAABB : rVisualization.m_vecTreeAABBsForBottomUpRendering)
-			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iDepthInTree <= rVisualization.m_iMaximumRenderedTreeDepth);
-				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
-
-				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-				if (bShallRender)
-				{
-					glm::vec4 vec4NodeRenderColor = rVisualization.m_vec4BottomUpNodeRenderColor;
-					if (rVisualization.m_bNodeDepthColorGrading)
-					{
-						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(rVisualization.m_vec4BottomUpNodeRenderColor,
-							rVisualization.m_vec4BottomUpNodeRenderColor_Gradient,
-							rCurrentRenderedBVHAABB.m_iDepthInTree,
-							rVisualization.m_tTopDownBVH_AABB.m_iTDeepestDepthOfNodes
-						);
-					}
-
-					rCurrentShader.setVec4("color", vec4NodeRenderColor);
-					RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
-				}
-
-				iAlreadyRenderedConstructionSteps++;
-			}
-		}
-	}
-	else if (rVisualization.GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::BOUNDING_SPHERE)
-	{
-		if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
-		{
-			int16_t iAlreadyRenderedConstructionSteps = 0;
-			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHBoundingSphere : rVisualization.m_vecTreeBoundingSpheresForTopDownRendering)
-			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingSphere.m_iDepthInTree <= rVisualization.m_iMaximumRenderedTreeDepth);
-				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
-
-				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-				if (bShallRender)
-				{
-					glm::vec4 vec4NodeRenderColor = rVisualization.m_vec4TopDownNodeRenderColor;
-					if (rVisualization.m_bNodeDepthColorGrading)
-					{
-						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(rVisualization.m_vec4TopDownNodeRenderColor,
-							rVisualization.m_vec4TopDownNodeRenderColor_Gradient,
-							rCurrentRenderedBVHBoundingSphere.m_iDepthInTree,
-							rVisualization.m_tTopDownBVH_AABB.m_iTDeepestDepthOfNodes
-						);
-					}
-
-					rCurrentShader.setVec4("color", vec4NodeRenderColor);
-					RenderTreeNodeBoundingsphere(rCurrentRenderedBVHBoundingSphere, rCurrentShader);
-				}
-
-				iAlreadyRenderedConstructionSteps++;
-			}
-		}
-
-		if (rVisualization.GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
-		{
-			int16_t iAlreadyRenderedConstructionSteps = 0;
-			for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHBoundingSphere : rVisualization.m_vecTreeBoundingSpheresForBottomUpRendering)
-			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingSphere.m_iDepthInTree <= rVisualization.m_iMaximumRenderedTreeDepth);
-				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < rVisualization.m_iNumberStepsRendered);
-
-				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-				if (bShallRender)
-				{
-					glm::vec4 vec4NodeRenderColor = rVisualization.m_vec4BottomUpNodeRenderColor;
-					if (rVisualization.m_bNodeDepthColorGrading)
-					{
-						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(rVisualization.m_vec4BottomUpNodeRenderColor,
-							rVisualization.m_vec4BottomUpNodeRenderColor_Gradient,
-							rCurrentRenderedBVHBoundingSphere.m_iDepthInTree,
-							rVisualization.m_tTopDownBVH_AABB.m_iTDeepestDepthOfNodes
-						);
-					}
-
-					rCurrentShader.setVec4("color", vec4NodeRenderColor);
-					RenderTreeNodeBoundingsphere(rCurrentRenderedBVHBoundingSphere, rCurrentShader);
-				}
-
-				iAlreadyRenderedConstructionSteps++;
-			}
-		}
-	}
-	else
-	{
-		assert(!"disaster");
-	}
-	
-
-	glEnable(GL_CULL_FACE);
-}
-
-void Renderer::RenderAABBOfSceneObject(const SceneObject & rSceneObject, Shader & rShader)
-{
-	// the AABBs
-	const CollisionDetection::AABB& rRenderedAABB = rSceneObject.m_tWorldSpaceAABB;
-	const CollisionDetection::AABB& rLocalSpaceAABBReference = rSceneObject.m_tLocalSpaceAABB;
-
-	// calc world matrix
-	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
-	// translation
-	world = glm::translate(world, rRenderedAABB.m_vec3Center);
-	// scale
-	world = glm::scale(world, rRenderedAABB.m_vec3Radius / rLocalSpaceAABBReference.m_vec3Radius);
-
-	rShader.setMat4("world", world);
-
-	glAssert();
-
-	// render the object appropriately
-	glBindVertexArray(m_uiColoredCubeVAO);
-	glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-	glAssert();
-}
-
-void Renderer::RenderBoundingSphereOfSceneObject(const SceneObject & rSceneObject, Shader & rShader)
-{
-	const CollisionDetection::BoundingSphere& rRenderedBoundingSphere = rSceneObject.m_tWorldSpaceBoundingSphere;
-
-	// calc world matrix
-	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
-	// translation
-	world = glm::translate(world, rRenderedBoundingSphere.m_vec3Center);
-	// scale 
-	const float fScale = rRenderedBoundingSphere.m_fRadius / Primitives::Sphere::SphereDefaultRadius;
-	world = glm::scale(world, glm::vec3(fScale, fScale, fScale));
-
-	rShader.setMat4("world", world);
-
-	glAssert();
-
-	// render a sphere
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glBindVertexArray(m_uiTexturedSphereVAO);
-	glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-}
-
-void Renderer::RenderTreeNodeAABB(const CollisionDetection::TreeNodeForRendering & rTreeNodeAABB, Shader & rShader)
-{
-	// the AABB
-	const CollisionDetection::AABB& rRenderedAABB = rTreeNodeAABB.m_pNodeToBeRendered->m_tAABBForNode;
-
-	// calc world matrix
-	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
-	// translation
-	world = glm::translate(world, rRenderedAABB.m_vec3Center);
-	// scale
-	const float fDetaultCubeHalfWidth = Primitives::Cube::DefaultCubeHalfWidth;
-	world = glm::scale(world, rRenderedAABB.m_vec3Radius / glm::vec3(fDetaultCubeHalfWidth, fDetaultCubeHalfWidth, fDetaultCubeHalfWidth)); // scaling a "default" cube so it has the same extents as the current AABB
-
-	rShader.setMat4("world", world);
-
-	glAssert();
-
-	// render the cube
-	glBindVertexArray(m_uiColoredCubeVAO);
-	glDrawElements(GL_LINE_STRIP, static_cast<GLsizei>(sizeof(Primitives::Cube::SimpleIndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
-
-	glAssert();
-}
-
-void Renderer::RenderTreeNodeBoundingsphere(const CollisionDetection::TreeNodeForRendering & rTreeNodeAABB, Shader & rShader)
-{
-	// the bounding sphere
-	const CollisionDetection::BoundingSphere& rRenderedBoundingSphere = rTreeNodeAABB.m_pNodeToBeRendered->m_tBoundingSphereForNode;
-
-	// calc world matrix
-	glm::mat4 world = glm::mat4(1.0f); // starting with identity matrix
-	// translation
-	world = glm::translate(world, rRenderedBoundingSphere.m_vec3Center);
-	// scale
-	const float fDefaultSphereRadius = Primitives::Sphere::SphereDefaultRadius;
-	const float fRenderedSphereRadius = rRenderedBoundingSphere.m_fRadius / fDefaultSphereRadius;
-	world = glm::scale(world,  glm::vec3(fRenderedSphereRadius, fRenderedSphereRadius, fRenderedSphereRadius)); // scaling a "default" sphere so it has the same extents as the current AABB
-
-	rShader.setMat4("world", world);
-
-	glAssert();
-
-	// render the sphere
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glBindVertexArray(m_uiTexturedSphereVAO);
-	glDrawArrays(GL_TRIANGLES, 0, Primitives::Sphere::NumberOfTrianglesInSphere * 3);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	glAssert();
-}
+#endif // _DEBUG

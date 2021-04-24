@@ -60,6 +60,19 @@ namespace CollisionDetection {
 	void ConstructBoundingVolumesForScene(Visualization& rScene);
 	void UpdateBoundingVolumesForScene(Visualization& rScene);
 	int StaticTestAABBagainstAABB(const AABB& rAABB, const AABB& rOtherAABB);
+	AABB CreateAABBForMultipleObjects(const SceneObject * pSceneObjects, size_t uiNumSceneObjects);
+	/*
+		TODO: DOC
+	*/
+	AABB MergeTwoAABBs(const AABB& rAABB1, const AABB& rAABB2);
+	/*
+		TODO: DOC
+	*/
+	BoundingSphere CreateBoundingSphereForMultipleObjects(const SceneObject* pSceneObjects, size_t uiNumSceneObjects);
+	/*
+		TODO: DOC
+	*/
+	BoundingSphere MergeTwoBoundingSpheres(const BoundingSphere& rBoundingSphere1, const BoundingSphere& rBoundingSphere2);
 
 	//////////////////////////////////////////////////////////////
 	//////////////////////////BVH/////////////////////////////////
@@ -92,16 +105,23 @@ namespace CollisionDetection {
 		void RecursiveDeleteTree(BVHTreeNode* pNode);
 	};
 
-	struct TreeNodeForRendering {
-		BVHTreeNode* m_pNodeToBeRendered;
-		int16_t m_iDepthInTree = 0u;
-		int16_t m_iRenderingOrder = 0u; // when stepping through the simulation, this determines in which order node bounding volumes are rendered.
-	};
+	/*
+		TODO: DOC
+	*/
+	size_t PartitionSceneObjectsInPlace_AABB(SceneObject* pSceneObjects, size_t uiNumSceneObjects);
+	/*
+		TODO: DOC
+	*/
+	size_t PartitionSceneObjectsInPlace_BoundingSphere(SceneObject* pSceneObjects, size_t uiNumSceneObjects);
+	/*
+		TODO: DOC
+	*/
+	void FindBottomUpNodesToMerge_AABB(BVHTreeNode** pNode, size_t uiNumNodes, size_t& rNodeIndex1, size_t& rNodeIndex2);
+	/*
+		TODO: DOC
+	*/
+	void FindBottomUpNodesToMerge_BoundingSphere(BVHTreeNode** pNode, size_t uiNumNodes, size_t& rNodeIndex1, size_t& rNodeIndex2);
 
-	BoundingVolumeHierarchy ConstructTopDownAABBBVHForScene(Visualization& rScene);
-	BoundingVolumeHierarchy ConstructBottomUpAABBBVHForScene(Visualization& rScene);
-	BoundingVolumeHierarchy ConstructTopDownBoundingSphereBVHForScene(Visualization& rScene);
-	BoundingVolumeHierarchy ConstructBottomUpBoundingSphereBVHForScene(Visualization& rScene);
 	RayCastIntersectionResult CastRayIntoBVH(const BoundingVolumeHierarchy& rBVH, const Ray& rCastedRay);
 	RayCastIntersectionResult BruteForceRayIntoObjects(std::vector<SceneObject>& rvecObjects, const Ray& rCastedRay);
 }

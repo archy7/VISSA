@@ -84,72 +84,12 @@ namespace CollisionDetection {
 		// BOUNDING VOLUME HIERARCHY
 		//////////////////////////////////////////
 
-		/*
-			recursive function that constructs a top down AABB tree
-		*/
-		void RecursiveTopDownTree_AABB(BVHTreeNode** pNode, SceneObject* pSceneObjects, size_t uiNumSceneObjects);
-		/*
-			TODO: DOC
-		*/
-		BVHTreeNode* BottomUpTree_AABB(SceneObject* pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization);
-		/*
-			TODO: DOC
-		*/
-		void FindBottomUpNodesToMerge_AABB(BVHTreeNode** pNode, size_t uiNumNodes, size_t& rNodeIndex1, size_t& rNodeIndex2);
-		/*
-			TODO: DOC
-		*/
-		AABB MergeTwoAABBs(const AABB& rAABB1, const AABB& rAABB2);
-		/*
-			TODO: DOC
-		*/
-		void TraverseTreeForDataForTopDownRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth, int16_t& riTotalTreeDepth);
-		/*
-			TODO: DOC
-		*/
-		void TraverseTreeForDataForBottomUpRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iTreeDepth, int16_t& riTotalTreeDepth);
-		/*
-			TODO: DOC
-		*/
-		AABB CreateAABBForMultipleObjects(const SceneObject* pSceneObjects, size_t uiNumSceneObjects);
-		/*
-			TODO: DOC
-		*/
-		size_t PartitionSceneObjectsInPlace_AABB(SceneObject* pSceneObjects, size_t uiNumSceneObjects);
 
 
-		/*
-			recursive function that constructs a top down Bounding Sphere tree
-		*/
-		void RecursiveTopDownTree_BoundingSphere(BVHTreeNode** pNode, SceneObject* pSceneObjects, size_t uiNumSceneObjects);
-		/*
-			TODO: DOC
-		*/
-		BVHTreeNode* BottomUpTree_BoundingSphere(SceneObject* pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization);
-		/*
-			TODO: DOC
-		*/
-		void FindBottomUpNodesToMerge_BoundingSphere(BVHTreeNode** pNode, size_t uiNumNodes, size_t& rNodeIndex1, size_t& rNodeIndex2);
-		/*
-			TODO: DOC
-		*/
-		BoundingSphere MergeTwoBoundingSpheres(const BoundingSphere& rBoundingSphere1, const BoundingSphere& rBoundingSphere2);
-		/*
-			TODO: DOC
-		*/
-		void TraverseTreeForDataForTopDownRendering_BoundingSphere(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecBoundingspheresForRendering, int16_t iTreeDepth, int16_t& riTotalTreeDepth);
-		/*
-			TODO: DOC
-		*/
-		void TraverseTreeForDataForBottomUpRendering_BoundingSphere(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecBoundingSpheresForRendering, int16_t iTreeDepth, int16_t& riTotalTreeDepth);
-		/*
-			TODO: DOC
-		*/
-		BoundingSphere CreateBoundingSphereForMultipleObjects(const SceneObject* pSceneObjects, size_t uiNumSceneObjects);
-		/*
-			TODO: DOC
-		*/
-		size_t PartitionSceneObjectsInPlace_BoundingSphere(SceneObject* pSceneObjects, size_t uiNumSceneObjects);
+
+
+
+
 
 		//////////////////////////////////////////
 		// RAY CASTING
@@ -328,77 +268,148 @@ int CollisionDetection::StaticTestAABBagainstAABB(const AABB & rAABB, const AABB
 	return 1;
 }
 
+AABB CollisionDetection::CreateAABBForMultipleObjects(const SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+{
+	AABB tResult;
+
+	// initializing min values to max and vice versa for definitive overwriting for the first vertex
+	float fXMin = std::numeric_limits<float>::max();
+	float fXMax = std::numeric_limits<float>::lowest();
+	float fYMin = std::numeric_limits<float>::max();
+	float fYMax = std::numeric_limits<float>::lowest();
+	float fZMin = std::numeric_limits<float>::max();
+	float fZMax = std::numeric_limits<float>::lowest();
+
+	for (size_t uiCurrentSceneObjectIndex = 0u; uiCurrentSceneObjectIndex < uiNumSceneObjects; uiCurrentSceneObjectIndex++)
+	{
+		const SceneObject& rCurrentObject = pSceneObjects[uiCurrentSceneObjectIndex];
+		assert(glm::length(rCurrentObject.m_tWorldSpaceAABB.m_vec3Radius) > 0.0f);	// make sure AABB of current object has already been constructed
+
+		// get extent of current AABB
+		const float fObjAABBXMin = rCurrentObject.m_tWorldSpaceAABB.CalcMinimumX();
+		const float fObjAABBYMin = rCurrentObject.m_tWorldSpaceAABB.CalcMinimumY();
+		const float fObjAABBZMin = rCurrentObject.m_tWorldSpaceAABB.CalcMinimumZ();
+		const float fObjAABBXMax = rCurrentObject.m_tWorldSpaceAABB.CalcMaximumX();
+		const float fObjAABBYMax = rCurrentObject.m_tWorldSpaceAABB.CalcMaximumY();
+		const float fObjAABBZMax = rCurrentObject.m_tWorldSpaceAABB.CalcMaximumZ();
+
+		// update resulting bounding volume accordingly
+		fXMin = std::min<float>(fXMin, fObjAABBXMin);
+		fYMin = std::min<float>(fYMin, fObjAABBYMin);
+		fZMin = std::min<float>(fZMin, fObjAABBZMin);
+		fXMax = std::max<float>(fXMax, fObjAABBXMax);
+		fYMax = std::max<float>(fYMax, fObjAABBYMax);
+		fZMax = std::max<float>(fZMax, fObjAABBZMax);
+	}
+
+	// calculating AABB center
+	const float fCenterX = fXMin * 0.5f + fXMax * 0.5f;
+	const float fCenterY = fYMin * 0.5f + fYMax * 0.5f;
+	const float fCenterZ = fZMin * 0.5f + fZMax * 0.5f;
+	tResult.m_vec3Center = glm::vec3(fCenterX, fCenterY, fCenterZ);
+
+	// calculating AABB halfwidths
+	const float fXTotalExtent = fXMax - fXMin;
+	const float fYTotalExtent = fYMax - fYMin;
+	const float fZTotalExtent = fZMax - fZMin;
+	const float fHalfWidthX = fXTotalExtent * 0.5f;
+	const float fHalfWidthY = fYTotalExtent * 0.5f;
+	const float fHalfWidthZ = fZTotalExtent * 0.5f;
+
+	// calculating AABB halfwidths
+	tResult.m_vec3Radius = glm::vec3(fHalfWidthX, fHalfWidthY, fHalfWidthZ);
+
+	return tResult;
+}
+
+AABB CollisionDetection::MergeTwoAABBs(const AABB & rAABB1, const AABB & rAABB2)
+{
+	AABB tResult;
+
+	const float fXMin = std::min(rAABB1.CalcMinimumX(), rAABB2.CalcMinimumX());
+	const float fYMin = std::min(rAABB1.CalcMinimumY(), rAABB2.CalcMinimumY());
+	const float fZMin = std::min(rAABB1.CalcMinimumZ(), rAABB2.CalcMinimumZ());
+	const float fXMax = std::max(rAABB1.CalcMaximumX(), rAABB2.CalcMaximumX());
+	const float fYMax = std::max(rAABB1.CalcMaximumY(), rAABB2.CalcMaximumY());
+	const float fZMax = std::max(rAABB1.CalcMaximumZ(), rAABB2.CalcMaximumZ());
+
+	// calculating AABB center
+	const float fCenterX = fXMin * 0.5f + fXMax * 0.5f;
+	const float fCenterY = fYMin * 0.5f + fYMax * 0.5f;
+	const float fCenterZ = fZMin * 0.5f + fZMax * 0.5f;
+	tResult.m_vec3Center = glm::vec3(fCenterX, fCenterY, fCenterZ);
+
+	// calculating AABB halfwidths
+	const float fXTotalExtent = fXMax - fXMin;
+	const float fYTotalExtent = fYMax - fYMin;
+	const float fZTotalExtent = fZMax - fZMin;
+	const float fHalfWidthX = fXTotalExtent * 0.5f;
+	const float fHalfWidthY = fYTotalExtent * 0.5f;
+	const float fHalfWidthZ = fZTotalExtent * 0.5f;
+
+	// calculating AABB halfwidths
+	tResult.m_vec3Radius = glm::vec3(fHalfWidthX, fHalfWidthY, fHalfWidthZ);
+
+	return tResult;
+}
+
+BoundingSphere CollisionDetection::CreateBoundingSphereForMultipleObjects(const SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+{
+	assert(uiNumSceneObjects >= 2u); // if 1 or less, some error occurred
+	assert(pSceneObjects[0].m_tWorldSpaceBoundingSphere.m_fRadius > 0.0f);
+
+	// initiliazing result with first object
+	BoundingSphere tResult = pSceneObjects[0].m_tWorldSpaceBoundingSphere;
+
+	// for every FOLLOWING object (its bounding sphere specifically) ...
+	for (size_t uiCurrentObjectToBeEncompassed = 1u; uiCurrentObjectToBeEncompassed < uiNumSceneObjects; uiCurrentObjectToBeEncompassed++)
+	{
+		const BoundingSphere& rCurrentOtherBoundingSphere = pSceneObjects[uiCurrentObjectToBeEncompassed].m_tWorldSpaceBoundingSphere;
+		assert(rCurrentOtherBoundingSphere.m_fRadius > 0.0f);
+
+		// we determine the distance vector to encompassed sphere from result sphere
+		const glm::vec3 vec3CenterPointsDistance = rCurrentOtherBoundingSphere.m_vec3Center - tResult.m_vec3Center;
+
+		// we construct the normalized direction of the distance ...
+		const glm::vec3 vec3NormalizedCenterPointsDirection = glm::normalize(vec3CenterPointsDistance);
+		// ...  to then scale it by the encompassed sphere's radius, resulting in a "directed" radius
+		const glm::vec3 vec3DirectedEncompassedSphereRadius = vec3NormalizedCenterPointsDirection * rCurrentOtherBoundingSphere.m_fRadius;
+		// we construct the point on the encompassed sphere that is the most distant to the current sphere's radius
+		const glm::vec3 vec3EncompassedSphereMostDistantPoint = rCurrentOtherBoundingSphere.m_vec3Center + vec3DirectedEncompassedSphereRadius;
+		// we conditionally update the result sphere to encompass this most distant point
+		ConditionallyUpdateSphereToEncompassPoint(tResult, vec3EncompassedSphereMostDistantPoint);
+	}
+
+	// after every "other" sphere has been encompassed, the bounding sphere of all given objects is ready
+
+	return tResult;
+}
+
+BoundingSphere CollisionDetection::MergeTwoBoundingSpheres(const BoundingSphere & rBoundingSphere1, const BoundingSphere & rBoundingSphere2)
+{
+	assert(rBoundingSphere1.m_fRadius > 0.0f);
+	assert(rBoundingSphere2.m_fRadius > 0.0f);
+
+	// initiliazing result with first bounding sphere
+	BoundingSphere tResult = rBoundingSphere1;
+
+	// we determine the distance vector to encompassed sphere from result sphere
+	const glm::vec3 vec3CenterPointsDistance = rBoundingSphere2.m_vec3Center - tResult.m_vec3Center;
+	// we construct the normalized direction of the distance ...
+	const glm::vec3 vec3NormalizedCenterPointsDirection = glm::normalize(vec3CenterPointsDistance);
+	// ...  to then scale it by the encompassed sphere's radius, resulting in a "directed" radius
+	const glm::vec3 vec3DirectedEncompassedSphereRadius = vec3NormalizedCenterPointsDirection * rBoundingSphere2.m_fRadius;
+	// we construct the point on the encompassed sphere that is the most distant to the current sphere's center
+	const glm::vec3 vec3EncompassedSphereMostDistantPoint = rBoundingSphere2.m_vec3Center + vec3DirectedEncompassedSphereRadius;
+	// we conditionally update the result sphere to encompass this most distant point
+	ConditionallyUpdateSphereToEncompassPoint(tResult, vec3EncompassedSphereMostDistantPoint);
+
+	return tResult;
+}
+
 	//////////////////////////////////////////////////////////////
 	//////////////////////////BVH/////////////////////////////////
 	//////////////////////////////////////////////////////////////
-
-CollisionDetection::BoundingVolumeHierarchy CollisionDetection::ConstructTopDownAABBBVHForScene(Visualization & rScene)
-{
-	assert(rScene.m_vecObjects.size() > 0);
-
-	BoundingVolumeHierarchy tResult;
-	
-	// the construction
-	tResult.m_pRootNode = new BVHTreeNode;
-	RecursiveTopDownTree_AABB(&(tResult.m_pRootNode), rScene.m_vecObjects.data(), rScene.m_vecObjects.size());
-
-	// first traversal to gather data for rendering. In theory, it is possible to traverse the tree every frame for BV rendering.
-	// But that is terrible, so data is fetched into a linear vector
-	rScene.m_vecTreeAABBsForTopDownRendering.clear();
-	rScene.m_vecTreeAABBsForTopDownRendering.reserve(rScene.m_vecObjects.size());
-	TraverseTreeForDataForTopDownRendering_AABB(tResult.m_pRootNode, rScene.m_vecTreeAABBsForTopDownRendering, 0, tResult.m_iTDeepestDepthOfNodes);
-
-	return tResult;
-}
-
-BoundingVolumeHierarchy CollisionDetection::ConstructBottomUpAABBBVHForScene(Visualization & rScene)
-{
-	assert(rScene.m_vecObjects.size() > 0);
-
-	BoundingVolumeHierarchy tResult;
-	rScene.m_vecTreeAABBsForBottomUpRendering.clear();
-	rScene.m_vecTreeAABBsForBottomUpRendering.reserve(rScene.m_vecObjects.size());
-
-	// the construction INCLUDING HALF THE PREPARATION OF AABB RENDERING DATA
-	tResult.m_pRootNode = BottomUpTree_AABB(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
-	TraverseTreeForDataForBottomUpRendering_AABB(tResult.m_pRootNode, rScene.m_vecTreeAABBsForBottomUpRendering, 0, tResult.m_iTDeepestDepthOfNodes);
-
-	return tResult;
-}
-
-BoundingVolumeHierarchy CollisionDetection::ConstructTopDownBoundingSphereBVHForScene(Visualization & rScene)
-{
-	assert(rScene.m_vecObjects.size() > 0);
-
-	BoundingVolumeHierarchy tResult;
-
-	// the construction
-	tResult.m_pRootNode = new BVHTreeNode;
-	RecursiveTopDownTree_BoundingSphere(&(tResult.m_pRootNode), rScene.m_vecObjects.data(), rScene.m_vecObjects.size());
-
-	// first traversal to gather data for rendering. In theory, it is possible to traverse the tree every frame for BV rendering.
-	// But that is terrible, so data is fetched into a linear vector
-	rScene.m_vecTreeBoundingSpheresForTopDownRendering.clear();
-	rScene.m_vecTreeBoundingSpheresForTopDownRendering.reserve(rScene.m_vecObjects.size());
-	TraverseTreeForDataForTopDownRendering_BoundingSphere(tResult.m_pRootNode, rScene.m_vecTreeBoundingSpheresForTopDownRendering, 0, tResult.m_iTDeepestDepthOfNodes);
-
-	return tResult;
-}
-
-BoundingVolumeHierarchy CollisionDetection::ConstructBottomUpBoundingSphereBVHForScene(Visualization & rScene)
-{
-	assert(rScene.m_vecObjects.size() > 0);
-
-	BoundingVolumeHierarchy tResult;
-	rScene.m_vecTreeBoundingSpheresForBottomUpRendering.clear();
-	rScene.m_vecTreeBoundingSpheresForBottomUpRendering.reserve(rScene.m_vecObjects.size());
-
-	// the construction INCLUDING HALF THE PREPARATION OF BOUNDING SPHERE RENDERING DATA
-	tResult.m_pRootNode = BottomUpTree_BoundingSphere(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
-	TraverseTreeForDataForBottomUpRendering_BoundingSphere(tResult.m_pRootNode, rScene.m_vecTreeBoundingSpheresForBottomUpRendering, 0, tResult.m_iTDeepestDepthOfNodes);
-
-	return tResult;
-}
 
 void CollisionDetection::BoundingVolumeHierarchy::DeleteTree()
 {
@@ -431,6 +442,361 @@ void CollisionDetection::BoundingVolumeHierarchy::RecursiveDeleteTree(BVHTreeNod
 //////////////////////////////////////////
 // RAY CASTING
 //////////////////////////////////////////
+
+size_t CollisionDetection::PartitionSceneObjectsInPlace_AABB(SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+{
+	assert(pSceneObjects);
+	assert(uiNumSceneObjects > 0u);
+	/*
+		an explanation:
+		This function:
+		1. decides the splitting axis
+		2. then the splitting point
+		3. then partitions the given scene objects
+	*/
+
+	// 1. Finding the splitting axis
+	// 1.1. Finding the axis with the longest extent
+
+	// initializing with values that will definitely be overwritten
+	float fXMaxExtent = std::numeric_limits<float>::lowest();
+	float fXMinExtent = std::numeric_limits<float>::max();
+	float fYMaxExtent = std::numeric_limits<float>::lowest();
+	float fYMinExtent = std::numeric_limits<float>::max();
+	float fZMaxExtent = std::numeric_limits<float>::lowest();
+	float fZMinExtent = std::numeric_limits<float>::max();
+
+	// finding min and max extents for every axis
+	for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+	{
+		const SceneObject& rCurrentSceneObject = pSceneObjects[uiCurrentSceneObject];
+
+		fXMaxExtent = std::max(fXMaxExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMaximumX());
+		fYMaxExtent = std::max(fYMaxExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMaximumY());
+		fZMaxExtent = std::max(fZMaxExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMaximumZ());
+
+		fXMinExtent = std::min(fXMinExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMinimumX());
+		fYMinExtent = std::min(fYMinExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMinimumY());
+		fZMinExtent = std::min(fZMinExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMinimumZ());
+	}
+
+	// Getting the longest extent of the 3 axes
+	const float fXTotalExtent = fXMaxExtent - fXMinExtent;
+	const float fYTotalExtent = fYMaxExtent - fYMinExtent;
+	const float fZTotalExtent = fZMaxExtent - fZMinExtent;
+
+	// """sorting""" the axes by their extents
+	const int iNumSplittingAxes = 3;
+	const int x = 0, y = 1, z = 2;
+	int iSplittingAxes[iNumSplittingAxes];
+	iSplittingAxes[0] = x;
+
+	if (fYTotalExtent > fXTotalExtent && fYTotalExtent > fZTotalExtent)
+		iSplittingAxes[0] = y;
+
+	if (fZTotalExtent > fXTotalExtent && fZTotalExtent > fYTotalExtent)
+		iSplittingAxes[0] = z;
+
+	// first axis now stores the index of the longest axis in the 3 dimensional coordinate vector
+	// now for the other two
+	iSplittingAxes[1] = y;
+	iSplittingAxes[2] = z;
+	if (fZTotalExtent > fYTotalExtent)
+		std::swap(iSplittingAxes[1], iSplittingAxes[2]);
+
+	// Next step: try to partition objects along the longest axis, if that doesn't work (all objects in one child), try next best
+
+	size_t uiNumLeftChildren = uiNumSceneObjects; // intentionally initiliazed to an invalid index for when every axis fails
+	SceneObject* pCopiedArray = new SceneObject[uiNumSceneObjects];
+	for (int iCurrentSplittingAxisIndex = 0; iCurrentSplittingAxisIndex < iNumSplittingAxes; iCurrentSplittingAxisIndex++)
+	{
+		// 2. Finding the splitting point on the current axis
+		// done by using the object mean (mean of the object centroids)
+
+		float fObjectCentroidsMean = 0.0f;
+		const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
+		const int iCurrentSplittingAxis = iSplittingAxes[iCurrentSplittingAxisIndex];
+
+		// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
+		for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+		{
+			const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center;
+			fObjectCentroidsMean += rCurrentSceneObjectCenter[iCurrentSplittingAxis] * fPreDivisionFactor;
+		}
+
+		// 3. partitioning the scene objects:				
+
+		// two passes: one for determination of bucket sizes, the second for sorting into buckets
+		// first pass
+		const size_t uiNumBuckets = 2u;
+		size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
+		for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+		{
+			// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+			const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
+			uiNumElementsPerBucket[uiBucketIndex]++;
+		}
+
+		assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
+
+		// second pass
+		size_t uiBucketInsertionIndices[uiNumBuckets];
+		uiBucketInsertionIndices[0u] = 0u;
+		uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
+
+		for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+		{
+			// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+			const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
+			const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
+			pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
+		}
+
+		memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
+
+
+		if (uiNumElementsPerBucket[0] > 0 && uiNumElementsPerBucket[1] > 0) // if the objects were actually partitioned
+		{
+			uiNumLeftChildren = uiNumElementsPerBucket[0]; // number of left children = partitioning index
+			break;	// no need to consider the other axes
+		}
+	}
+
+	delete[] pCopiedArray;
+
+	/*
+		Now, there is still one edge case left: what if one were to add two identical objects to the tree?
+		identical = their two bounding volumes are identical.
+		There is no proper way to partition these objects, but they have to be partitioned. Otherwise,
+		tree construction would endlessly try to partition them in the "next" child.
+		Solution: just partition them "randomly" -> equal number of both objects on both sides
+	*/
+
+	if (uiNumLeftChildren == uiNumSceneObjects) // the invalid index from before partitioning was attempted
+		uiNumLeftChildren = uiNumSceneObjects / 2u;	// partition all identical objects evenly
+
+	/*
+		another note: since the objects were "fake" sorted already anyway, no need to sort them again.
+		It doesn't matter if they would have been all left or all right, they are still identical and sorted.
+	*/
+
+	return uiNumLeftChildren;
+}
+
+size_t CollisionDetection::PartitionSceneObjectsInPlace_BoundingSphere(SceneObject * pSceneObjects, size_t uiNumSceneObjects)
+{
+	assert(pSceneObjects);
+	assert(uiNumSceneObjects > 0u);
+	/*
+		an explanation:
+		This function:
+		1. decides the splitting axis
+		2. then the splitting point
+		3. then partitions the given scene objects
+	*/
+
+	// 1. Finding the splitting axis
+	// 1.1. Finding the axis with the longest extent
+
+	// initializing with values that will definitely be overwritten
+	float fXMaxExtent = std::numeric_limits<float>::lowest();
+	float fXMinExtent = std::numeric_limits<float>::max();
+	float fYMaxExtent = std::numeric_limits<float>::lowest();
+	float fYMinExtent = std::numeric_limits<float>::max();
+	float fZMaxExtent = std::numeric_limits<float>::lowest();
+	float fZMinExtent = std::numeric_limits<float>::max();
+
+	// finding min and max extents for every axis
+	for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+	{
+		const SceneObject& rCurrentSceneObject = pSceneObjects[uiCurrentSceneObject];
+
+		fXMaxExtent = std::max(fXMaxExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMaximumX());
+		fYMaxExtent = std::max(fYMaxExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMaximumY());
+		fZMaxExtent = std::max(fZMaxExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMaximumZ());
+
+		fXMinExtent = std::min(fXMinExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMinimumX());
+		fYMinExtent = std::min(fYMinExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMinimumY());
+		fZMinExtent = std::min(fZMinExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMinimumZ());
+	}
+
+	// Getting the longest extent of the 3 axes
+	const float fXTotalExtent = fXMaxExtent - fXMinExtent;
+	const float fYTotalExtent = fYMaxExtent - fYMinExtent;
+	const float fZTotalExtent = fZMaxExtent - fZMinExtent;
+
+	// """sorting""" the axes by their extents
+	const int iNumSplittingAxes = 3;
+	const int x = 0, y = 1, z = 2;
+	int iSplittingAxes[iNumSplittingAxes];
+	iSplittingAxes[0] = x;
+
+	if (fYTotalExtent > fXTotalExtent && fYTotalExtent > fZTotalExtent)
+		iSplittingAxes[0] = y;
+
+	if (fZTotalExtent > fXTotalExtent && fZTotalExtent > fYTotalExtent)
+		iSplittingAxes[0] = z;
+
+	// first axis now stores the index of the longest axis in the 3 dimensional coordinate vector
+	// now for the other two
+	iSplittingAxes[1] = y;
+	iSplittingAxes[2] = z;
+	if (fZTotalExtent > fYTotalExtent)
+		std::swap(iSplittingAxes[1], iSplittingAxes[2]);
+
+	// Next step: try to partition objects along the longest axis, if that doesn't work (all objects in one child), try next best
+
+	size_t uiNumLeftChildren = uiNumSceneObjects; // intentionally initiliazed to an invalid index for when every partitioning axis fails
+	SceneObject* pCopiedArray = new SceneObject[uiNumSceneObjects];
+	for (int iCurrentSplittingAxisIndex = 0; iCurrentSplittingAxisIndex < iNumSplittingAxes; iCurrentSplittingAxisIndex++)
+	{
+		// 2. Finding the splitting point on the current axis
+		// done by using the object mean (mean of the object centroids)
+
+		float fObjectCentroidsMean = 0.0f;
+		const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
+		const int iCurrentSplittingAxis = iSplittingAxes[iCurrentSplittingAxisIndex];
+
+		// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
+		for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+		{
+			const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center;
+			fObjectCentroidsMean += rCurrentSceneObjectCenter[iCurrentSplittingAxis] * fPreDivisionFactor;
+		}
+
+		// 3. partitioning the scene objects:				
+
+		// two passes: one for determination of bucket sizes, the second for sorting into buckets
+		// first pass
+		const size_t uiNumBuckets = 2u;
+		size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
+		for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+		{
+			// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+			const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
+			uiNumElementsPerBucket[uiBucketIndex]++;
+		}
+
+		assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
+
+		// second pass
+		size_t uiBucketInsertionIndices[uiNumBuckets];
+		uiBucketInsertionIndices[0u] = 0u;
+		uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
+
+		for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
+		{
+			// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
+			const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
+			const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
+			pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
+		}
+
+		memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
+
+
+		if (uiNumElementsPerBucket[0] > 0 && uiNumElementsPerBucket[1] > 0) // if the objects were actually partitioned
+		{
+			uiNumLeftChildren = uiNumElementsPerBucket[0]; // number of left children = partitioning index
+			break;	// no need to consider the other axes
+		}
+	}
+
+	delete[] pCopiedArray;
+
+	/*
+		Now, there is still one edge case left: what if one were to add two identical objects to the tree?
+		identical = their two bounding volumes are identical.
+		There is no proper way to partition these objects, but they have to be partitioned. Otherwise,
+		tree construction would endlessly try to partition them in the "next" child.
+		Solution: just partition them "randomly" -> equal number of both objects on both sides
+	*/
+
+	if (uiNumLeftChildren == uiNumSceneObjects) // the invalid index from before partitioning was attempted
+		uiNumLeftChildren = uiNumSceneObjects / 2u;	// partition all identical objects evenly
+
+	/*
+		another note: since the objects were "fake" sorted already anyway, no need to sort them again.
+		It doesn't matter if they would have been all left or all right, they are still identical and sorted.
+	*/
+
+	return uiNumLeftChildren;
+}
+
+void CollisionDetection::FindBottomUpNodesToMerge_AABB(BVHTreeNode ** pNode, size_t uiNumNodes, size_t & rNodeIndex1, size_t & rNodeIndex2)
+{
+	float fCurrentlySmallestAABBVolume = std::numeric_limits<float>::max();
+
+	// testing every current node...
+	for (size_t uiCurrentMergePartnerIndex1 = 0; uiCurrentMergePartnerIndex1 < uiNumNodes; uiCurrentMergePartnerIndex1++)
+	{
+		// ... against every other node
+		for (size_t uiCurrentMergePartnerIndex2 = uiCurrentMergePartnerIndex1 + 1; uiCurrentMergePartnerIndex2 < uiNumNodes; uiCurrentMergePartnerIndex2++)
+		{
+			//  determine the size of the bounding volume that would result from the two current 
+			const AABB& rAABB1 = pNode[uiCurrentMergePartnerIndex1]->m_tAABBForNode;
+			const AABB& rAABB2 = pNode[uiCurrentMergePartnerIndex2]->m_tAABBForNode;
+
+			const float fMergedAABBExtentX = std::abs(rAABB1.m_vec3Center.x - rAABB2.m_vec3Center.x) + rAABB1.m_vec3Radius.x + rAABB2.m_vec3Radius.x;
+			const float fMergedAABBExtentY = std::abs(rAABB1.m_vec3Center.y - rAABB2.m_vec3Center.y) + rAABB1.m_vec3Radius.y + rAABB2.m_vec3Radius.y;
+			const float fMergedAABBExtentZ = std::abs(rAABB1.m_vec3Center.z - rAABB2.m_vec3Center.z) + rAABB1.m_vec3Radius.z + rAABB2.m_vec3Radius.z;
+
+			const float fMergedAABBVolume = fMergedAABBExtentX * fMergedAABBExtentY * fMergedAABBExtentZ;
+
+			// update results conditionally
+			if (fMergedAABBVolume < fCurrentlySmallestAABBVolume)
+			{
+				fCurrentlySmallestAABBVolume = fMergedAABBVolume;
+				rNodeIndex1 = uiCurrentMergePartnerIndex1;
+				rNodeIndex2 = uiCurrentMergePartnerIndex2;
+			}
+		}
+	}
+}
+
+void CollisionDetection::FindBottomUpNodesToMerge_BoundingSphere(BVHTreeNode ** pNode, size_t uiNumNodes, size_t & rNodeIndex1, size_t & rNodeIndex2)
+{
+	float fCurrentlySmallestBoundingSphereDiameter = std::numeric_limits<float>::max();
+
+	// testing every current node...
+	for (size_t uiCurrentMergePartnerIndex1 = 0; uiCurrentMergePartnerIndex1 < uiNumNodes; uiCurrentMergePartnerIndex1++)
+	{
+		// ... against every other node
+		for (size_t uiCurrentMergePartnerIndex2 = uiCurrentMergePartnerIndex1 + 1; uiCurrentMergePartnerIndex2 < uiNumNodes; uiCurrentMergePartnerIndex2++)
+		{
+			//  determine the size of the bounding volume that would result from the two current 
+			const BoundingSphere& rBoundingSphere1 = pNode[uiCurrentMergePartnerIndex1]->m_tBoundingSphereForNode;
+			const BoundingSphere& rBoundingSphere2 = pNode[uiCurrentMergePartnerIndex2]->m_tBoundingSphereForNode;
+
+			// we determine the distance vector to sphere2 from sphere1
+			const glm::vec3 vec3CenterPointsDistance = rBoundingSphere2.m_vec3Center - rBoundingSphere1.m_vec3Center;
+			// we construct the normalized direction of the distance ...
+			const glm::vec3 vec3NormalizedCenterPointsDirection = glm::normalize(vec3CenterPointsDistance);
+			// ... to then scale it by the second sphere's radius, resulting in a "directed radius"
+			const glm::vec3 vec3DirectedSecondSphereRadius = vec3NormalizedCenterPointsDirection * rBoundingSphere2.m_fRadius;
+			// ... we also scale its inverse with the first sphere's radius, resulting in a "radius" directed in the opposite direction
+			const glm::vec3 vec3DirectedFirstSphereRadius = -vec3NormalizedCenterPointsDirection * rBoundingSphere1.m_fRadius;
+
+			// we construct the point on the second sphere that is the most distant to the first sphere's center
+			const glm::vec3 vec3SecondSphereMostDistantPoint = rBoundingSphere2.m_vec3Center + vec3DirectedSecondSphereRadius;
+			// we construct the point on the first sphere that is the most distant to the second sphere's center
+			const glm::vec3 vec3FirstSphereMostDistantPoint = rBoundingSphere1.m_vec3Center + vec3DirectedFirstSphereRadius;
+
+			// having constructed the two most distant points, we can now simply determine their distance
+			const glm::vec3 vec3DistanceBetweenMostDistantPoints = vec3SecondSphereMostDistantPoint - vec3FirstSphereMostDistantPoint;
+			// which effectively is the diameter of the bounding sphere that would encompass both spheres.
+			const float fMergedBoundingSphereDiameter = glm::length(vec3DistanceBetweenMostDistantPoints);
+
+			// update results conditionally
+			if (fMergedBoundingSphereDiameter < fCurrentlySmallestBoundingSphereDiameter)
+			{
+				fCurrentlySmallestBoundingSphereDiameter = fMergedBoundingSphereDiameter;
+				rNodeIndex1 = uiCurrentMergePartnerIndex1;
+				rNodeIndex2 = uiCurrentMergePartnerIndex2;
+			}
+		}
+	}
+}
 
 RayCastIntersectionResult CollisionDetection::CastRayIntoBVH(const BoundingVolumeHierarchy & rBVH, const Ray & rCastedRay)
 {
@@ -753,815 +1119,7 @@ namespace CollisionDetection {
 		// BOUNDING VOLUME HIERARCHY
 		//////////////////////////////////////////
 
-		void RecursiveTopDownTree_AABB(BVHTreeNode ** pTree, SceneObject * pSceneObjects, size_t uiNumSceneObjects)
-		{
-			assert(pTree);
-			assert(pSceneObjects);
-			assert(uiNumSceneObjects > 0);
-
-			const uint8_t uiNumberOfObjectsPerLeaf = 1u;
-			BVHTreeNode* pNewNode = new BVHTreeNode;
-			*pTree = pNewNode;
-
-			if (uiNumSceneObjects <= uiNumberOfObjectsPerLeaf) // is a leaf
-			{
-				assert(uiNumSceneObjects == 1); // needs reconsideration for >1 objects per leaf
-				// bounding volumes for single objects is already done, no need to compute that here
-				pNewNode->m_uiNumOjbects = static_cast<uint8_t>(uiNumSceneObjects);
-				pNewNode->m_pObjects = pSceneObjects;
-			}
-			else // is a node
-			{
-				// create AABB bounding volume for the current set of objects
-				pNewNode->m_tAABBForNode = CreateAABBForMultipleObjects(pSceneObjects, uiNumSceneObjects);
-
-				// create Bounding Sphere volume for the current set of objects
-				//pNewNode->m_tBoundingSphereForNode = CreateBoundingSphereForMultipleObjects(pSceneObjects, uiNumSceneObjects);
-
-				// partition current set into subsets IN PLACE!!!
-				size_t uiNumLeftchildren = PartitionSceneObjectsInPlace_AABB(pSceneObjects, uiNumSceneObjects);
-
-				// move on with "left" side
-				RecursiveTopDownTree_AABB(&(pNewNode->m_pLeft), pSceneObjects, uiNumLeftchildren);
-
-				// move on with "right" side
-				RecursiveTopDownTree_AABB(&(pNewNode->m_pRight), pSceneObjects + uiNumLeftchildren, uiNumSceneObjects - uiNumLeftchildren);
-			}
-		}
-
-		BVHTreeNode * BottomUpTree_AABB(SceneObject * pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization)
-		{
-			assert(uiNumSceneObjects > 0);
-
-			BVHTreeNode** pTempNodes = new BVHTreeNode*[uiNumSceneObjects]; // careful: these are pointers to pointers
-
-			// creating all leaf nodes: number leaves == number objects
-			for (size_t uiCurrentNewLeafNode = 0u; uiCurrentNewLeafNode < uiNumSceneObjects; uiCurrentNewLeafNode++)
-			{
-				pTempNodes[uiCurrentNewLeafNode] = new BVHTreeNode;	// assigning the adress of the new leaf node to the pointer pointed at by pTempNodes[current]
-				pTempNodes[uiCurrentNewLeafNode]->m_uiNumOjbects = 1u;
-				pTempNodes[uiCurrentNewLeafNode]->m_pObjects = &pSceneObjects[uiCurrentNewLeafNode];
-				pTempNodes[uiCurrentNewLeafNode]->m_tAABBForNode = pTempNodes[uiCurrentNewLeafNode]->m_pObjects->m_tWorldSpaceAABB;
-			}
-
-			// for visualization purposes
-			int16_t iNumConstructedNodes = 0;
-
-			// merging leaves into nodes until root node is constructed
-			while (uiNumSceneObjects > 1) {
-				// Pick two volumes to pair together
-				size_t uiMergedNodeIndex1 = 0, uiMergedNodeIndex2 = 0;
-				FindBottomUpNodesToMerge_AABB(pTempNodes, uiNumSceneObjects, uiMergedNodeIndex1, uiMergedNodeIndex2);
-
-				// Pair them in new parent node
-				BVHTreeNode* pParentNode = new BVHTreeNode;
-				pParentNode->m_pLeft = pTempNodes[uiMergedNodeIndex1];
-				pParentNode->m_pRight = pTempNodes[uiMergedNodeIndex2];
-				// construct AABB for that parent node (adaption from orginal code)
-				pParentNode->m_tAABBForNode = MergeTwoAABBs(pTempNodes[uiMergedNodeIndex1]->m_tAABBForNode, pTempNodes[uiMergedNodeIndex2]->m_tAABBForNode);
-
-				// for visualization/rendering purposes
-				TreeNodeForRendering tNewAABBNodeForRendering;
-				tNewAABBNodeForRendering.m_iRenderingOrder = iNumConstructedNodes++;
-				tNewAABBNodeForRendering.m_pNodeToBeRendered = pParentNode;
-				rVisualization.m_vecTreeAABBsForBottomUpRendering.push_back(tNewAABBNodeForRendering);
-
-				//Updating the current set of nodes accordingly
-				size_t uiMinIndex = uiMergedNodeIndex1, uiMaxIndex = uiMergedNodeIndex2;
-				if (uiMergedNodeIndex1 > uiMergedNodeIndex2)
-				{
-					uiMinIndex = uiMergedNodeIndex2;
-					uiMaxIndex = uiMergedNodeIndex1;
-				}
-				pTempNodes[uiMinIndex] = pParentNode;
-				pTempNodes[uiMaxIndex] = pTempNodes[uiNumSceneObjects - 1];
-				uiNumSceneObjects--;
-			}
-
-			BVHTreeNode* pRootNode = pTempNodes[0]; // careful: getting the pointer to root by dereferencing the pointer to pointer
-			delete[] pTempNodes;
-			return pRootNode;
-		}
-
-		void TraverseTreeForDataForTopDownRendering_AABB(BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iDepthInTree, int16_t& riTotalTreeDepth)
-		{
-			assert(pNode);			
-
-			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
-			{
-				// if it is a node, there was a partitioning step, which means there have to be two children
-				assert(pNode->m_pLeft);
-				assert(pNode->m_pRight);
-
-				// save relevant data for rendering
-				TreeNodeForRendering tNewAABBForRendering;
-				tNewAABBForRendering.m_iDepthInTree = iDepthInTree;
-				tNewAABBForRendering.m_pNodeToBeRendered = pNode;
-				rvecAABBsForRendering.push_back(tNewAABBForRendering);
-
-				riTotalTreeDepth = std::max(riTotalTreeDepth, iDepthInTree);
-				iDepthInTree++; // we are now one level deeper
-
-				// traverse left ...
-				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pLeft, rvecAABBsForRendering, iDepthInTree, riTotalTreeDepth);
-				// ... then right
-				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rvecAABBsForRendering, iDepthInTree, riTotalTreeDepth);
-			}
-
-			// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
-		}
-
-		void TraverseTreeForDataForBottomUpRendering_AABB(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecAABBsForRendering, int16_t iDepthInTree, int16_t& riTotalTreeDepth)
-		{
-			/*
-				This is going to be ugly.
-				We are facing a problem here: For Bottom up construction of a BVH, the order in which AABBs are constructed is not the same as the tree is later being traversed.
-				That means, there is no information in the tree, in which order its nodes were constructed.
-				Also, i want to keep this information outside of the tree, since it is really only relevant for rendering/visualizing.
-				So, in an effort to keep the visualization only data out of the tree, we have to now do something very ugly.
-				Order of construction can only be determined during construction. Tree depth of a given node and its associated AABB can only be determined during traversal.
-			*/
-
-			assert(pNode);
-
-			
-
-			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
-			{
-				// if it is a node, there was a partitioning step, which means there have to be two children
-				assert(pNode->m_pLeft);
-				assert(pNode->m_pRight);
-
-				// the ugly part. finding the appropriate rendering object to assign it its true tree depth.
-				for (TreeNodeForRendering& rCurrentRenderObject : rvecAABBsForRendering)
-				{
-					if (pNode == rCurrentRenderObject.m_pNodeToBeRendered)
-					{
-						rCurrentRenderObject.m_iDepthInTree = iDepthInTree;
-						break;
-					}
-				}
-
-				riTotalTreeDepth = std::max(riTotalTreeDepth, iDepthInTree);
-				iDepthInTree++; // we are now one level deeper				
-
-				// traverse left ...
-				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pLeft, rvecAABBsForRendering, iDepthInTree, riTotalTreeDepth);
-				// ... then right
-				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pRight, rvecAABBsForRendering, iDepthInTree, riTotalTreeDepth);
-			}
-		}
-
-		void FindBottomUpNodesToMerge_AABB(BVHTreeNode ** pNode, size_t uiNumNodes, size_t & rNodeIndex1, size_t & rNodeIndex2)
-		{
-			float fCurrentlySmallestAABBVolume = std::numeric_limits<float>::max();
-
-			// testing every current node...
-			for (size_t uiCurrentMergePartnerIndex1 = 0; uiCurrentMergePartnerIndex1 < uiNumNodes; uiCurrentMergePartnerIndex1++)
-			{
-				// ... against every other node
-				for (size_t uiCurrentMergePartnerIndex2 = uiCurrentMergePartnerIndex1 + 1; uiCurrentMergePartnerIndex2 < uiNumNodes; uiCurrentMergePartnerIndex2++)
-				{
-					//  determine the size of the bounding volume that would result from the two current 
-					const AABB& rAABB1 = pNode[uiCurrentMergePartnerIndex1]->m_tAABBForNode;
-					const AABB& rAABB2 = pNode[uiCurrentMergePartnerIndex2]->m_tAABBForNode;
-
-					const float fMergedAABBExtentX = std::abs(rAABB1.m_vec3Center.x - rAABB2.m_vec3Center.x) + rAABB1.m_vec3Radius.x + rAABB2.m_vec3Radius.x;
-					const float fMergedAABBExtentY = std::abs(rAABB1.m_vec3Center.y - rAABB2.m_vec3Center.y) + rAABB1.m_vec3Radius.y + rAABB2.m_vec3Radius.y;
-					const float fMergedAABBExtentZ = std::abs(rAABB1.m_vec3Center.z - rAABB2.m_vec3Center.z) + rAABB1.m_vec3Radius.z + rAABB2.m_vec3Radius.z;
-
-					const float fMergedAABBVolume = fMergedAABBExtentX * fMergedAABBExtentY * fMergedAABBExtentZ;
-
-					// update results conditionally
-					if (fMergedAABBVolume < fCurrentlySmallestAABBVolume)
-					{
-						fCurrentlySmallestAABBVolume = fMergedAABBVolume;
-						rNodeIndex1 = uiCurrentMergePartnerIndex1;
-						rNodeIndex2 = uiCurrentMergePartnerIndex2;
-					}
-				}
-			}
-		}
-
-		AABB MergeTwoAABBs(const AABB & rAABB1, const AABB & rAABB2)
-		{
-			AABB tResult;
-
-			const float fXMin = std::min(rAABB1.CalcMinimumX(), rAABB2.CalcMinimumX());
-			const float fYMin = std::min(rAABB1.CalcMinimumY(), rAABB2.CalcMinimumY());
-			const float fZMin = std::min(rAABB1.CalcMinimumZ(), rAABB2.CalcMinimumZ());
-			const float fXMax = std::max(rAABB1.CalcMaximumX(), rAABB2.CalcMaximumX());
-			const float fYMax = std::max(rAABB1.CalcMaximumY(), rAABB2.CalcMaximumY());
-			const float fZMax = std::max(rAABB1.CalcMaximumZ(), rAABB2.CalcMaximumZ());
-
-			// calculating AABB center
-			const float fCenterX = fXMin * 0.5f + fXMax * 0.5f;
-			const float fCenterY = fYMin * 0.5f + fYMax * 0.5f;
-			const float fCenterZ = fZMin * 0.5f + fZMax * 0.5f;
-			tResult.m_vec3Center = glm::vec3(fCenterX, fCenterY, fCenterZ);
-
-			// calculating AABB halfwidths
-			const float fXTotalExtent = fXMax - fXMin;
-			const float fYTotalExtent = fYMax - fYMin;
-			const float fZTotalExtent = fZMax - fZMin;
-			const float fHalfWidthX = fXTotalExtent * 0.5f;
-			const float fHalfWidthY = fYTotalExtent * 0.5f;
-			const float fHalfWidthZ = fZTotalExtent * 0.5f;
-
-			// calculating AABB halfwidths
-			tResult.m_vec3Radius = glm::vec3(fHalfWidthX, fHalfWidthY, fHalfWidthZ);
-
-			return tResult;
-		}
-
-		AABB CreateAABBForMultipleObjects(const SceneObject * pSceneObjects, size_t uiNumSceneObjects)
-		{
-			AABB tResult;
-
-			// initializing min values to max and vice versa for definitive overwriting for the first vertex
-			float fXMin = std::numeric_limits<float>::max();
-			float fXMax = std::numeric_limits<float>::lowest();
-			float fYMin = std::numeric_limits<float>::max();
-			float fYMax = std::numeric_limits<float>::lowest();
-			float fZMin = std::numeric_limits<float>::max();
-			float fZMax = std::numeric_limits<float>::lowest();
-
-			for (size_t uiCurrentSceneObjectIndex = 0u; uiCurrentSceneObjectIndex < uiNumSceneObjects; uiCurrentSceneObjectIndex++)
-			{
-				const SceneObject& rCurrentObject = pSceneObjects[uiCurrentSceneObjectIndex];
-				assert(glm::length(rCurrentObject.m_tWorldSpaceAABB.m_vec3Radius) > 0.0f);	// make sure AABB of current object has already been constructed
-
-				// get extent of current AABB
-				const float fObjAABBXMin = rCurrentObject.m_tWorldSpaceAABB.CalcMinimumX();
-				const float fObjAABBYMin = rCurrentObject.m_tWorldSpaceAABB.CalcMinimumY();
-				const float fObjAABBZMin = rCurrentObject.m_tWorldSpaceAABB.CalcMinimumZ();
-				const float fObjAABBXMax = rCurrentObject.m_tWorldSpaceAABB.CalcMaximumX();
-				const float fObjAABBYMax = rCurrentObject.m_tWorldSpaceAABB.CalcMaximumY();
-				const float fObjAABBZMax = rCurrentObject.m_tWorldSpaceAABB.CalcMaximumZ();
-
-				// update resulting bounding volume accordingly
-				fXMin = std::min<float>(fXMin, fObjAABBXMin);
-				fYMin = std::min<float>(fYMin, fObjAABBYMin);
-				fZMin = std::min<float>(fZMin, fObjAABBZMin);
-				fXMax = std::max<float>(fXMax, fObjAABBXMax);
-				fYMax = std::max<float>(fYMax, fObjAABBYMax);
-				fZMax = std::max<float>(fZMax, fObjAABBZMax);
-			}
-
-			// calculating AABB center
-			const float fCenterX = fXMin * 0.5f + fXMax * 0.5f;
-			const float fCenterY = fYMin * 0.5f + fYMax * 0.5f;
-			const float fCenterZ = fZMin * 0.5f + fZMax * 0.5f;
-			tResult.m_vec3Center = glm::vec3(fCenterX, fCenterY, fCenterZ);
-
-			// calculating AABB halfwidths
-			const float fXTotalExtent = fXMax - fXMin;
-			const float fYTotalExtent = fYMax - fYMin;
-			const float fZTotalExtent = fZMax - fZMin;
-			const float fHalfWidthX = fXTotalExtent * 0.5f;
-			const float fHalfWidthY = fYTotalExtent * 0.5f;
-			const float fHalfWidthZ = fZTotalExtent * 0.5f;
-
-			// calculating AABB halfwidths
-			tResult.m_vec3Radius = glm::vec3(fHalfWidthX, fHalfWidthY, fHalfWidthZ);
-
-			return tResult;
-		}
-
-		BoundingSphere MergeTwoBoundingSpheres(const BoundingSphere & rBoundingSphere1, const BoundingSphere & rBoundingSphere2)
-		{
-			assert(rBoundingSphere1.m_fRadius > 0.0f);
-			assert(rBoundingSphere2.m_fRadius > 0.0f);
-
-			// initiliazing result with first bounding sphere
-			BoundingSphere tResult = rBoundingSphere1;
-
-			// we determine the distance vector to encompassed sphere from result sphere
-			const glm::vec3 vec3CenterPointsDistance = rBoundingSphere2.m_vec3Center - tResult.m_vec3Center;
-			// we construct the normalized direction of the distance ...
-			const glm::vec3 vec3NormalizedCenterPointsDirection = glm::normalize(vec3CenterPointsDistance);
-			// ...  to then scale it by the encompassed sphere's radius, resulting in a "directed" radius
-			const glm::vec3 vec3DirectedEncompassedSphereRadius = vec3NormalizedCenterPointsDirection * rBoundingSphere2.m_fRadius;
-			// we construct the point on the encompassed sphere that is the most distant to the current sphere's center
-			const glm::vec3 vec3EncompassedSphereMostDistantPoint = rBoundingSphere2.m_vec3Center + vec3DirectedEncompassedSphereRadius;
-			// we conditionally update the result sphere to encompass this most distant point
-			ConditionallyUpdateSphereToEncompassPoint(tResult, vec3EncompassedSphereMostDistantPoint);
-
-			return tResult;
-		}
-
-		void TraverseTreeForDataForTopDownRendering_BoundingSphere(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecBoundingspheresForRendering, int16_t iDepthInTree, int16_t& riTotalTreeDepth)
-		{
-			assert(pNode);
-
-			
-			
-
-			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
-			{
-				// if it is a node, there was a partitioning step, which means there have to be two children
-				assert(pNode->m_pLeft);
-				assert(pNode->m_pRight);
-
-				// save relevant data for rendering
-				TreeNodeForRendering tNewBoundingSphereForRendering;
-				tNewBoundingSphereForRendering.m_iDepthInTree = iDepthInTree;
-				tNewBoundingSphereForRendering.m_pNodeToBeRendered = pNode;
-				rvecBoundingspheresForRendering.push_back(tNewBoundingSphereForRendering);
-
-				riTotalTreeDepth = std::max(riTotalTreeDepth, iDepthInTree);
-				iDepthInTree++; // we are now one level deeper
-
-				// traverse left ...
-				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pLeft, rvecBoundingspheresForRendering, iDepthInTree, riTotalTreeDepth);
-				// ... then right
-				TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rvecBoundingspheresForRendering, iDepthInTree, riTotalTreeDepth);
-			}
-
-			// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
-		}
-
-		void TraverseTreeForDataForBottomUpRendering_BoundingSphere(BVHTreeNode * pNode, std::vector<TreeNodeForRendering>& rvecBoundingSpheresForRendering, int16_t iDepthInTree, int16_t& riDeepestDepthOfNodes)
-		{
-			/*
-				This is going to be ugly.
-				We are facing a problem here: For Bottom up construction of a BVH, the order in which AABBs are constructed is not the same as the tree is later being traversed.
-				That means, there is no information in the tree, in which order its nodes were constructed.
-				Also, i want to keep this information outside of the tree, since it is really only relevant for rendering/visualizing.
-				So, in an effort to keep the visualization only data out of the tree, we have to now do something very ugly.
-				Order of construction can only be determined during construction. Tree depth of a given node and its associated AABB can only be determined during traversal.
-			*/
-
-			assert(pNode);
-
-			if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
-			{
-				// if it is a node, there was a partitioning step, which means there have to be two children
-				assert(pNode->m_pLeft);
-				assert(pNode->m_pRight);
-
-				// the ugly part. finding the appropriate rendering object to assign it its true tree depth.
-				for (TreeNodeForRendering& rCurrentRenderObject : rvecBoundingSpheresForRendering)
-				{
-					if (pNode == rCurrentRenderObject.m_pNodeToBeRendered)
-					{
-						rCurrentRenderObject.m_iDepthInTree = iDepthInTree;
-						break;
-					}
-				}
-
-				riDeepestDepthOfNodes = std::max(riDeepestDepthOfNodes, iDepthInTree);
-				iDepthInTree++; // we are now one level deeper
-
-				// traverse left ...
-				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pLeft, rvecBoundingSpheresForRendering, iDepthInTree, riDeepestDepthOfNodes);
-				// ... then right
-				TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pRight, rvecBoundingSpheresForRendering, iDepthInTree, riDeepestDepthOfNodes);
-			}
-		}
-
-		BoundingSphere CreateBoundingSphereForMultipleObjects(const SceneObject * pSceneObjects, size_t uiNumSceneObjects)
-		{
-			assert(uiNumSceneObjects >= 2u); // if 1 or less, some error occurred
-			assert(pSceneObjects[0].m_tWorldSpaceBoundingSphere.m_fRadius > 0.0f);
-
-			// initiliazing result with first object
-			BoundingSphere tResult = pSceneObjects[0].m_tWorldSpaceBoundingSphere;
-
-			// for every FOLLOWING object (its bounding sphere specifically) ...
-			for (size_t uiCurrentObjectToBeEncompassed = 1u; uiCurrentObjectToBeEncompassed < uiNumSceneObjects; uiCurrentObjectToBeEncompassed++)
-			{
-				const BoundingSphere& rCurrentOtherBoundingSphere = pSceneObjects[uiCurrentObjectToBeEncompassed].m_tWorldSpaceBoundingSphere;
-				assert(rCurrentOtherBoundingSphere.m_fRadius > 0.0f);
-
-				// we determine the distance vector to encompassed sphere from result sphere
-				const glm::vec3 vec3CenterPointsDistance = rCurrentOtherBoundingSphere.m_vec3Center - tResult.m_vec3Center;
-
-				// we construct the normalized direction of the distance ...
-				const glm::vec3 vec3NormalizedCenterPointsDirection = glm::normalize(vec3CenterPointsDistance);
-				// ...  to then scale it by the encompassed sphere's radius, resulting in a "directed" radius
-				const glm::vec3 vec3DirectedEncompassedSphereRadius = vec3NormalizedCenterPointsDirection * rCurrentOtherBoundingSphere.m_fRadius;
-				// we construct the point on the encompassed sphere that is the most distant to the current sphere's radius
-				const glm::vec3 vec3EncompassedSphereMostDistantPoint = rCurrentOtherBoundingSphere.m_vec3Center + vec3DirectedEncompassedSphereRadius;
-				// we conditionally update the result sphere to encompass this most distant point
-				ConditionallyUpdateSphereToEncompassPoint(tResult, vec3EncompassedSphereMostDistantPoint);
-			}
-
-			// after every "other" sphere has been encompassed, the bounding sphere of all given objects is ready
-
-			return tResult;
-		}
-
-		size_t PartitionSceneObjectsInPlace_BoundingSphere(SceneObject * pSceneObjects, size_t uiNumSceneObjects)
-		{
-			assert(pSceneObjects);
-			assert(uiNumSceneObjects > 0u);
-			/*
-				an explanation:
-				This function:
-				1. decides the splitting axis
-				2. then the splitting point
-				3. then partitions the given scene objects
-			*/
-
-			// 1. Finding the splitting axis
-			// 1.1. Finding the axis with the longest extent
-
-			// initializing with values that will definitely be overwritten
-			float fXMaxExtent = std::numeric_limits<float>::lowest();
-			float fXMinExtent = std::numeric_limits<float>::max();
-			float fYMaxExtent = std::numeric_limits<float>::lowest();
-			float fYMinExtent = std::numeric_limits<float>::max();
-			float fZMaxExtent = std::numeric_limits<float>::lowest();
-			float fZMinExtent = std::numeric_limits<float>::max();
-
-			// finding min and max extents for every axis
-			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-			{
-				const SceneObject& rCurrentSceneObject = pSceneObjects[uiCurrentSceneObject];
-
-				fXMaxExtent = std::max(fXMaxExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMaximumX());
-				fYMaxExtent = std::max(fYMaxExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMaximumY());
-				fZMaxExtent = std::max(fZMaxExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMaximumZ());
-
-				fXMinExtent = std::min(fXMinExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMinimumX());
-				fYMinExtent = std::min(fYMinExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMinimumY());
-				fZMinExtent = std::min(fZMinExtent, rCurrentSceneObject.m_tWorldSpaceBoundingSphere.CalcMinimumZ());
-			}
-
-			// Getting the longest extent of the 3 axes
-			const float fXTotalExtent = fXMaxExtent - fXMinExtent;
-			const float fYTotalExtent = fYMaxExtent - fYMinExtent;
-			const float fZTotalExtent = fZMaxExtent - fZMinExtent;
-
-			// """sorting""" the axes by their extents
-			const int iNumSplittingAxes = 3;
-			const int x = 0, y = 1, z = 2;
-			int iSplittingAxes[iNumSplittingAxes];
-			iSplittingAxes[0] = x;
-
-			if (fYTotalExtent > fXTotalExtent && fYTotalExtent > fZTotalExtent)
-				iSplittingAxes[0] = y;
-
-			if (fZTotalExtent > fXTotalExtent && fZTotalExtent > fYTotalExtent)
-				iSplittingAxes[0] = z;
-
-			// first axis now stores the index of the longest axis in the 3 dimensional coordinate vector
-			// now for the other two
-			iSplittingAxes[1] = y;
-			iSplittingAxes[2] = z;
-			if (fZTotalExtent > fYTotalExtent)
-				std::swap(iSplittingAxes[1], iSplittingAxes[2]);
-
-			// Next step: try to partition objects along the longest axis, if that doesn't work (all objects in one child), try next best
-
-			size_t uiNumLeftChildren = uiNumSceneObjects; // intentionally initiliazed to an invalid index for when every partitioning axis fails
-			SceneObject* pCopiedArray = new SceneObject[uiNumSceneObjects];
-			for (int iCurrentSplittingAxisIndex = 0; iCurrentSplittingAxisIndex < iNumSplittingAxes; iCurrentSplittingAxisIndex++)
-			{
-				// 2. Finding the splitting point on the current axis
-				// done by using the object mean (mean of the object centroids)
-
-				float fObjectCentroidsMean = 0.0f;
-				const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
-				const int iCurrentSplittingAxis = iSplittingAxes[iCurrentSplittingAxisIndex];
-
-				// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
-				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-				{
-					const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center;
-					fObjectCentroidsMean += rCurrentSceneObjectCenter[iCurrentSplittingAxis] * fPreDivisionFactor;
-				}
-
-				// 3. partitioning the scene objects:				
-
-				// two passes: one for determination of bucket sizes, the second for sorting into buckets
-				// first pass
-				const size_t uiNumBuckets = 2u;
-				size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
-				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-				{
-					// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
-					const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
-					uiNumElementsPerBucket[uiBucketIndex]++;
-				}
-
-				assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
-
-				// second pass
-				size_t uiBucketInsertionIndices[uiNumBuckets];
-				uiBucketInsertionIndices[0u] = 0u;
-				uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
-
-				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-				{
-					// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
-					const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
-					const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
-					pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
-				}
-
-				memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
-
-
-				if (uiNumElementsPerBucket[0] > 0 && uiNumElementsPerBucket[1] > 0) // if the objects were actually partitioned
-				{
-					uiNumLeftChildren = uiNumElementsPerBucket[0]; // number of left children = partitioning index
-					break;	// no need to consider the other axes
-				}
-			}
-
-			delete[] pCopiedArray;
-
-			/*
-				Now, there is still one edge case left: what if one were to add two identical objects to the tree?
-				identical = their two bounding volumes are identical.
-				There is no proper way to partition these objects, but they have to be partitioned. Otherwise,
-				tree construction would endlessly try to partition them in the "next" child.
-				Solution: just partition them "randomly" -> equal number of both objects on both sides
-			*/
-
-			if (uiNumLeftChildren == uiNumSceneObjects) // the invalid index from before partitioning was attempted
-				uiNumLeftChildren = uiNumSceneObjects / 2u;	// partition all identical objects evenly
-
-			/*
-				another note: since the objects were "fake" sorted already anyway, no need to sort them again.
-				It doesn't matter if they would have been all left or all right, they are still identical and sorted.
-			*/
-
-			return uiNumLeftChildren;
-		}
-
-		size_t PartitionSceneObjectsInPlace_AABB(SceneObject * pSceneObjects, size_t uiNumSceneObjects)
-		{
-			assert(pSceneObjects);
-			assert(uiNumSceneObjects > 0u);
-			/*
-				an explanation:
-				This function:
-				1. decides the splitting axis
-				2. then the splitting point
-				3. then partitions the given scene objects
-			*/
-
-			// 1. Finding the splitting axis
-			// 1.1. Finding the axis with the longest extent
-
-			// initializing with values that will definitely be overwritten
-			float fXMaxExtent = std::numeric_limits<float>::lowest();
-			float fXMinExtent = std::numeric_limits<float>::max();
-			float fYMaxExtent = std::numeric_limits<float>::lowest();
-			float fYMinExtent = std::numeric_limits<float>::max();
-			float fZMaxExtent = std::numeric_limits<float>::lowest();
-			float fZMinExtent = std::numeric_limits<float>::max();
-
-			// finding min and max extents for every axis
-			for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-			{
-				const SceneObject& rCurrentSceneObject = pSceneObjects[uiCurrentSceneObject];
-
-				fXMaxExtent = std::max(fXMaxExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMaximumX());
-				fYMaxExtent = std::max(fYMaxExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMaximumY());
-				fZMaxExtent = std::max(fZMaxExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMaximumZ());
-
-				fXMinExtent = std::min(fXMinExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMinimumX());
-				fYMinExtent = std::min(fYMinExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMinimumY());
-				fZMinExtent = std::min(fZMinExtent, rCurrentSceneObject.m_tWorldSpaceAABB.CalcMinimumZ());
-			}
-
-			// Getting the longest extent of the 3 axes
-			const float fXTotalExtent = fXMaxExtent - fXMinExtent;
-			const float fYTotalExtent = fYMaxExtent - fYMinExtent;
-			const float fZTotalExtent = fZMaxExtent - fZMinExtent;
-
-			// """sorting""" the axes by their extents
-			const int iNumSplittingAxes = 3;
-			const int x = 0, y = 1, z = 2;
-			int iSplittingAxes[iNumSplittingAxes];
-			iSplittingAxes[0] = x;
-
-			if (fYTotalExtent > fXTotalExtent && fYTotalExtent > fZTotalExtent)
-				iSplittingAxes[0] = y;
-
-			if (fZTotalExtent > fXTotalExtent && fZTotalExtent > fYTotalExtent)
-				iSplittingAxes[0] = z;
-
-			// first axis now stores the index of the longest axis in the 3 dimensional coordinate vector
-			// now for the other two
-			iSplittingAxes[1] = y;
-			iSplittingAxes[2] = z;
-			if (fZTotalExtent > fYTotalExtent)
-				std::swap(iSplittingAxes[1], iSplittingAxes[2]);
-
-			// Next step: try to partition objects along the longest axis, if that doesn't work (all objects in one child), try next best
-
-			size_t uiNumLeftChildren = uiNumSceneObjects; // intentionally initiliazed to an invalid index for when every axis fails
-			SceneObject* pCopiedArray = new SceneObject[uiNumSceneObjects];
-			for (int iCurrentSplittingAxisIndex = 0; iCurrentSplittingAxisIndex < iNumSplittingAxes; iCurrentSplittingAxisIndex++)
-			{
-				// 2. Finding the splitting point on the current axis
-				// done by using the object mean (mean of the object centroids)
-
-				float fObjectCentroidsMean = 0.0f;
-				const float fPreDivisionFactor = 1.0f / static_cast<float>(uiNumSceneObjects);
-				const int iCurrentSplittingAxis = iSplittingAxes[iCurrentSplittingAxisIndex];
-
-				// iterate over all scene objects and determine the mean by accumulating equally weighted coordinates of the splitting axis
-				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-				{
-					const glm::vec3& rCurrentSceneObjectCenter = pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center;
-					fObjectCentroidsMean += rCurrentSceneObjectCenter[iCurrentSplittingAxis] * fPreDivisionFactor;
-				}
-
-				// 3. partitioning the scene objects:				
-
-				// two passes: one for determination of bucket sizes, the second for sorting into buckets
-				// first pass
-				const size_t uiNumBuckets = 2u;
-				size_t uiNumElementsPerBucket[uiNumBuckets] = { 0u };
-				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-				{
-					// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
-					const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
-					uiNumElementsPerBucket[uiBucketIndex]++;
-				}
-
-				assert((uiNumElementsPerBucket[0] + uiNumElementsPerBucket[1]) == uiNumSceneObjects);
-
-				// second pass
-				size_t uiBucketInsertionIndices[uiNumBuckets];
-				uiBucketInsertionIndices[0u] = 0u;
-				uiBucketInsertionIndices[1u] = uiNumElementsPerBucket[0u];
-
-				for (size_t uiCurrentSceneObject = 0u; uiCurrentSceneObject < uiNumSceneObjects; uiCurrentSceneObject++)
-				{
-					// will be true == 1 for right bucket and false == 0 for left bucket throught implicit type conversion
-					const size_t uiBucketIndex = (pSceneObjects[uiCurrentSceneObject].m_tWorldSpaceAABB.m_vec3Center[iCurrentSplittingAxis] >= fObjectCentroidsMean);
-					const size_t uiInsertionIndex = uiBucketInsertionIndices[uiBucketIndex]++;
-					pCopiedArray[uiInsertionIndex] = pSceneObjects[uiCurrentSceneObject];
-				}
-
-				memcpy(pSceneObjects, pCopiedArray, uiNumSceneObjects * sizeof(SceneObject));
-				
-
-				if (uiNumElementsPerBucket[0] > 0 && uiNumElementsPerBucket[1] > 0) // if the objects were actually partitioned
-				{
-					uiNumLeftChildren = uiNumElementsPerBucket[0]; // number of left children = partitioning index
-					break;	// no need to consider the other axes
-				}
-			}
-
-			delete[] pCopiedArray;
-
-			/*
-				Now, there is still one edge case left: what if one were to add two identical objects to the tree?
-				identical = their two bounding volumes are identical.
-				There is no proper way to partition these objects, but they have to be partitioned. Otherwise, 
-				tree construction would endlessly try to partition them in the "next" child.
-				Solution: just partition them "randomly" -> equal number of both objects on both sides
-			*/
-
-			if (uiNumLeftChildren == uiNumSceneObjects) // the invalid index from before partitioning was attempted
-				uiNumLeftChildren = uiNumSceneObjects / 2u;	// partition all identical objects evenly
-
-			/*
-				another note: since the objects were "fake" sorted already anyway, no need to sort them again.
-				It doesn't matter if they would have been all left or all right, they are still identical and sorted.
-			*/
-
-			return uiNumLeftChildren;
-		}
-
-		void RecursiveTopDownTree_BoundingSphere(BVHTreeNode ** pNode, SceneObject * pSceneObjects, size_t uiNumSceneObjects)
-		{
-			assert(pNode);
-			assert(pSceneObjects);
-			assert(uiNumSceneObjects > 0);
-
-			const uint8_t uiNumberOfObjectsPerLeaf = 1u;
-			BVHTreeNode* pNewNode = new BVHTreeNode;
-			*pNode = pNewNode;
-
-			if (uiNumSceneObjects <= uiNumberOfObjectsPerLeaf) // is a leaf
-			{
-				assert(uiNumSceneObjects == 1); // needs reconsideration for >1 objects per leaf
-				// bounding volumes for single objects is already done, no need to compute that here
-				pNewNode->m_uiNumOjbects = static_cast<uint8_t>(uiNumSceneObjects);
-				pNewNode->m_pObjects = pSceneObjects;
-			}
-			else // is a node
-			{
-				// create Bounding Sphere volume for the current set of objects
-				pNewNode->m_tBoundingSphereForNode = CreateBoundingSphereForMultipleObjects(pSceneObjects, uiNumSceneObjects);
-
-				// partition current set into subsets IN PLACE!!!
-				size_t uiPartitioningIndex = PartitionSceneObjectsInPlace_BoundingSphere(pSceneObjects, uiNumSceneObjects);
-
-				// move on with "left" side
-				RecursiveTopDownTree_BoundingSphere(&(pNewNode->m_pLeft), pSceneObjects, uiPartitioningIndex);
-
-				// move on with "right" side
-				RecursiveTopDownTree_BoundingSphere(&(pNewNode->m_pRight), pSceneObjects + uiPartitioningIndex, uiNumSceneObjects - uiPartitioningIndex);
-			}
-		}
-
-		BVHTreeNode * BottomUpTree_BoundingSphere(SceneObject * pSceneObjects, size_t uiNumSceneObjects, Visualization & rVisualization)
-		{
-			assert(uiNumSceneObjects > 0);
-
-			BVHTreeNode** pTempNodes = new BVHTreeNode*[uiNumSceneObjects]; // careful: these are pointers to pointers
-
-			// creating all leaf nodes: number leaves == number objects
-			for (size_t uiCurrentNewLeafNode = 0u; uiCurrentNewLeafNode < uiNumSceneObjects; uiCurrentNewLeafNode++)
-			{
-				pTempNodes[uiCurrentNewLeafNode] = new BVHTreeNode;	// assigning the adress of the new leaf node to the pointer pointed at by pTempNodes[current]
-				pTempNodes[uiCurrentNewLeafNode]->m_uiNumOjbects = 1u;
-				pTempNodes[uiCurrentNewLeafNode]->m_pObjects = &pSceneObjects[uiCurrentNewLeafNode];
-				pTempNodes[uiCurrentNewLeafNode]->m_tBoundingSphereForNode = pTempNodes[uiCurrentNewLeafNode]->m_pObjects->m_tWorldSpaceBoundingSphere;
-			}
-
-			// for visualization purposes
-			int16_t iNumConstructedNodes = 0;
-
-			// merging leaves into nodes until root node is constructed
-			while (uiNumSceneObjects > 1) {
-				// Pick two volumes to pair together
-				size_t uiMergedNodeIndex1 = 0, uiMergedNodeIndex2 = 0;
-				FindBottomUpNodesToMerge_BoundingSphere(pTempNodes, uiNumSceneObjects, uiMergedNodeIndex1, uiMergedNodeIndex2);
-
-				// Pair them in new parent node
-				BVHTreeNode* pParentNode = new BVHTreeNode;
-				pParentNode->m_pLeft = pTempNodes[uiMergedNodeIndex1];
-				pParentNode->m_pRight = pTempNodes[uiMergedNodeIndex2];
-				// construct AABB for that parent node (adaption from orginal code)
-				pParentNode->m_tBoundingSphereForNode = MergeTwoBoundingSpheres(pTempNodes[uiMergedNodeIndex1]->m_tBoundingSphereForNode, pTempNodes[uiMergedNodeIndex2]->m_tBoundingSphereForNode);
-
-				// for visualization/rendering purposes
-				TreeNodeForRendering tNewBoundingSphereNodeForRendering;
-				tNewBoundingSphereNodeForRendering.m_iRenderingOrder = iNumConstructedNodes++;
-				tNewBoundingSphereNodeForRendering.m_pNodeToBeRendered = pParentNode;
-				rVisualization.m_vecTreeBoundingSpheresForBottomUpRendering.push_back(tNewBoundingSphereNodeForRendering);
-
-				//Updating the current set of nodes accordingly
-				size_t uiMinIndex = uiMergedNodeIndex1, uiMaxIndex = uiMergedNodeIndex2;
-				if (uiMergedNodeIndex1 > uiMergedNodeIndex2)
-				{
-					uiMinIndex = uiMergedNodeIndex2;
-					uiMaxIndex = uiMergedNodeIndex1;
-				}
-				pTempNodes[uiMinIndex] = pParentNode;
-				pTempNodes[uiMaxIndex] = pTempNodes[uiNumSceneObjects - 1];
-				uiNumSceneObjects--;
-			}
-
-			BVHTreeNode* pRootNode = pTempNodes[0]; // careful: getting the pointer to root by dereferencing the pointer to pointer
-			delete[] pTempNodes;
-			return pRootNode;
-		}
-
-		void FindBottomUpNodesToMerge_BoundingSphere(BVHTreeNode ** pNode, size_t uiNumNodes, size_t & rNodeIndex1, size_t & rNodeIndex2)
-		{
-			float fCurrentlySmallestBoundingSphereDiameter = std::numeric_limits<float>::max();
-
-			// testing every current node...
-			for (size_t uiCurrentMergePartnerIndex1 = 0; uiCurrentMergePartnerIndex1 < uiNumNodes; uiCurrentMergePartnerIndex1++)
-			{
-				// ... against every other node
-				for (size_t uiCurrentMergePartnerIndex2 = uiCurrentMergePartnerIndex1 + 1; uiCurrentMergePartnerIndex2 < uiNumNodes; uiCurrentMergePartnerIndex2++)
-				{
-					//  determine the size of the bounding volume that would result from the two current 
-					const BoundingSphere& rBoundingSphere1 = pNode[uiCurrentMergePartnerIndex1]->m_tBoundingSphereForNode;
-					const BoundingSphere& rBoundingSphere2 = pNode[uiCurrentMergePartnerIndex2]->m_tBoundingSphereForNode;
-
-					// we determine the distance vector to sphere2 from sphere1
-					const glm::vec3 vec3CenterPointsDistance = rBoundingSphere2.m_vec3Center - rBoundingSphere1.m_vec3Center;
-					// we construct the normalized direction of the distance ...
-					const glm::vec3 vec3NormalizedCenterPointsDirection = glm::normalize(vec3CenterPointsDistance);
-					// ... to then scale it by the second sphere's radius, resulting in a "directed radius"
-					const glm::vec3 vec3DirectedSecondSphereRadius = vec3NormalizedCenterPointsDirection * rBoundingSphere2.m_fRadius;
-					// ... we also scale its inverse with the first sphere's radius, resulting in a "radius" directed in the opposite direction
-					const glm::vec3 vec3DirectedFirstSphereRadius = -vec3NormalizedCenterPointsDirection * rBoundingSphere1.m_fRadius;
-
-					// we construct the point on the second sphere that is the most distant to the first sphere's center
-					const glm::vec3 vec3SecondSphereMostDistantPoint = rBoundingSphere2.m_vec3Center + vec3DirectedSecondSphereRadius;
-					// we construct the point on the first sphere that is the most distant to the second sphere's center
-					const glm::vec3 vec3FirstSphereMostDistantPoint = rBoundingSphere1.m_vec3Center + vec3DirectedFirstSphereRadius;
-
-					// having constructed the two most distant points, we can now simply determine their distance
-					const glm::vec3 vec3DistanceBetweenMostDistantPoints = vec3SecondSphereMostDistantPoint - vec3FirstSphereMostDistantPoint;
-					// which effectively is the diameter of the bounding sphere that would encompass both spheres.
-					const float fMergedBoundingSphereDiameter = glm::length(vec3DistanceBetweenMostDistantPoints);
-
-					// update results conditionally
-					if (fMergedBoundingSphereDiameter < fCurrentlySmallestBoundingSphereDiameter)
-					{
-						fCurrentlySmallestBoundingSphereDiameter = fMergedBoundingSphereDiameter;
-						rNodeIndex1 = uiCurrentMergePartnerIndex1;
-						rNodeIndex2 = uiCurrentMergePartnerIndex2;
-					}
-				}
-			}
-		}
+		
 
 		//////////////////////////////////////////
 		// RAY CASTING

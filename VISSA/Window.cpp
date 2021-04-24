@@ -5,9 +5,10 @@
 #include <stdio.h>
 #include "Engine.h"
 
-Window::Window(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, Window* pContextSharingWindow):
+Window::Window(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, GLFWwindow* pContextSharingWindow):
 	m_pGLFWwindow(nullptr),
 	m_pContextSharingWindow(pContextSharingWindow),
+	m_pImGuiContext(nullptr),
 	m_iWindowWidth(iWindowWidth),
 	m_iWindowHeight(iWindowHeight),
 	m_sWindowName(sWindowName),
@@ -40,10 +41,22 @@ Window::~Window()
 //	//m_bIsInitialized = true;
 //}
 
-void Window::SetAsCurrentContext()
+void Window::SetAsCurrentRenderContext()
 {
 	assert(m_pGLFWwindow);
+	glAssert();
 	glfwMakeContextCurrent(m_pGLFWwindow);
+	glAssert();
+}
+
+void Window::SetAsCurrentGUIContext()
+{
+	assert(!"dont call me right now. right now there is only one gui context: the main window and its render context");
+
+	assert(m_pImGuiContext);
+	assert(glfwGetCurrentContext() == m_pGLFWwindow);
+
+	ImGui::SetCurrentContext(m_pImGuiContext);
 }
 
 void Window::CleanUpSequence()
@@ -73,10 +86,11 @@ void Window::RecreateWindow()
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-	if(m_pContextSharingWindow)
-		m_pGLFWwindow = glfwCreateWindow(m_iWindowWidth, m_iWindowHeight, m_sWindowName.c_str(), NULL, m_pContextSharingWindow->m_pGLFWwindow);
-	else
-		m_pGLFWwindow = glfwCreateWindow(m_iWindowWidth, m_iWindowHeight, m_sWindowName.c_str(), NULL, NULL);
+#ifdef _DEBUG
+	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+#endif
+
+	m_pGLFWwindow = glfwCreateWindow(m_iWindowWidth, m_iWindowHeight, m_sWindowName.c_str(), NULL, m_pContextSharingWindow);
 	
 	if (m_pGLFWwindow == NULL)
 	{

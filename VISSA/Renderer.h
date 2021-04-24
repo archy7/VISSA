@@ -10,9 +10,6 @@ class Camera;
 struct Window;
 class GUI;
 class Visualization;
-
-struct TriangularFace;
-
 /**
 	The singular renderer class for all rendering
 */
@@ -26,8 +23,19 @@ public:
 	Renderer& operator=(Renderer&& rOther) = delete;		// no move assignment
 	~Renderer();
 
+	struct TriangularFace {
+		struct Vertex {
+			glm::vec3 vec3Position;
+			glm::vec3 vec3Normal;
+			glm::vec2 vec2UVs;
+		};
+
+		Vertex vertex1;
+		Vertex vertex2;
+		Vertex vertex3;
+	};
+
 	// Member types
-private:
 	struct SphereTrianglesGenerationResult {
 		GLuint m_uiNumberOfTriangles;
 		TriangularFace* m_pTriangleData;
@@ -43,52 +51,29 @@ private:
 	glm::mat4 m_mat4PerspectiveProjection;
 	glm::mat4 m_mat4OrthographicProjection;
 public:
-	// shader handles
-	Shader m_tColorShader, m_tTextureShader, m_tMaskedColorShader, m_tMaskedColorShader2D;
-	// Buffer Handles
-	GLuint m_uiCameraProjectionUBO;
-	GLuint m_uiTexturedCubeVBO, m_uiTexturedCubeVAO, m_uiTexturedCubeEBO;
-	GLuint m_uiColoredCubeVBO, m_uiColoredCubeVAO, m_uiColoredCubeEBO;
-	GLuint m_uiTexturedPlaneVBO, m_uiTexturedPlaneVAO, m_uiTexturedPlaneEBO;
-	GLuint m_uiColoredPlaneVBO, m_uiColoredPlaneVAO, m_uiColoredPlaneEBO;
-	GLuint m_uiTexturedSphereVBO, m_uiTexturedSphereVAO;// m_uiTexturedSphereEBO;
-	GLuint m_uiGridPlaneVBO, m_uiGridPlaneVAO, m_uiGridPlaneEBO;
-	// Texture Handles
-	GLuint m_uiTexture1, m_uiGridMaskTexture, m_uiCrosshairTexture, m_ui2DCircleTexture;
-	// View space information
-	float m_fNearPlane, m_fFarPlane;
-	glm::vec4 m_vec4fClearColor;
-
+	
 	// Init/Loads/Frees
 	void InitRenderer();
 	// Work
 	// during a frame and before rendering, this updates some objects that will be constant for the duration of a frame, i.e. camera and projection matrix
 	void UpdateFrameConstants(const Camera& rCamera, const Window& rWindow);
 	void UpdateProjectionMatrices(const Camera& rCamera, const Window& rWindow);
-	void Render(const Camera& rCamera, Window& rWindow, const Visualization& rScene);
+	void RenderIntoMainWindow(Window& rWindow);
 
-	glm::vec3 ConstructRayDirectionFromMousePosition(const Window& rWindow) const;
+	static glm::vec3 ConstructRayDirectionFromMousePosition(const Window& rWindow, const glm::mat4& rmat4PerspectiveProjection, const glm::mat4& rmat4Camera);
 	static GLuint LoadTextureFromFile(const char* sPath);
 	// Getters
-	const glm::mat4& GetCameraMatrix() const;
-	const glm::mat4& GetPerspectiveProjectionMatrix() const;
+	static SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
+
+#ifdef _DEBUG
+	static void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length, const char *message, const void *userParam);
+#endif // _DEBUG
 private:
-	SphereTrianglesGenerationResult GenerateSphereVertexData(float fRadius, int SubdivisionIterations);
-	void LoadShaders();
-	void LoadTextures();
-	void LoadPrimitivesToGPU();
-	void InitUniformBuffers();
+	glm::vec4 m_vec4fMainWindowClearColor;
+
 	void SetInitialOpenGLState();
-	void RenderVisualization(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
-	void Render3DSceneConstants(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);	// scene components that are omnipresent, like a uniform grid or a cross hair
-	void RenderHUDComponents(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
-	void RenderRealObjects(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
-	void RenderRealObjectsOLD(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
-	void RenderDataStructureObjectsOLD(const Camera& rCamera, const Window& rWindow);
-	void RenderDataStructureObjects(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
-	void RenderAABBOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
-	void RenderBoundingSphereOfSceneObject(const SceneObject& rSceneObject, Shader& rShader);
-	void RenderTreeNodeAABB(const CollisionDetection::TreeNodeForRendering& rTreeNodeAABB, Shader& rShader);
-	void RenderTreeNodeBoundingsphere(const CollisionDetection::TreeNodeForRendering& rTreeNodeAABB, Shader& rShader);
+	
+	//void RenderRealObjectsOLD(const Camera& rCamera, const Window& rWindow, const Visualization& rScene);
+	//void RenderDataStructureObjectsOLD(const Camera& rCamera, const Window& rWindow);
 	void FreeGPUResources();
 };

@@ -16,21 +16,21 @@
 #include "CollisionDetection.h"
 
 class Engine {
-	friend GUI;
+	friend GUI;		// todo: reconsider this
 public:
 	Engine();
 	~Engine();
 
 	void MainLoop();
-	Window* GetMainWindow();
+	static Window* GetMainWindow();
 	
 	void ProcessKeyboardInput();
-	bool IsDiscreteKeyReady(int iKey);
+	static bool IsDiscreteKeyReadyForWindow(GLFWwindow* pWindow, int iKey);
 
 	// Globals
 	static Engine* GetGlobalEngine();
-	static Window* MakeWindow(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName, Window* pContextSharingWindow = nullptr); // TODO: remove the last parameter, decision has been made that no GPU resources are shared
-
+	static Window* MakeWindowAndSetAsContext(int32_t iWindowWidth, int32_t iWindowHeight, std::string sWindowName); // TODO: remove the last parameter, decision has been made that no GPU resources are shared
+	
 	// Callbacks
 	static void ResizeWindowCallback(GLFWwindow* pWindow, int fNewWidth, int fNewHeight);
 	static void MouseScrollCallBack(GLFWwindow* pWindow, double fXOffset, double fYOffset);
@@ -42,14 +42,14 @@ private:
 	// Members
 	Window* m_pMainWindow;
 	Renderer m_tRenderer;
-	Camera m_tCamera;
 	GUI m_tGUI;
-	Visualization m_tVisualization;
+	Visualization* m_pVisualization;
 	int m_iDiscreteKeysStates[GLFW_KEY_LAST];
 	float m_fDeltaTime, m_fLastFrame, m_fCurrentFrame;
 
 	// Globals
 	static Engine* sm_pEngine;
+	static bool MainWindowCreated(); // for window creation process
 
 	void InitEngine();
 	

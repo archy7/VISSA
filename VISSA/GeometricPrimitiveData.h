@@ -72,9 +72,6 @@ namespace Primitives {
 
 		static GLuint NumberOfTrianglesInSphere;
 		static GLfloat SphereDefaultRadius;
-
-		
-		
 	};
 
 	struct Line {

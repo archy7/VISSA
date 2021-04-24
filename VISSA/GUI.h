@@ -8,43 +8,28 @@ class Engine;
 struct Window;
 struct SceneObject;
 
+/*
+	TODO: there is a strong point to make to get rid of this class and turn it into a namespace. needs consideration
+			as of right now, this class is more like a small extra step for rendering the softwares main menu.
+*/
 class GUI {
 public:
 	GUI();
 
-	void InitForWindow(Window& rWindow);
+	static void InitForWindow(Window& rWindow);
 	void ShowMenu(bool bShowMenu);
-	void ShowObjectPropertiesWindow(bool bShowIt);
-	void ToggleHelpWindow();
 	bool IsMenuActive() const;
 	bool IsMouseCaptured() const;
 	void SetCaptureMouse(bool bIsCapturedNow);
-	void SetObjectPropertiesWindowPosition(float fXPosition, float fYPosition);
-	void SetFocusedObject(SceneObject* pFocusedObject);
-	SceneObject* GetFocusedObject();
-	void CancelObjectPropertiesChanges();
 
 	void Render(Engine& rEngine);
 	void RenderMainMenu(Engine& rEngine);
-	void RenderSimControlPanel(Engine& rEngine);
-	void RenderSimOptions(Engine& rEngine);
-	void RenderObjectPropertiesWindow(Engine& rEngine);
-	void RenderObjectCreationWindow(Engine& rEngine);
-	void RenderHelpWindow(Engine& rEngine);
 	void ConditionallyRenderQuitConfirmation(Engine& rEngine);
 	void ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine);
 	void ConditionallyRenderOptions(Engine& rEngine);
+
+	static void HelpMarker(const char* sText);
 private:
-	ImVec2 m_vec2ObjectPropertiesWindowPosition;
-
-	SceneObject* m_pCurrentlyFocusedObject;
-
 	bool m_bShowMainMenu;
-	bool m_bShowSimulationControlPanel;
-	bool m_bShowSimulationOptions;
-	bool m_bShowObjectPropertiesWindow;
-	bool m_bShowObjectCreationWindow;
-	bool m_bShowHelpWindow;
-	bool m_bObjectPropertiesPendingChanges;
 	bool m_bCaptureMouse;
 };
