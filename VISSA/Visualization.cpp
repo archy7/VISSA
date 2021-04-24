@@ -188,8 +188,8 @@ void Visualization::LoadDefaultScene()
 	assert(vecNewObjectsPositions.size() == vecNewObjectsScales.size());
 	assert(vecNewObjectsScales.size() == vecNewObjectsRotations.size());
 
-	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
-	for (int uiCurrentNewObject = 0; uiCurrentNewObject < 4; uiCurrentNewObject++)
+	for (int uiCurrentNewObject = 0; uiCurrentNewObject < vecNewObjectsPositions.size(); uiCurrentNewObject++)
+	//for (int uiCurrentNewObject = 0; uiCurrentNewObject < 4; uiCurrentNewObject++)
 	{
 		SceneObject tNewObject;
 		tNewObject.m_tTransform.m_vec3Position = vecNewObjectsPositions[uiCurrentNewObject];
@@ -215,11 +215,6 @@ void Visualization::LoadDefaultScene()
 
 void Visualization::Render()
 {
-	//assert(glfwGetCurrentContext() == Engine::GetGlobalEngine().GetMainWindow().m_pGLFWwindow); // this makes sure contexts are handled correctly.
-
-	//if (rMainWindow.IsMinimized()) // hot fix to stop crashes when minimizing the window. needs proper handling in the future: https://www.glfw.org/docs/3.3/window_guide.html
-		//return;
-
 	assert(m_p2DGraphWindow);
 
 	m_rMainWindow.SetAsCurrentRenderContext();
@@ -229,8 +224,6 @@ void Visualization::Render()
 	UpdateProjectionMatrices();
 	glAssert();
 	Render3DVisualization();
-	glAssert();
-	RenderVisualizationGUI();
 	glAssert();
 
 	m_p2DGraphWindow->SetAsCurrentRenderContext();
@@ -283,12 +276,99 @@ void Visualization::Render2DGraph() const
 {
 	assert(glfwGetCurrentContext() == m_p2DGraphWindow->m_pGLFWwindow); // set the right context before calling this funtion
 
+	if (m_p2DGraphWindow->IsMinimized())
+		return;
+
 	glClearColor(m_vec4fClearColor2DGraphWindow.r, m_vec4fClearColor2DGraphWindow.g, m_vec4fClearColor2DGraphWindow.b, m_vec4fClearColor2DGraphWindow.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	/////////////////////////////////////////////////////////
 
-	ConstructBVHTreeGraph(m_tTopDownAABBs);
+	const std::vector<TreeNodeForRendering>* pvecNodeRenderData = nullptr;
+	const std::vector<TreeNodeForRendering>* pvecLeafRenderData = nullptr;
+	glm::vec4 vec4NodeRenderColor_Base;
+	glm::vec4 vec4NodeRenderColor_Gradient;
+	int16_t iDeepestDepthOfNodes = 0;
+	if (GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::AABB)
+	{
+		// rendering the AABBs of tree nodes in the BVH
+
+		if (GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
+		{
+			pvecNodeRenderData = &m_tTopDownAABBs.m_vecTreeNodeDataForRendering;
+			pvecLeafRenderData = &m_tTopDownAABBs.m_vecTreeLeafDataForRendering;
+			vec4NodeRenderColor_Base = m_vec4TopDownNodeRenderColor;
+			vec4NodeRenderColor_Gradient = m_vec4TopDownNodeRenderColor_Gradient;
+			iDeepestDepthOfNodes = m_tTopDownAABBs.m_tBVH.m_iTDeepestDepthOfNodes;
+		}
+		if (GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
+		{
+			pvecNodeRenderData = &m_tBottomUpAABBs.m_vecTreeNodeDataForRendering;
+			pvecLeafRenderData = &m_tBottomUpAABBs.m_vecTreeLeafDataForRendering;
+			vec4NodeRenderColor_Base = m_vec4BottomUpNodeRenderColor;
+			vec4NodeRenderColor_Gradient = m_vec4BottomUpNodeRenderColor_Gradient;
+			iDeepestDepthOfNodes = m_tBottomUpAABBs.m_tBVH.m_iTDeepestDepthOfNodes;
+		}
+	}
+	else if (GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::BOUNDING_SPHERE)
+	{
+		if (GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
+		{
+			pvecNodeRenderData = &m_tTopDownBoundingSpheres.m_vecTreeNodeDataForRendering;
+			pvecLeafRenderData = &m_tTopDownBoundingSpheres.m_vecTreeLeafDataForRendering;
+			vec4NodeRenderColor_Base = m_vec4TopDownNodeRenderColor;
+			vec4NodeRenderColor_Gradient = m_vec4TopDownNodeRenderColor_Gradient;
+			iDeepestDepthOfNodes = m_tTopDownBoundingSpheres.m_tBVH.m_iTDeepestDepthOfNodes;
+		}
+		if (GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
+		{
+			pvecNodeRenderData = &m_tBottomUpBoundingSpheres.m_vecTreeNodeDataForRendering;
+			pvecLeafRenderData = &m_tBottomUpBoundingSpheres.m_vecTreeLeafDataForRendering;
+			vec4NodeRenderColor_Base = m_vec4BottomUpNodeRenderColor;
+			vec4NodeRenderColor_Gradient = m_vec4BottomUpNodeRenderColor_Gradient;
+			iDeepestDepthOfNodes = m_tBottomUpBoundingSpheres.m_tBVH.m_iTDeepestDepthOfNodes;
+		}
+	}
+	else
+	{
+		assert(!"disaster");
+	}
+
+	int16_t iAlreadyRenderedConstructionSteps = 0;
+	for (const TreeNodeForRendering& rCurrentRendered2DNode : *pvecNodeRenderData)
+	{
+		bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRendered2DNode.m_iDepthInTree <= m_iMaximumRenderedTreeDepth);
+		bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < m_iNumberStepsRendered);
+
+		bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
+		if (bShallRender)
+		{
+			glm::vec4 vec4RenderColor = vec4NodeRenderColor_Base;
+			if (m_bNodeDepthColorGrading)
+			{
+				vec4RenderColor = InterpolateRenderColorForTreeNode(vec4NodeRenderColor_Base,
+					vec4NodeRenderColor_Gradient,
+					rCurrentRendered2DNode.m_iDepthInTree,
+					iDeepestDepthOfNodes
+				);
+			}
+
+			DrawNodeAtPosition(rCurrentRendered2DNode.m_vec2_2DNodeDrawPosition, vec4RenderColor);
+
+			DrawLineFromTo(rCurrentRendered2DNode.m_vec2_2DLineToParentOrigin, rCurrentRendered2DNode.m_vec2_2DLineToParentTarget);
+		}
+		iAlreadyRenderedConstructionSteps++;
+	}
+
+	glm::vec4 vec4LeafDrawColor(0.0f, 0.0f, 0.55f, 1.0f);
+	if (m_iNumberStepsRendered > 0)
+	{
+		for (const TreeNodeForRendering& rCurrentRendered2DLeaf : *pvecLeafRenderData)
+		{
+			Draw2DObjectAtPosition(rCurrentRendered2DLeaf.m_vec2_2DNodeDrawPosition, vec4LeafDrawColor);
+			DrawLineFromTo(rCurrentRendered2DLeaf.m_vec2_2DLineToParentOrigin, rCurrentRendered2DLeaf.m_vec2_2DLineToParentTarget);
+		}
+	}
 
 	/////////////////////////////////////////////////////////
 
@@ -302,19 +382,28 @@ void Visualization::UpdateFrameConstants()
 
 void Visualization::UpdateProjectionMatrices()
 {
-	// perspective projection matrix for 3D window
-	m_mat4PerspectiveProjection3DWindow = glm::perspective(glm::radians(m_tCamera.Zoom), static_cast<float>(m_rMainWindow.m_iWindowWidth) / static_cast<float>(m_rMainWindow.m_iWindowHeight), 0.1f, m_fRenderDistance);
+	if (!m_rMainWindow.IsMinimized())
+	{
+		// perspective projection matrix for 3D window
+		m_mat4PerspectiveProjection3DWindow = glm::perspective(glm::radians(m_tCamera.Zoom), static_cast<float>(m_rMainWindow.m_iWindowWidth) / static_cast<float>(m_rMainWindow.m_iWindowHeight), 0.1f, m_fRenderDistance);
 
-	// orthographic projection matrix for 3D window
-	m_mat4OrthographicProjection3DWindow = glm::ortho(0.0f, static_cast<float>(m_rMainWindow.m_iWindowWidth), 0.0f, static_cast<float>(m_rMainWindow.m_iWindowHeight), -0.1f, m_fRenderDistance); // todo: replace with 2d version: https://glm.g-truc.net/0.9.2/api/a00245.html#ga71777a3b1d4fe1729cccf6eda05c8127
+		// orthographic projection matrix for 3D window
+		m_mat4OrthographicProjection3DWindow = glm::ortho(0.0f, static_cast<float>(m_rMainWindow.m_iWindowWidth), 0.0f, static_cast<float>(m_rMainWindow.m_iWindowHeight), -0.1f, m_fRenderDistance); // todo: replace with 2d version: https://glm.g-truc.net/0.9.2/api/a00245.html#ga71777a3b1d4fe1729cccf6eda05c8127
+	}
 
-	// orthographic projection matrix for 2D window
-	m_mat4OrthographicProjection2DWindow = glm::ortho(0.0f, static_cast<float>(m_p2DGraphWindow->m_iWindowWidth), 0.0f, static_cast<float>(m_p2DGraphWindow->m_iWindowHeight), -0.1f, 10.0f); // todo: replace with 2d version: https://glm.g-truc.net/0.9.2/api/a00245.html#ga71777a3b1d4fe1729cccf6eda05c8127
+	if (!m_p2DGraphWindow->IsMinimized())
+	{
+		// orthographic projection matrix for 2D window
+		m_mat4OrthographicProjection2DWindow = glm::ortho(0.0f, static_cast<float>(m_p2DGraphWindow->m_iWindowWidth), 0.0f, static_cast<float>(m_p2DGraphWindow->m_iWindowHeight), -0.1f, 10.0f); // todo: replace with 2d version: https://glm.g-truc.net/0.9.2/api/a00245.html#ga71777a3b1d4fe1729cccf6eda05c8127
+	}
 }
 
-void Visualization::Render3DVisualization() const
+void Visualization::Render3DVisualization()
 {
 	assert(glfwGetCurrentContext() == m_rMainWindow.m_pGLFWwindow); // set the right context before calling this funtion
+
+	if (m_rMainWindow.IsMinimized()) // hot fix to stop crashes when minimizing the window. needs proper handling in the future: https://www.glfw.org/docs/3.3/window_guide.html
+		return;
 
 	glAssert();
 
@@ -335,6 +424,7 @@ void Visualization::Render3DVisualization() const
 	RenderDataStructureObjects();
 	Render3DSceneConstants();
 	RenderHUDComponents();
+	RenderVisualizationGUI();
 }
 
 void Visualization::RenderVisualizationGUI()
@@ -475,125 +565,45 @@ void Visualization::RenderDataStructureObjects() const
 		}
 	}
 
+	
+	const std::vector<TreeNodeForRendering>* pvecNodeRenderData = nullptr;
+	glm::vec4 vec4NodeRenderColor_Base;
+	glm::vec4 vec4NodeRenderColor_Gradient;
+	int16_t iDeepestDepthOfNodes = 0;
 	if (GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::AABB)
 	{
 		// rendering the AABBs of tree nodes in the BVH
+
 		if (GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
 		{
-			int16_t iAlreadyRenderedConstructionSteps = 0;
-			for (const TreeNodeForRendering& rCurrentRenderedBVHAABB : m_tTopDownAABBs.m_vecTreeNodeDataForRendering)
-			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iDepthInTree <= m_iMaximumRenderedTreeDepth);
-				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < m_iNumberStepsRendered);
-
-				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-				if (bShallRender)
-				{
-					glm::vec4 vec4NodeRenderColor = m_vec4TopDownNodeRenderColor;
-					if (m_bNodeDepthColorGrading)
-					{
-						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(m_vec4TopDownNodeRenderColor,
-							m_vec4TopDownNodeRenderColor_Gradient,
-							rCurrentRenderedBVHAABB.m_iDepthInTree,
-							m_tTopDownAABBs.m_tBVH.m_iTDeepestDepthOfNodes
-						);
-					}
-
-					rCurrentShader.setVec4("color", vec4NodeRenderColor);
-					RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
-				}
-
-				iAlreadyRenderedConstructionSteps++;
-			}
+			pvecNodeRenderData = &m_tTopDownAABBs.m_vecTreeNodeDataForRendering;
+			vec4NodeRenderColor_Base = m_vec4TopDownNodeRenderColor;
+			vec4NodeRenderColor_Gradient = m_vec4TopDownNodeRenderColor_Gradient;
+			iDeepestDepthOfNodes =  m_tTopDownAABBs.m_tBVH.m_iTDeepestDepthOfNodes;
 		}
-
 		if (GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
 		{
-			int16_t iAlreadyRenderedConstructionSteps = 0;
-			for (const TreeNodeForRendering& rCurrentRenderedBVHAABB : m_tBottomUpAABBs.m_vecTreeNodeDataForRendering)
-			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHAABB.m_iDepthInTree <= m_iMaximumRenderedTreeDepth);
-				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < m_iNumberStepsRendered);
-
-				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-				if (bShallRender)
-				{
-					glm::vec4 vec4NodeRenderColor = m_vec4BottomUpNodeRenderColor;
-					if (m_bNodeDepthColorGrading)
-					{
-						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(m_vec4BottomUpNodeRenderColor,
-							m_vec4BottomUpNodeRenderColor_Gradient,
-							rCurrentRenderedBVHAABB.m_iDepthInTree,
-							m_tBottomUpAABBs.m_tBVH.m_iTDeepestDepthOfNodes
-						);
-					}
-
-					rCurrentShader.setVec4("color", vec4NodeRenderColor);
-					RenderTreeNodeAABB(rCurrentRenderedBVHAABB, rCurrentShader);
-				}
-
-				iAlreadyRenderedConstructionSteps++;
-			}
+			pvecNodeRenderData = &m_tBottomUpAABBs.m_vecTreeNodeDataForRendering;
+			vec4NodeRenderColor_Base = m_vec4BottomUpNodeRenderColor;
+			vec4NodeRenderColor_Gradient = m_vec4BottomUpNodeRenderColor_Gradient;
+			iDeepestDepthOfNodes = m_tBottomUpAABBs.m_tBVH.m_iTDeepestDepthOfNodes;
 		}
 	}
 	else if (GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::BOUNDING_SPHERE)
 	{
 		if (GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::TOPDOWN)
 		{
-			int16_t iAlreadyRenderedConstructionSteps = 0;
-			for (const TreeNodeForRendering& rCurrentRenderedBVHBoundingSphere : m_tTopDownBoundingSpheres.m_vecTreeNodeDataForRendering)
-			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingSphere.m_iDepthInTree <= m_iMaximumRenderedTreeDepth);
-				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < m_iNumberStepsRendered);
-
-				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-				if (bShallRender)
-				{
-					glm::vec4 vec4NodeRenderColor = m_vec4TopDownNodeRenderColor;
-					if (m_bNodeDepthColorGrading)
-					{
-						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(m_vec4TopDownNodeRenderColor,
-							m_vec4TopDownNodeRenderColor_Gradient,
-							rCurrentRenderedBVHBoundingSphere.m_iDepthInTree,
-							m_tTopDownBoundingSpheres.m_tBVH.m_iTDeepestDepthOfNodes
-						);
-					}
-
-					rCurrentShader.setVec4("color", vec4NodeRenderColor);
-					RenderTreeNodeBoundingsphere(rCurrentRenderedBVHBoundingSphere, rCurrentShader);
-				}
-
-				iAlreadyRenderedConstructionSteps++;
-			}
+			pvecNodeRenderData = &m_tTopDownBoundingSpheres.m_vecTreeNodeDataForRendering;
+			vec4NodeRenderColor_Base = m_vec4TopDownNodeRenderColor;
+			vec4NodeRenderColor_Gradient = m_vec4TopDownNodeRenderColor_Gradient;
+			iDeepestDepthOfNodes = m_tTopDownBoundingSpheres.m_tBVH.m_iTDeepestDepthOfNodes;
 		}
-
 		if (GetCurrenBVHConstructionStrategy() == Visualization::eBVHConstructionStrategy::BOTTOMUP)
 		{
-			int16_t iAlreadyRenderedConstructionSteps = 0;
-			for (const TreeNodeForRendering& rCurrentRenderedBVHBoundingSphere : m_tBottomUpBoundingSpheres.m_vecTreeNodeDataForRendering)
-			{
-				bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingSphere.m_iDepthInTree <= m_iMaximumRenderedTreeDepth);
-				bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < m_iNumberStepsRendered);
-
-				bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-				if (bShallRender)
-				{
-					glm::vec4 vec4NodeRenderColor = m_vec4BottomUpNodeRenderColor;
-					if (m_bNodeDepthColorGrading)
-					{
-						vec4NodeRenderColor = InterpolateRenderColorForTreeNode(m_vec4BottomUpNodeRenderColor,
-							m_vec4BottomUpNodeRenderColor_Gradient,
-							rCurrentRenderedBVHBoundingSphere.m_iDepthInTree,
-							m_tBottomUpBoundingSpheres.m_tBVH.m_iTDeepestDepthOfNodes
-						);
-					}
-
-					rCurrentShader.setVec4("color", vec4NodeRenderColor);
-					RenderTreeNodeBoundingsphere(rCurrentRenderedBVHBoundingSphere, rCurrentShader);
-				}
-
-				iAlreadyRenderedConstructionSteps++;
-			}
+			pvecNodeRenderData = &m_tBottomUpBoundingSpheres.m_vecTreeNodeDataForRendering;
+			vec4NodeRenderColor_Base = m_vec4BottomUpNodeRenderColor;
+			vec4NodeRenderColor_Gradient = m_vec4BottomUpNodeRenderColor_Gradient;
+			iDeepestDepthOfNodes = m_tBottomUpBoundingSpheres.m_tBVH.m_iTDeepestDepthOfNodes;
 		}
 	}
 	else
@@ -601,11 +611,39 @@ void Visualization::RenderDataStructureObjects() const
 		assert(!"disaster");
 	}
 
+	int16_t iAlreadyRenderedConstructionSteps = 0;
+	for (const TreeNodeForRendering& rCurrentRenderedBVHBoundingVolume : *pvecNodeRenderData)
+	{
+		bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingVolume.m_iDepthInTree <= m_iMaximumRenderedTreeDepth);
+		bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < m_iNumberStepsRendered);
+
+		bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
+		if (bShallRender)
+		{
+			glm::vec4 vec4RenderColor = vec4NodeRenderColor_Base;
+			if (m_bNodeDepthColorGrading)
+			{
+				vec4RenderColor = InterpolateRenderColorForTreeNode(vec4NodeRenderColor_Base,
+					vec4NodeRenderColor_Gradient,
+					rCurrentRenderedBVHBoundingVolume.m_iDepthInTree,
+					iDeepestDepthOfNodes
+				);
+			}
+
+			rCurrentShader.setVec4("color", vec4RenderColor);
+			
+			if (GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::AABB)
+				RenderTreeNodeAABB(rCurrentRenderedBVHBoundingVolume, rCurrentShader);
+			if (GetCurrentBVHBoundingVolume() == Visualization::eBVHBoundingVolume::BOUNDING_SPHERE)
+				RenderTreeNodeBoundingsphere(rCurrentRenderedBVHBoundingVolume, rCurrentShader);
+		}
+		iAlreadyRenderedConstructionSteps++;
+	}
 
 	glEnable(GL_CULL_FACE);
 }
 
-void Visualization::ProcessMouseMovement(GLFWwindow* pWindow, double dXPosition, double dYPosition)
+void Visualization::MouseMoveCallback(GLFWwindow* pWindow, double dXPosition, double dYPosition)
 {
 	assert(m_p2DGraphWindow);
 
@@ -647,7 +685,7 @@ void Visualization::ProcessMouseMovement(GLFWwindow* pWindow, double dXPosition,
 	}
 }
 
-void Visualization::ProcessMouseClick(GLFWwindow * pWindow, int iButton, int iAction, int iModifiers)
+void Visualization::MouseClickCallback(GLFWwindow * pWindow, int iButton, int iAction, int iModifiers)
 {
 	assert(m_p2DGraphWindow);
 
@@ -675,6 +713,17 @@ void Visualization::ProcessMouseClick(GLFWwindow * pWindow, int iButton, int iAc
 	else
 	{
 		assert(!"it's a disastah");
+	}
+}
+
+void Visualization::WindowResizeCallBack(GLFWwindow * pWindow, int iNewWidth, int iNewHeight)
+{
+	if (pWindow == m_p2DGraphWindow->m_pGLFWwindow)
+	{
+		m_p2DGraphWindow->m_iWindowWidth = iNewWidth;
+		m_p2DGraphWindow->m_iWindowHeight = iNewHeight;
+		m_p2DGraphWindow->SetAsCurrentRenderContext();
+		glViewport(0, 0, iNewWidth, iNewHeight);
 	}
 }
 
@@ -903,7 +952,7 @@ void Visualization::RecursiveTopDownTree_AABB(CollisionDetection::BVHTreeNode **
 	}
 }
 
-CollisionDetection::BVHTreeNode * Visualization::BottomUpTree_AABB(SceneObject * pSceneObjects, size_t uiNumSceneObjects, Visualization & rVisualization)
+CollisionDetection::BVHTreeNode * Visualization::BottomUpTree_AABB(SceneObject * pSceneObjects, size_t uiNumSceneObjects, BVHRenderingDataTuple& rBVHRenderDataTuple)
 {
 	assert(uiNumSceneObjects > 0);
 
@@ -938,7 +987,7 @@ CollisionDetection::BVHTreeNode * Visualization::BottomUpTree_AABB(SceneObject *
 		TreeNodeForRendering tNewAABBNodeForRendering;
 		tNewAABBNodeForRendering.m_iRenderingOrder = iNumConstructedNodes++;
 		tNewAABBNodeForRendering.m_pNodeToBeRendered = pParentNode;
-		m_tBottomUpAABBs.m_vecTreeNodeDataForRendering.push_back(tNewAABBNodeForRendering);	// todo: Im not sure if i like this
+		rBVHRenderDataTuple.m_vecTreeNodeDataForRendering.push_back(tNewAABBNodeForRendering);
 
 		//Updating the current set of nodes accordingly
 		size_t uiMinIndex = uiMergedNodeIndex1, uiMaxIndex = uiMergedNodeIndex2;
@@ -990,7 +1039,7 @@ void Visualization::RecursiveTopDownTree_BoundingSphere(CollisionDetection::BVHT
 	}
 }
 
-CollisionDetection::BVHTreeNode * Visualization::BottomUpTree_BoundingSphere(SceneObject * pSceneObjects, size_t uiNumSceneObjects, Visualization & rVisualization)
+CollisionDetection::BVHTreeNode * Visualization::BottomUpTree_BoundingSphere(SceneObject * pSceneObjects, size_t uiNumSceneObjects, BVHRenderingDataTuple& rBVHRenderDataTuple)
 {
 	assert(uiNumSceneObjects > 0);
 
@@ -1018,14 +1067,14 @@ CollisionDetection::BVHTreeNode * Visualization::BottomUpTree_BoundingSphere(Sce
 		CollisionDetection::BVHTreeNode* pParentNode = new CollisionDetection::BVHTreeNode;
 		pParentNode->m_pLeft = pTempNodes[uiMergedNodeIndex1];
 		pParentNode->m_pRight = pTempNodes[uiMergedNodeIndex2];
-		// construct AABB for that parent node (adaption from orginal code)
+		// construct Bounding Sphere for that parent node (adaption from orginal code)
 		pParentNode->m_tBoundingSphereForNode = CollisionDetection::MergeTwoBoundingSpheres(pTempNodes[uiMergedNodeIndex1]->m_tBoundingSphereForNode, pTempNodes[uiMergedNodeIndex2]->m_tBoundingSphereForNode);
 
 		// for visualization/rendering purposes
 		TreeNodeForRendering tNewBoundingSphereNodeForRendering;
 		tNewBoundingSphereNodeForRendering.m_iRenderingOrder = iNumConstructedNodes++;
 		tNewBoundingSphereNodeForRendering.m_pNodeToBeRendered = pParentNode;
-		m_tBottomUpAABBs.m_vecTreeNodeDataForRendering.push_back(tNewBoundingSphereNodeForRendering); // todo: not sure if i like this
+		rBVHRenderDataTuple.m_vecTreeNodeDataForRendering.push_back(tNewBoundingSphereNodeForRendering);
 
 		//Updating the current set of nodes accordingly
 		size_t uiMinIndex = uiMergedNodeIndex1, uiMaxIndex = uiMergedNodeIndex2;
@@ -1267,7 +1316,7 @@ void Visualization::TraverseTreeForDataForTopDownRendering_AABB(CollisionDetecti
 {
 	assert(pNode);
 
-	if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
+	if (pNode->IsANode()) // node -> not a leaf
 	{
 		// if it is a node, there was a partitioning step, which means there have to be two children
 		assert(pNode->m_pLeft);
@@ -1287,8 +1336,13 @@ void Visualization::TraverseTreeForDataForTopDownRendering_AABB(CollisionDetecti
 		// ... then right
 		TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rBVHRenderDataTuple, iDepthInTree);
 	}
-
-	// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
+	else // is a leaf
+	{
+		TreeNodeForRendering tNewLeafNodeForRendering;
+		tNewLeafNodeForRendering.m_iDepthInTree = iDepthInTree;
+		tNewLeafNodeForRendering.m_pNodeToBeRendered = pNode;
+		rBVHRenderDataTuple.m_vecTreeLeafDataForRendering.push_back(tNewLeafNodeForRendering);
+	}
 }
 
 void Visualization::TraverseTreeForDataForBottomUpRendering_AABB(CollisionDetection::BVHTreeNode* pNode, BVHRenderingDataTuple & rBVHRenderDataTuple, int16_t iDepthInTree)
@@ -1304,7 +1358,7 @@ void Visualization::TraverseTreeForDataForBottomUpRendering_AABB(CollisionDetect
 
 	assert(pNode);
 
-	if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
+	if (pNode->IsANode()) // node -> not a leaf
 	{
 		// if it is a node, there was a partitioning step, which means there have to be two children
 		assert(pNode->m_pLeft);
@@ -1328,13 +1382,20 @@ void Visualization::TraverseTreeForDataForBottomUpRendering_AABB(CollisionDetect
 		// ... then right
 		TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pRight, rBVHRenderDataTuple, iDepthInTree);
 	}
+	else // is a leaf
+	{
+		TreeNodeForRendering tNewLeafNodeForRendering;
+		tNewLeafNodeForRendering.m_iDepthInTree = iDepthInTree;
+		tNewLeafNodeForRendering.m_pNodeToBeRendered = pNode;
+		rBVHRenderDataTuple.m_vecTreeLeafDataForRendering.push_back(tNewLeafNodeForRendering);
+	}
 }
 
 void Visualization::TraverseTreeForDataForTopDownRendering_BoundingSphere(CollisionDetection::BVHTreeNode* pNode, BVHRenderingDataTuple & rBVHRenderDataTuple, int16_t iDepthInTree)
 {
 	assert(pNode);
 
-	if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
+	if (pNode->IsANode()) // node -> is a leaf
 	{
 		// if it is a node, there was a partitioning step, which means there have to be two children
 		assert(pNode->m_pLeft);
@@ -1354,8 +1415,13 @@ void Visualization::TraverseTreeForDataForTopDownRendering_BoundingSphere(Collis
 		// ... then right
 		TraverseTreeForDataForTopDownRendering_AABB(pNode->m_pRight, rBVHRenderDataTuple, iDepthInTree);
 	}
-
-	// Note: In this function we care only for nodes, leaves are intentionally left out since we have that data separated
+	else // is a leaf
+	{
+		TreeNodeForRendering tNewLeafNodeForRendering;
+		tNewLeafNodeForRendering.m_iDepthInTree = iDepthInTree;
+		tNewLeafNodeForRendering.m_pNodeToBeRendered = pNode;
+		rBVHRenderDataTuple.m_vecTreeLeafDataForRendering.push_back(tNewLeafNodeForRendering);
+	}
 }
 
 void Visualization::TraverseTreeForDataForBottomUpRendering_BoundingSphere(CollisionDetection::BVHTreeNode* pNode, BVHRenderingDataTuple & rBVHRenderDataTuple, int16_t iDepthInTree)
@@ -1371,7 +1437,7 @@ void Visualization::TraverseTreeForDataForBottomUpRendering_BoundingSphere(Colli
 
 	assert(pNode);
 
-	if (pNode->IsANode()) // if there is a pointer to objects, it is a leaf
+	if (pNode->IsANode()) // node -> is a leaf
 	{
 		// if it is a node, there was a partitioning step, which means there have to be two children
 		assert(pNode->m_pLeft);
@@ -1395,6 +1461,30 @@ void Visualization::TraverseTreeForDataForBottomUpRendering_BoundingSphere(Colli
 		// ... then right
 		TraverseTreeForDataForBottomUpRendering_AABB(pNode->m_pRight, rBVHRenderDataTuple, iDepthInTree);
 	}
+	else // is a leaf
+	{
+		TreeNodeForRendering tNewLeafNodeForRendering;
+		tNewLeafNodeForRendering.m_iDepthInTree = iDepthInTree;
+		tNewLeafNodeForRendering.m_pNodeToBeRendered = pNode;
+		rBVHRenderDataTuple.m_vecTreeLeafDataForRendering.push_back(tNewLeafNodeForRendering);
+	}
+}
+
+Visualization::TreeNodeForRendering*  Visualization::FindRenderDataOfNode(const CollisionDetection::BVHTreeNode* pNode, std::vector<TreeNodeForRendering>& rvecRenderData) const
+{
+	TreeNodeForRendering* pResult = nullptr;
+
+	for (TreeNodeForRendering& rCurrentRenderData : rvecRenderData)
+	{
+		if (rCurrentRenderData.m_pNodeToBeRendered == pNode)
+		{
+			pResult = &rCurrentRenderData;
+			break;
+		}
+	}
+
+	assert(pResult); // the node you are looking for in the given render data vector does not exist.
+	return pResult;
 }
 
 void Visualization::LoadTextures()
@@ -1407,7 +1497,7 @@ void Visualization::LoadTextures()
 
 	m_p2DGraphWindow->SetAsCurrentRenderContext();
 	// textures 2D
-	m_ui2DCircleTexture = Renderer::LoadTextureFromFile("resources/textures/2Dcircle.png");
+	m_ui2DCircleTexture = Renderer::LoadTextureFromFile("resources/textures/2DFullcircle.png");
 	m_ui2DOBJTexture = Renderer::LoadTextureFromFile("resources/textures/2DOBJ.png");
 }
 
@@ -1695,9 +1785,11 @@ Visualization::BVHRenderingDataTuple Visualization::ConstructTopDownAABBBVHandRe
 
 	// first traversal to gather data for rendering. In theory, it is possible to traverse the tree every frame for BV rendering.
 	// But that is terrible, so data is fetched into a linear vector
-	tResult.m_vecTreeNodeDataForRendering.clear();
 	tResult.m_vecTreeNodeDataForRendering.reserve(100);
 	TraverseTreeForDataForTopDownRendering_AABB(tResult.m_tBVH.m_pRootNode,tResult, 0);
+
+	// now for the rendering data of the 2d window
+	ConstructBVHTreeGraphRenderData(tResult);
 
 	return tResult;
 }
@@ -1707,12 +1799,15 @@ Visualization::BVHRenderingDataTuple Visualization::ConstructBottomUpAABBBVHandR
 	assert(rScene.m_vecObjects.size() > 0);
 
 	BVHRenderingDataTuple tResult;
-	tResult.m_vecTreeNodeDataForRendering.clear();
 	tResult.m_vecTreeNodeDataForRendering.reserve(100);
 
 	// the construction INCLUDING HALF THE PREPARATION OF AABB RENDERING DATA
-	tResult.m_tBVH.m_pRootNode = BottomUpTree_AABB(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
+	tResult.m_tBVH.m_pRootNode = BottomUpTree_AABB(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), tResult);
+	// the other half of the rendering data
 	TraverseTreeForDataForBottomUpRendering_AABB(tResult.m_tBVH.m_pRootNode, tResult, 0);
+
+	// now for the rendering data of the 2d window
+	ConstructBVHTreeGraphRenderData(tResult);
 
 	return tResult;
 }
@@ -1729,10 +1824,12 @@ Visualization::BVHRenderingDataTuple Visualization::ConstructTopDownBoundingSphe
 
 	// first traversal to gather data for rendering. In theory, it is possible to traverse the tree every frame for BV rendering.
 	// But that is terrible, so data is fetched into a linear vector
-	tResult.m_vecTreeNodeDataForRendering.clear();
 	tResult.m_vecTreeNodeDataForRendering.reserve(100);
 
 	TraverseTreeForDataForTopDownRendering_BoundingSphere(tResult.m_tBVH.m_pRootNode, tResult, 0);
+
+	// now for the rendering data of the 2d window
+	ConstructBVHTreeGraphRenderData(tResult);
 
 	return tResult;
 }
@@ -1742,24 +1839,21 @@ Visualization::BVHRenderingDataTuple Visualization::ConstructBottomUpBoundingSph
 	assert(rScene.m_vecObjects.size() > 0);
 
 	BVHRenderingDataTuple tResult;
-	tResult.m_vecTreeNodeDataForRendering.clear();
 	tResult.m_vecTreeNodeDataForRendering.reserve(100);
 
 	// the construction INCLUDING HALF THE PREPARATION OF BOUNDING SPHERE RENDERING DATA
-	tResult.m_tBVH.m_pRootNode = BottomUpTree_BoundingSphere(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), rScene);
+	tResult.m_tBVH.m_pRootNode = BottomUpTree_BoundingSphere(rScene.m_vecObjects.data(), rScene.m_vecObjects.size(), tResult);
+	// the other half of the rendering data
 	TraverseTreeForDataForBottomUpRendering_BoundingSphere(tResult.m_tBVH.m_pRootNode, tResult, 0);
+
+	// now for the rendering data of the 2d window
+	ConstructBVHTreeGraphRenderData(tResult);
 
 	return tResult;
 }
 
-void Visualization::ConstructBVHTreeGraph(const BVHRenderingDataTuple& rBVHRenderDataTuple) const
+void Visualization::ConstructBVHTreeGraphRenderData(BVHRenderingDataTuple& rBVHRenderDataTuple)
 {
-	assert(glfwGetCurrentContext() == m_p2DGraphWindow->m_pGLFWwindow); // you are not in the right context!
-
-	const Shader& rCurrentShader = m_tMaskedColorShader2D;
-
-	// TODO: move this calculation out into after the tree is constructed
-
 	// calculate the scaling of of every circle which will represent a node of the tree
 	const float fUsableWidth = static_cast<float>(m_p2DGraphWindow->m_iWindowWidth);// *0.9f; // saving 10% space for padding
 	// the graph of the binary tree will always be more restricted by its width rather than height, so only that has to be considered
@@ -1783,28 +1877,10 @@ void Visualization::ConstructBVHTreeGraph(const BVHRenderingDataTuple& rBVHRende
 
 	// pre-calculations done, starting with recursion
 
-	RecursiveDrawTreeGraph(rBVHRenderDataTuple.m_tBVH.m_pRootNode, tTotalScreenSpace, glm::vec2(-1.0f, -1.0f));
-
-	
-	
-
-	/*int16_t iAlreadyRenderedConstructionSteps = 0;
-	for (const CollisionDetection::TreeNodeForRendering& rCurrentRenderedBVHBoundingSphere : rvecNodesToRender)
-	{
-		bool bIsWithinMaximumRenderedTreeDepth = (rCurrentRenderedBVHBoundingSphere.m_iDepthInTree <= m_iMaximumRenderedTreeDepth);
-		bool bIsWithinMaximumRenderedConstructionSteps = (iAlreadyRenderedConstructionSteps < m_iNumberStepsRendered);
-
-		bool bShallRender = bIsWithinMaximumRenderedConstructionSteps && bIsWithinMaximumRenderedTreeDepth;
-		if (bShallRender)
-		{
-			
-		}
-
-		iAlreadyRenderedConstructionSteps++;
-	}*/
+	RecursiveConstructTreeGraphRenderData(rBVHRenderDataTuple.m_tBVH.m_pRootNode, rBVHRenderDataTuple, tTotalScreenSpace, glm::vec2(-1.0f, -1.0f));
 }
 
-void Visualization::RecursiveDrawTreeGraph(const CollisionDetection::BVHTreeNode * pCurrentNode, ScreenSpaceForGraphRendering tScreenSpaceForThisNode, glm::vec2 vec2PreviousDrawPosition) const
+void Visualization::RecursiveConstructTreeGraphRenderData(const CollisionDetection::BVHTreeNode * pCurrentNode, BVHRenderingDataTuple& rBVHRenderDataTuple, ScreenSpaceForGraphRendering tScreenSpaceForThisNode, glm::vec2 vec2PreviousDrawPosition)
 {
 	assert(pCurrentNode);
 
@@ -1815,8 +1891,14 @@ void Visualization::RecursiveDrawTreeGraph(const CollisionDetection::BVHTreeNode
 	// drawing the node/leaf
 	if (pCurrentNode->IsANode())
 	{
-		DrawNodeAtPosition(vec2CurrentNodeDrawPosition);
-
+		TreeNodeForRendering* pRenderDataOfCurrentNode = FindRenderDataOfNode(pCurrentNode, rBVHRenderDataTuple.m_vecTreeNodeDataForRendering);
+		pRenderDataOfCurrentNode->m_vec2_2DNodeDrawPosition = vec2CurrentNodeDrawPosition;
+		if (vec2PreviousDrawPosition.x > 0.0f) // little "trick" to distinguish between root and every other node/leaf
+		{
+			pRenderDataOfCurrentNode->m_vec2_2DLineToParentOrigin = vec2CurrentNodeDrawPosition;
+			pRenderDataOfCurrentNode->m_vec2_2DLineToParentTarget = vec2PreviousDrawPosition;
+		}
+		
 		if (pCurrentNode->m_pLeft) {
 			ScreenSpaceForGraphRendering tScreenSpaceForLeftChild;
 			tScreenSpaceForLeftChild.m_fWidthStart = tScreenSpaceForThisNode.m_fWidthStart;
@@ -1824,7 +1906,7 @@ void Visualization::RecursiveDrawTreeGraph(const CollisionDetection::BVHTreeNode
 			tScreenSpaceForLeftChild.m_fHeightStart = tScreenSpaceForThisNode.m_fHeightStart;
 			tScreenSpaceForLeftChild.m_fHeightEnd = tScreenSpaceForThisNode.m_fHeightEnd - m_f2DGraphVerticalScreenSpaceReductionPerTreeLevel;
 
-			RecursiveDrawTreeGraph(pCurrentNode->m_pLeft, tScreenSpaceForLeftChild, vec2CurrentNodeDrawPosition);
+			RecursiveConstructTreeGraphRenderData(pCurrentNode->m_pLeft, rBVHRenderDataTuple, tScreenSpaceForLeftChild, vec2CurrentNodeDrawPosition);
 		}
 
 		if (pCurrentNode->m_pRight) {
@@ -1834,20 +1916,19 @@ void Visualization::RecursiveDrawTreeGraph(const CollisionDetection::BVHTreeNode
 			tScreenSpaceForRightChild.m_fHeightStart = tScreenSpaceForThisNode.m_fHeightStart;
 			tScreenSpaceForRightChild.m_fHeightEnd = tScreenSpaceForThisNode.m_fHeightEnd - m_f2DGraphVerticalScreenSpaceReductionPerTreeLevel;
 
-			RecursiveDrawTreeGraph(pCurrentNode->m_pRight, tScreenSpaceForRightChild, vec2CurrentNodeDrawPosition);
+			RecursiveConstructTreeGraphRenderData(pCurrentNode->m_pRight, rBVHRenderDataTuple, tScreenSpaceForRightChild, vec2CurrentNodeDrawPosition);
 		}
 	}
 	else // is a leaf
 	{
-		Draw2DObjectAtPosition(vec2CurrentNodeDrawPosition);
-	}
-
-	// drawing the line between this node/leaf and its parent
-	if (vec2PreviousDrawPosition.x > 0.0f) // little "trick" to distinguish between root and every other node/leaf
-		DrawLineFromTo(vec2CurrentNodeDrawPosition, vec2PreviousDrawPosition);
+		TreeNodeForRendering* pRenderDataOfCurrentLeaf = FindRenderDataOfNode(pCurrentNode, rBVHRenderDataTuple.m_vecTreeLeafDataForRendering);
+		pRenderDataOfCurrentLeaf->m_vec2_2DNodeDrawPosition = vec2CurrentNodeDrawPosition;
+		pRenderDataOfCurrentLeaf->m_vec2_2DLineToParentOrigin = vec2CurrentNodeDrawPosition;
+		pRenderDataOfCurrentLeaf->m_vec2_2DLineToParentTarget = vec2PreviousDrawPosition;
+	}	
 }
 
-void Visualization::DrawNodeAtPosition(glm::vec2 vec2ScreenSpacePosition) const
+void Visualization::DrawNodeAtPosition(glm::vec2 vec2ScreenSpacePosition, const glm::vec4& rvec4DrawColor) const
 {
 	glAssert();
 	const Shader& rCurrentShader = m_tMaskedColorShader2D;
@@ -1871,7 +1952,7 @@ void Visualization::DrawNodeAtPosition(glm::vec2 vec2ScreenSpacePosition) const
 	rCurrentShader.setMat4("orthoProjection", m_mat4OrthographicProjection2DWindow);
 
 	// setting the color red
-	rCurrentShader.setVec4("color", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	rCurrentShader.setVec4("color", rvec4DrawColor);
 
 	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 }
@@ -1914,7 +1995,7 @@ void Visualization::DrawLineFromTo(glm::vec2 vec2From, glm::vec2 vec2To) const
 	glDrawArrays(GL_LINES, 0, 2);
 }
 
-void Visualization::Draw2DObjectAtPosition(glm::vec2 vec2ScreenSpacePosition) const
+void Visualization::Draw2DObjectAtPosition(glm::vec2 vec2ScreenSpacePosition, const glm::vec4& rvec4DrawColor) const
 {
 	glAssert();
 	const Shader& rCurrentShader = m_tMaskedColorShader2D;
@@ -1938,7 +2019,7 @@ void Visualization::Draw2DObjectAtPosition(glm::vec2 vec2ScreenSpacePosition) co
 	rCurrentShader.setMat4("orthoProjection", m_mat4OrthographicProjection2DWindow);
 
 	// setting the color
-	rCurrentShader.setVec4("color", glm::vec4(0.0f, 0.0f, 0.55f, 1.0f));
+	rCurrentShader.setVec4("color", rvec4DrawColor);
 
 	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sizeof(Primitives::Plane::IndexData) / sizeof(GLuint)), GL_UNSIGNED_INT, 0);
 }

@@ -91,9 +91,10 @@ void GUI::RenderMainMenu(Engine& rEngine)
 	//ImGui::Text("TRANSPARENT MENU BACK GROUND");
 
 	ImGuiWindowFlags menuFlags = 0;
-	ImVec2 mainMenuWindowSize(rEngine.GetMainWindow()->m_iWindowWidth / 2, rEngine.GetMainWindow()->m_iWindowHeight);
-	ImVec2 mainMenuWindowPosition(main_viewport->GetCenter().x - rEngine.GetMainWindow()->m_iWindowWidth / 4, main_viewport->WorkPos.y);
-	ImGui::SetNextWindowPos(mainMenuWindowPosition);
+	ImVec2 mainMenuWindowSize(rEngine.GetMainWindow()->m_iWindowWidth / 4, rEngine.GetMainWindow()->m_iWindowHeight / 2);
+	//ImVec2 mainMenuWindowPosition(main_viewport->GetCenter().x - rEngine.GetMainWindow()->m_iWindowWidth / 2, main_viewport->WorkPos.y);
+	ImVec2 mainMenuWindowPosition(main_viewport->GetWorkCenter());
+	ImGui::SetNextWindowPos(mainMenuWindowPosition, 0, ImVec2(0.5f, 0.5f));
 	ImGui::SetNextWindowBgAlpha(1.0f);
 	ImGui::BeginChild("Main Menu", mainMenuWindowSize, true, menuFlags);
 

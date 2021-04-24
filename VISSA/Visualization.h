@@ -25,16 +25,22 @@ public:
 private:
 	struct TreeNodeForRendering {
 		CollisionDetection::BVHTreeNode* m_pNodeToBeRendered;
+		glm::vec2 m_vec2_2DNodeDrawPosition;
+		glm::vec2 m_vec2_2DLineToParentOrigin;
+		glm::vec2 m_vec2_2DLineToParentTarget;
 		int16_t m_iDepthInTree = 0u;
 		int16_t m_iRenderingOrder = 0u; // when stepping through the simulation, this determines in which order node bounding volumes are rendered.
 	};
 
+
 	struct BVHRenderingDataTuple {
 		CollisionDetection::BoundingVolumeHierarchy m_tBVH;
 		std::vector<TreeNodeForRendering> m_vecTreeNodeDataForRendering;
+		std::vector<TreeNodeForRendering> m_vecTreeLeafDataForRendering; // currently only used for rendering in the graph window
 		void DeleteAllData(){
 			m_tBVH.DeleteTree();
 			m_vecTreeNodeDataForRendering.clear();
+			m_vecTreeLeafDataForRendering.clear();
 		}
 	};
 public:
@@ -64,7 +70,7 @@ private:
 	BVHRenderingDataTuple m_tBottomUpAABBs;
 	BVHRenderingDataTuple m_tTopDownBoundingSpheres;
 	BVHRenderingDataTuple m_tBottomUpBoundingSpheres;
-	BVHRenderingDataTuple* m_pCurrentlyActiveConstructionStrategy;
+	BVHRenderingDataTuple* m_pCurrentlyActiveConstructionStrategy;	// todo: update the GUI to refer to this, also use it for all rendering purposes
 public:
 	//struct WindodContext3D {
 	// the window
@@ -159,9 +165,10 @@ public:
 	void Update(float fDeltaTime);
 	
 
-	// input
-	void ProcessMouseMovement(GLFWwindow* pWindow, double dXPosition, double dYPosition);
-	void ProcessMouseClick(GLFWwindow * pWindow, int iButton, int iAction, int iModifiers);
+	// callbacks
+	void MouseMoveCallback(GLFWwindow* pWindow, double dXPosition, double dYPosition);
+	void MouseClickCallback(GLFWwindow * pWindow, int iButton, int iAction, int iModifiers);
+	void WindowResizeCallBack(GLFWwindow* pWindow, int iNewWidth, int iNewHeight);
 	void ProcessKeyboardInput();
 
 	// simulation controls
@@ -208,7 +215,7 @@ private:
 	/*
 		TODO: DOC
 	*/
-	CollisionDetection::BVHTreeNode* BottomUpTree_AABB(SceneObject* pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization);
+	CollisionDetection::BVHTreeNode* BottomUpTree_AABB(SceneObject* pSceneObjects, size_t uiNumSceneObjects, BVHRenderingDataTuple& rBVHRenderDataTuple);
 	/*
 		recursive function that constructs a top down Bounding Sphere tree
 	*/
@@ -216,7 +223,7 @@ private:
 	/*
 		TODO: DOC
 	*/
-	CollisionDetection::BVHTreeNode* BottomUpTree_BoundingSphere(SceneObject* pSceneObjects, size_t uiNumSceneObjects, Visualization& rVisualization);
+	CollisionDetection::BVHTreeNode* BottomUpTree_BoundingSphere(SceneObject* pSceneObjects, size_t uiNumSceneObjects, BVHRenderingDataTuple& rBVHRenderDataTuple);
 	/*
 		TODO: DOC
 	*/
@@ -233,6 +240,11 @@ private:
 		TODO: DOC
 	*/
 	void TraverseTreeForDataForBottomUpRendering_BoundingSphere(CollisionDetection::BVHTreeNode* pNode, BVHRenderingDataTuple& rBVHRenderDataTuple, int16_t iDepthInTree);
+	/*
+		TODO: DOC
+	*/
+	TreeNodeForRendering* FindRenderDataOfNode(const CollisionDetection::BVHTreeNode* pNode, std::vector< TreeNodeForRendering>& rvecRenderData) const;
+
 
 	// loading and setup
 	void InitPlaybackSpeeds();
@@ -247,13 +259,13 @@ private:
 	void Render2DGraph() const;
 	void UpdateFrameConstants();
 	void UpdateProjectionMatrices();
-	void Render3DVisualization() const;
+	void Render3DVisualization();
 	void RenderVisualizationGUI();
 	void RenderRealObjects() const;
 	void RenderHUDComponents() const;
 	void RenderDataStructureObjects() const;
 	void Render3DSceneConstants() const;
-	void RenderTreeNodeAABB(const TreeNodeForRendering& rTreeNodeAABB, const Shader& rShader) const;
+	void RenderTreeNodeAABB(const TreeNodeForRendering& rTreeNodeAABB, const Shader& rShader) const;			// todo: reconsider if that shader parameter is really needed
 	void RenderTreeNodeBoundingsphere(const TreeNodeForRendering& rTreeNodeAABB, const Shader& rShader) const;
 	void RenderAABBOfSceneObject(const SceneObject& rSceneObject, const Shader& rShader) const;
 	void RenderBoundingSphereOfSceneObject(const SceneObject& rSceneObject, const Shader& rShader) const;
@@ -285,9 +297,9 @@ private:
 	BVHRenderingDataTuple ConstructBottomUpBoundingSphereBVHandRenderDataForScene(Visualization& rScene);
 
 	// 2D graph
-	void ConstructBVHTreeGraph(const BVHRenderingDataTuple& rBVHRenderDataTuple) const;
-	void RecursiveDrawTreeGraph(const CollisionDetection::BVHTreeNode* pCurrentNode, ScreenSpaceForGraphRendering tScreenSpaceForThisNode, glm::vec2 vec2PreviousDrawPosition) const;
-	void DrawNodeAtPosition(glm::vec2 vec2ScreenSpacePosition) const;
+	void ConstructBVHTreeGraphRenderData(BVHRenderingDataTuple& rBVHRenderDataTuple);
+	void RecursiveConstructTreeGraphRenderData(const CollisionDetection::BVHTreeNode* pCurrentNode, BVHRenderingDataTuple& rBVHRenderDataTuple, ScreenSpaceForGraphRendering tScreenSpaceForThisNode, glm::vec2 vec2PreviousDrawPosition);
+	void DrawNodeAtPosition(glm::vec2 vec2ScreenSpacePosition, const glm::vec4& rvec4DrawColor) const;
+	void Draw2DObjectAtPosition(glm::vec2 vec2ScreenSpacePosition, const glm::vec4& rvec4DrawColor) const;
 	void DrawLineFromTo(glm::vec2 vec2From, glm::vec2 vec2To) const;
-	void Draw2DObjectAtPosition(glm::vec2 vec2ScreenSpacePosition) const;
 };

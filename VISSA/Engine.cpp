@@ -215,17 +215,17 @@ bool Engine::IsDiscreteKeyReadyForWindow(GLFWwindow* pWindow, int iKey)
 
 void Engine::ResizeWindowCallback(GLFWwindow* pWindow, int iNewWidth, int iNewHeight)
 {
-	assert(!"window resizing currently not accounted for and is disabled in general. You should not land here.");
 
 	Engine* pEngine = GetGlobalEngine();
 
-	// TODO: this is not clean. needs proper handling on window per window basis
 	if (pWindow == pEngine->m_pMainWindow->m_pGLFWwindow)
 	{
 		pEngine->m_pMainWindow->m_iWindowWidth = iNewWidth;
 		pEngine->m_pMainWindow->m_iWindowHeight = iNewHeight;
+		pEngine->m_pMainWindow->SetAsCurrentRenderContext();
 		glViewport(0, 0, iNewWidth, iNewHeight);
 	}
+
 }
 
 void Engine::MouseScrollCallBack(GLFWwindow* pWindow, double fXOffset, double fYOffset)
@@ -254,7 +254,7 @@ void Engine::MouseMoveCallBack(GLFWwindow* pWindow, double dXPosition, double dY
 
 		// also forwarding the mouse move to the current visualization to handle it
 		if (pEngine->m_pVisualization)
-			pEngine->m_pVisualization->ProcessMouseMovement(pWindow, dXPosition, dYPosition);
+			pEngine->m_pVisualization->MouseMoveCallback(pWindow, dXPosition, dYPosition);
 	}
 }
 
@@ -273,7 +273,7 @@ void Engine::MouseClickCallBack(GLFWwindow * pWindow, int iButton, int iAction, 
 
 		// also forwarding the mouse click to the current visualization to handle it
 		if (pEngine->m_pVisualization)
-			pEngine->m_pVisualization->ProcessMouseClick(pWindow, iButton, iAction, iModifiers);
+			pEngine->m_pVisualization->MouseClickCallback(pWindow, iButton, iAction, iModifiers);
 	}
 }
 

@@ -91,11 +91,7 @@ namespace CollisionDetection {
 		}
 	};
 
-	struct BoundingVolumeHierarchy {
-		//BoundingVolumeHierarchy();
-		//~BoundingVolumeHierarchy();
-		//BoundingVolumeHierarchy(BoundingVolumeHierarchy& rOther);
-		//BoundingVolumeHierarchy& operator=(BoundingVolumeHierarchy tOther);
+	struct BoundingVolumeHierarchy {			// todo: turn this into a class with a destructor that ensures deletion of tree
 		BVHTreeNode* m_pRootNode = nullptr;
 		int16_t m_iTDeepestDepthOfNodes = 0;
 
