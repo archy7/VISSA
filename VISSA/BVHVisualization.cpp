@@ -2535,7 +2535,7 @@ void BVHVisualization::RenderHelpWindow()
 	ImGui::Begin("Help", &m_bShowHelpWindow, window_flags);
 	//ImGui::SetWindowFocus();
 
-	ImGui::Text("Visualization for Bounding Volume Hierarchies: In the main window, you can see the 3D scene. In the second window, you can see the BVH Tree represented as a graph");
+	ImGui::TextWrapped("Visualization for Bounding Volume Hierarchies: In the main window, you can see the 3D scene. In the second window, you can see the BVH Tree represented as a graph.");
 	ImGui::Separator();
 	ImGui::Text("Controls");
 	ImGui::Text("[ESC] : Opens Main Menu");
