@@ -9,6 +9,9 @@
 #include <sstream>
 #include <iostream>
 
+/*
+	todo: this class needs more consideration
+*/
 class Shader
 {
 public:

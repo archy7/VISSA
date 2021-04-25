@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 
+#include "BVHVisualization.h"
+
 GUI::GUI() :
 	m_bShowMainMenu(true)
 {
@@ -91,7 +93,7 @@ void GUI::RenderMainMenu(Engine& rEngine)
 	//ImGui::Text("TRANSPARENT MENU BACK GROUND");
 
 	ImGuiWindowFlags menuFlags = 0;
-	ImVec2 mainMenuWindowSize(rEngine.GetMainWindow()->m_iWindowWidth / 4, rEngine.GetMainWindow()->m_iWindowHeight / 2);
+	ImVec2 mainMenuWindowSize(static_cast<float>(rEngine.GetMainWindow()->m_iWindowWidth) / 4.0f, static_cast<float>(rEngine.GetMainWindow()->m_iWindowHeight) / 2.0f);
 	//ImVec2 mainMenuWindowPosition(main_viewport->GetCenter().x - rEngine.GetMainWindow()->m_iWindowWidth / 2, main_viewport->WorkPos.y);
 	ImVec2 mainMenuWindowPosition(main_viewport->GetWorkCenter());
 	ImGui::SetNextWindowPos(mainMenuWindowPosition, 0, ImVec2(0.5f, 0.5f));
@@ -109,6 +111,15 @@ void GUI::RenderMainMenu(Engine& rEngine)
 	//{
 	//	ImGui::OpenPopup("OPTIONS");
 	//}
+	if (rEngine.m_pVisualization)
+	{
+		if (ImGui::Button("CLOSE VISUALIZATION"))
+		{
+			delete rEngine.m_pVisualization;
+			rEngine.m_pVisualization = nullptr;
+			glfwSetWindowTitle(rEngine.m_pMainWindow->m_pGLFWwindow, "VISSA");
+		}
+	}
 	if (ImGui::Button("QUIT"))
 	{
 		ImGui::OpenPopup("CONFIRM QUIT");
@@ -157,12 +168,12 @@ void GUI::ConditionallyRenderVisualizationSelectionMenu(Engine& rEngine)
 	{
 		if (ImGui::Button("BOUNDING VOLUME HIERARCHY", ImVec2(0, 0)))
 		{
-			// CD relevant
-			rEngine.m_pVisualization = new Visualization(*Engine::GetMainWindow());
-			rEngine.m_pVisualization->Load();	// really bad implementation of "loading"
+			// Visualization relevant
+			delete rEngine.m_pVisualization;
+			rEngine.m_pVisualization = new BVHVisualization(Engine::GetMainWindow());
+			rEngine.m_pVisualization->Load();
 
 			// UI relevant
-			//m_bCaptureMouse = false;
 			ImGui::CloseCurrentPopup();
 			m_bShowMainMenu = false;
 		}

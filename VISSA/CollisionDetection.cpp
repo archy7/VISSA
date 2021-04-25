@@ -3,7 +3,8 @@
 #include <limits>
 #include <algorithm>
 
-#include "Visualization.h"
+//#include "Visualization.h"
+#include "Scene.h"
 #include "SceneObject.h"
 #include "GeometricPrimitiveData.h"
 
@@ -205,7 +206,7 @@ float CollisionDetection::BoundingSphere::CalcMaximumZ() const
 	return m_vec3Center.z + m_fRadius;
 }
 
-void CollisionDetection::ConstructBoundingVolumesForScene(Visualization& rScene)
+void CollisionDetection::ConstructBoundingVolumesForScene(Scene& rScene)
 {
 	for (SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
 	{
@@ -229,7 +230,7 @@ void CollisionDetection::ConstructBoundingVolumesForScene(Visualization& rScene)
 	}
 }
 
-void CollisionDetection::UpdateBoundingVolumesForScene(Visualization & rScene)
+void CollisionDetection::UpdateBoundingVolumesForScene(Scene& rScene)
 {
 	for (SceneObject& rCurrentSceneObject : rScene.m_vecObjects)
 	{

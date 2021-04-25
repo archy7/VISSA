@@ -137,6 +137,7 @@ void Engine::MainLoop()
 		if (m_pVisualization)
 			m_pVisualization->Render();
 		
+		m_pMainWindow->SetAsCurrentRenderContext();
 		m_tGUI.Render(*this);
 
 		// Rendering

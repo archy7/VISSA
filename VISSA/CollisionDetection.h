@@ -6,6 +6,7 @@
 
 class Visualization;
 struct SceneObject;
+class Scene;
 
 
 namespace CollisionDetection {
@@ -57,8 +58,8 @@ namespace CollisionDetection {
 		bool IntersectionWithObjectOccured() const { return m_pFirstIntersectedSceneObject; }
 	};	
 
-	void ConstructBoundingVolumesForScene(Visualization& rScene);
-	void UpdateBoundingVolumesForScene(Visualization& rScene);
+	void ConstructBoundingVolumesForScene(Scene & rScene);
+	void UpdateBoundingVolumesForScene(Scene& rScene);
 	int StaticTestAABBagainstAABB(const AABB& rAABB, const AABB& rOtherAABB);
 	AABB CreateAABBForMultipleObjects(const SceneObject * pSceneObjects, size_t uiNumSceneObjects);
 	/*
