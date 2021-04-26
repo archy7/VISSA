@@ -840,7 +840,11 @@ BVHVisualization::eBVHBoundingVolume BVHVisualization::GetCurrentBVHBoundingVolu
 
 void BVHVisualization::SetNewBVHBoundingVolume(eBVHBoundingVolume eNewBoundingVolume)
 {
-	m_eBVHBoundingVolume = eNewBoundingVolume;
+	if (m_eBVHBoundingVolume != eNewBoundingVolume)
+	{
+		m_eBVHBoundingVolume = eNewBoundingVolume;
+		ResetSimulation();
+	}
 }
 
 void BVHVisualization::DeleteGivenObject(SceneObject* pToBeDeletedObject)
@@ -2158,6 +2162,10 @@ void BVHVisualization::RenderSimOptions()
 			if (ImGui::Button("Default Scene", ImVec2(120, 0)))
 			{
 				LoadDefaultScene(m_tScene);
+				CollisionDetection::ConstructBoundingVolumesForScene(m_tScene);
+				CollisionDetection::UpdateBoundingVolumesForScene(m_tScene);
+				ReconstructAllTrees();
+				ResetSimulation();
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::SameLine(); GUI::HelpMarker("The scene which is loaded when you first start the Bounding Volume Hierarchy Visualization");
