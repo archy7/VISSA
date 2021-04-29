@@ -184,7 +184,9 @@ private:
 	void DecreaseSimulationSpeed();
 	float GetCurrentSimulationSpeed() const;
 	void InvertSimulationProgression();			// instead of advancing "forward", the simulation now rolls "back", and vice versa
+	void MoveToPreviousSimulationStep();
 	void MoveToNextSimulationStep();
+	void AdvanceSimulationInCurrentDirection();
 
 	// options and  parameters
 	eBVHConstructionStrategy GetCurrenBVHConstructionStrategy() const;
@@ -232,8 +234,9 @@ private:
 	void RenderObjectCreationWindow();
 	void RenderHelpWindow();
 	void CancelObjectPropertiesChanges();
-	bool IsMouseCaptured() const;
-	void SetCaptureMouse(bool bIsCapturedNow);
+	bool IsMouseCapturedByGUI() const;
+	bool IsCameraModeActive() const;	// convenience function for better clarity. Camera mode is active when mouse is captured.
+	void SetGUICaptureMouse(bool bIsCapturedNow);
 	void SetFocusedObject(SceneObject* pFocusedObject);
 	void SetObjectPropertiesWindowPosition(float fXPosition, float fYPosition);
 

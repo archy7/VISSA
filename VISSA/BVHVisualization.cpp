@@ -67,7 +67,7 @@ BVHVisualization::BVHVisualization(Window* pMainWindow) :
 	m_pCurrentlyFocusedObject(nullptr),
 	m_fCrossHairScaling(1.0f),
 	m_fRenderDistance(10000.0f),
-	m_uiCurrentPlayBackSpeedIndex(0u),
+	m_uiCurrentPlayBackSpeedIndex(2u),
 	m_iSimulationDirectionSign(0),
 	m_fAccumulatedTimeSinceLastUpdateStep(0.0f),
 	m_f2DGraphNodeSize(0.0f),
@@ -77,9 +77,9 @@ BVHVisualization::BVHVisualization(Window* pMainWindow) :
 	m_bRenderGridXPlane(false),
 	m_bRenderGridYPlane(false),
 	m_bRenderGridZPlane(false),
-	m_bNodeDepthColorGrading(false),
+	m_bNodeDepthColorGrading(true),
 	m_bGUICaptureMouse(true),
-	m_bShowSimulationOptions(false),
+	m_bShowSimulationOptions(true),
 	m_bShowObjectCreationWindow(false),
 	m_bShowObjectPropertiesWindow(false),
 	m_bShowHelpWindow(true),
@@ -163,7 +163,7 @@ void BVHVisualization::Update(float fDeltaTime)
 		m_fAccumulatedTimeSinceLastUpdateStep += fPlaybackSpeedAdjustedDeltaTime;
 		if (m_fAccumulatedTimeSinceLastUpdateStep >= 1.0f)
 		{
-			MoveToNextSimulationStep();
+			AdvanceSimulationInCurrentDirection();
 			m_fAccumulatedTimeSinceLastUpdateStep -= 1.0f;
 		}
 	}
@@ -771,7 +771,7 @@ void BVHVisualization::ResetSimulation()
 	m_iMaximumRenderedTreeDepth = 100;
 	m_iSimulationDirectionSign = 1;
 	m_ePresentationMode = DISCRETE;
-	m_uiCurrentPlayBackSpeedIndex = 2u;
+	//m_uiCurrentPlayBackSpeedIndex = 2u; // no longer resetting playback speed
 }
 
 void BVHVisualization::PlaySimulation()
@@ -809,14 +809,34 @@ void BVHVisualization::InvertSimulationProgression()
 	m_iSimulationDirectionSign *= -1;
 }
 
-void BVHVisualization::MoveToNextSimulationStep()
+void BVHVisualization::MoveToPreviousSimulationStep()
 {
-	const int iNextNumberOfConstructionStepsRendered = m_iNumberStepsRendered + m_iSimulationDirectionSign;
+	const int iNextNumberOfConstructionStepsRendered = m_iNumberStepsRendered - 1;
 
 	// bounds checks
 	m_iNumberStepsRendered = std::max<int>(0, iNextNumberOfConstructionStepsRendered);
 	assert(m_tTopDownAABBs.m_vecTreeNodeDataForRendering.size() <= std::numeric_limits<int>::max());	// make sure that number fits or chaos might ensue. This assertion will probably never fire... but it doesnt hurt either
 	m_iNumberStepsRendered = std::min<int>(m_iNumberStepsRendered, static_cast<int>(m_tTopDownAABBs.m_vecTreeNodeDataForRendering.size())); // todo: rework to dynamically work with current set BVH
+}
+
+void BVHVisualization::MoveToNextSimulationStep()
+{
+	const int iNextNumberOfConstructionStepsRendered = m_iNumberStepsRendered + 1;
+
+	// bounds checks
+	m_iNumberStepsRendered = std::max<int>(0, iNextNumberOfConstructionStepsRendered);
+	assert(m_tTopDownAABBs.m_vecTreeNodeDataForRendering.size() <= std::numeric_limits<int>::max());	// make sure that number fits or chaos might ensue. This assertion will probably never fire... but it doesnt hurt either
+	m_iNumberStepsRendered = std::min<int>(m_iNumberStepsRendered, static_cast<int>(m_tTopDownAABBs.m_vecTreeNodeDataForRendering.size())); // todo: rework to dynamically work with current set BVH
+}
+
+void BVHVisualization::AdvanceSimulationInCurrentDirection()
+{
+	if (m_iSimulationDirectionSign == 1)
+		MoveToNextSimulationStep();
+	else if (m_iSimulationDirectionSign == -1)
+		MoveToPreviousSimulationStep();
+	else
+		assert(!"disaster");
 }
 
 BVHVisualization::eBVHConstructionStrategy BVHVisualization::GetCurrenBVHConstructionStrategy() const
@@ -2091,7 +2111,6 @@ void BVHVisualization::RenderSimControlPanel()
 	if (ImGui::Button("RESET"))
 		ResetSimulation();
 	ImGui::SameLine();
-
 	if (m_ePresentationMode == BVHVisualization::ePresentationMode::DISCRETE)
 	{
 		if (ImGui::Button("PLAY"))
@@ -2102,14 +2121,21 @@ void BVHVisualization::RenderSimControlPanel()
 		if (ImGui::Button("PAUSE"))
 			PauseSimulation();
 	}
-	ImGui::SameLine();
-	if (ImGui::Button("STEP"))
-		MoveToNextSimulationStep();
+
 	ImGui::SameLine();
 	std::string sInverButtonLabel = (m_iSimulationDirectionSign == 1) ? "REVERSE PLAYBACK" : "FORWARD PLAYBACK";
 	if (ImGui::Button(sInverButtonLabel.c_str()))
 		InvertSimulationProgression();
 
+	ImGui::SameLine();
+	if (ImGui::Button("STEP FORWARD"))
+		MoveToNextSimulationStep();
+
+	ImGui::SameLine();
+	if (ImGui::Button("STEP BACK"))
+		MoveToPreviousSimulationStep();
+
+	// next line
 
 	if (ImGui::Button("SLOWER"))
 		DecreaseSimulationSpeed();
@@ -2119,12 +2145,24 @@ void BVHVisualization::RenderSimControlPanel()
 	if (ImGui::Button("FASTER"))
 		IncreaseSimulationSpeed();
 
+	// next line
+
 	ImGui::Separator();
 	if (ImGui::Button("SIMULATION OPTIONS"))
 		m_bShowSimulationOptions = !m_bShowSimulationOptions;
 	ImGui::SameLine();
 	if (ImGui::Button("HELP"))
 		ToggleHelpWindow();
+	ImGui::SameLine();
+	if (IsCameraModeActive())
+	{
+		ImGui::Text("Camera Mode active.");
+	}
+	else // -> cursor mode
+	{
+		ImGui::Text("Cursor Mode active.");
+	}	
+	ImGui::SameLine(); GUI::HelpMarker("Toggle between Camera and Cursor Mode by pressing [M]");
 
 	ImGui::End();
 }
@@ -2268,7 +2306,7 @@ void BVHVisualization::RenderSimOptions()
 	{
 		ImGui::Text("TOP DOWN OPTIONS AND PARAMETERS");
 		ImGui::ColorEdit3("Node Color##TOPDOWN", (float*)&m_vec4TopDownNodeRenderColor, iColorPickerFlags); ImGui::SameLine();
-		ImGui::Checkbox("Gradient##TOPDOWN", &m_bNodeDepthColorGrading);
+		ImGui::Checkbox("Gradient##TOPDOWN", &m_bNodeDepthColorGrading); ImGui::SameLine(); GUI::HelpMarker("When active, the BVH's Bounding Volumes will be colou graded depending on their depth in the hierarchy");
 		if (m_bNodeDepthColorGrading)
 			ImGui::ColorEdit3("Node Gradient Color##TOPDOWN", (float*)&m_vec4TopDownNodeRenderColor_Gradient, iColorPickerFlags);
 	}
@@ -2278,7 +2316,7 @@ void BVHVisualization::RenderSimOptions()
 	{
 		ImGui::Text("BOTTOM UP OPTIONS AND PARAMETERS");
 		ImGui::ColorEdit3("Node Color##BOTTOMUP", (float*)&m_vec4BottomUpNodeRenderColor, iColorPickerFlags); ImGui::SameLine();
-		ImGui::Checkbox("Gradient##BOTTOMUP", &m_bNodeDepthColorGrading);
+		ImGui::Checkbox("Gradient##BOTTOMUP", &m_bNodeDepthColorGrading); ImGui::SameLine(); GUI::HelpMarker("When active, the BVH's Bounding Volumes will be colou graded depending on their depth in the hierarchy");
 		if (m_bNodeDepthColorGrading)
 			ImGui::ColorEdit3("Node Gradient Color##BOTTOMUP", (float*)&m_vec4BottomUpNodeRenderColor_Gradient, iColorPickerFlags);
 	}
@@ -2384,13 +2422,13 @@ void BVHVisualization::RenderObjectPropertiesWindow()
 	ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsDecimal;// | ImGuiInputTextFlags_EnterReturnsTrue;
 	if (ImGui::InputFloat3("Position", &(m_pCurrentlyFocusedObject->m_tTransform.m_vec3Position.x), "%.2f", flags))
 		m_bObjectPropertiesPendingChanges = true;
-	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z]");
+	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z] in cm");
 	if (ImGui::InputFloat3("Scale", &(m_pCurrentlyFocusedObject->m_tTransform.m_vec3Scale.x), "%.2f", flags))
 		m_bObjectPropertiesPendingChanges = true;
 	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z]");
 	if (ImGui::InputFloat4("Rotation", &(m_pCurrentlyFocusedObject->m_tTransform.m_tRotation.m_vec3Axis.x), "%.2f", flags))
 		m_bObjectPropertiesPendingChanges = true;
-	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z][angle]");
+	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z][angle] in degrees");
 	if (ImGui::Button("DELETE OBJECT"))
 	{
 		ImGui::OpenPopup("CONFIRM OBJECT DELETION");
@@ -2499,11 +2537,11 @@ void BVHVisualization::RenderObjectCreationWindow()
 
 	ImGuiInputTextFlags flags = ImGuiInputTextFlags_CharsDecimal;
 	ImGui::InputFloat3("Position", &(pObjectCreationData->m_tTransform.m_vec3Position.x), "%.2f", flags);
-	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z]");
+	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z] in cm");
 	ImGui::InputFloat3("Scale", &(pObjectCreationData->m_tTransform.m_vec3Scale.x), "%.2f", flags);
 	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z]");
 	ImGui::InputFloat4("Rotation", &(pObjectCreationData->m_tTransform.m_tRotation.m_vec3Axis.x), "%.2f", flags);
-	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z][angle]");
+	ImGui::SameLine(); GUI::HelpMarker("[X][Y][Z][angle] in degrees");
 
 	ImGui::TextWrapped("Creating a new object [OK] will invalidate the BVH. It will automatically be reconstructed and the visualization reset.");
 
@@ -2580,12 +2618,17 @@ void BVHVisualization::CancelObjectPropertiesChanges()
 	m_bObjectPropertiesPendingChanges = false; // reset this flag
 }
 
-bool BVHVisualization::IsMouseCaptured() const
+bool BVHVisualization::IsMouseCapturedByGUI() const
 {
 	return m_bGUICaptureMouse;
 }
 
-void BVHVisualization::SetCaptureMouse(bool bIsCapturedNow)
+bool BVHVisualization::IsCameraModeActive() const
+{
+	return IsMouseCapturedByGUI();
+}
+
+void BVHVisualization::SetGUICaptureMouse(bool bIsCapturedNow)
 {
 	m_bGUICaptureMouse = bIsCapturedNow;
 }
