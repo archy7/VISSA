@@ -94,13 +94,14 @@ BVHVisualization::BVHVisualization(Window* pMainWindow) :
 
 BVHVisualization::~BVHVisualization()
 {
-	FreeGPUResources();
-	delete m_p2DGraphWindow;
-
 	m_tTopDownAABBs.m_tBVH.DeleteTree();
 	m_tBottomUpAABBs.m_tBVH.DeleteTree();
 	m_tTopDownBoundingSpheres.m_tBVH.DeleteTree();
 	m_tBottomUpBoundingSpheres.m_tBVH.DeleteTree();
+
+	FreeGPUResources();
+	glfwDestroyWindow(m_p2DGraphWindow->m_pGLFWwindow);
+	delete m_p2DGraphWindow;
 }
 
 void BVHVisualization::Load()
@@ -219,16 +220,18 @@ void BVHVisualization::MouseClickCallback(GLFWwindow * pWindow, int iButton, int
 	{
 		if (iButton == GLFW_MOUSE_BUTTON_LEFT && iAction == GLFW_PRESS) // single click of left mouse button
 		{
-
-			if (m_pMainWindow->IsMouseCaptured())
+			if (!m_bShowHelpWindow) // only allow non GUI mouse clicks when the help window is not visible
 			{
-				// reacting to clicks made while camera control is active
-				CrosshairClick();
-			}
-			else
-			{
-				// reacting to clicks of a freely moving cursor
-				CursorClick();
+				if (m_pMainWindow->IsMouseCaptured())
+				{
+					// reacting to clicks made while camera control is active
+					CrosshairClick();
+				}
+				else
+				{
+					// reacting to clicks of a freely moving cursor
+					CursorClick();
+				}
 			}
 		}
 	}
@@ -2625,7 +2628,7 @@ bool BVHVisualization::IsMouseCapturedByGUI() const
 
 bool BVHVisualization::IsCameraModeActive() const
 {
-	return IsMouseCapturedByGUI();
+	return !IsMouseCapturedByGUI();
 }
 
 void BVHVisualization::SetGUICaptureMouse(bool bIsCapturedNow)

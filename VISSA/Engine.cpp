@@ -163,7 +163,6 @@ void Engine::ProcessKeyboardInput()
 	*/
 	if (!ImGui::GetIO().WantCaptureKeyboard)
 	{
-
 		/*
 			inputs for the engine itself
 		*/
