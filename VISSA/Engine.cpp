@@ -124,15 +124,14 @@ void Engine::MainLoop()
 
 		// main window
 		// 3D
-		m_tRenderer.RenderIntoMainWindow(*m_pMainWindow);
-		// GUI
 		m_pMainWindow->SetAsCurrentRenderContext();
+		m_tRenderer.RenderIntoMainWindow();
+		// GUI
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		
 		// visualization
 		if (m_pVisualization)
 			m_pVisualization->Render();

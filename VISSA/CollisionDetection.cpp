@@ -116,7 +116,7 @@ float CollisionDetection::AABB::CalcMinimumX() const
 {
 	assert(glm::length(m_vec3Radius) > 0.0f);
 
-	return m_vec3Center.x - m_vec3Radius.x;;
+	return m_vec3Center.x - m_vec3Radius.x;
 }
 
 float CollisionDetection::AABB::CalcMinimumY() const

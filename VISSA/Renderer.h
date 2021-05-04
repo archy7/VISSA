@@ -58,7 +58,7 @@ public:
 	// during a frame and before rendering, this updates some objects that will be constant for the duration of a frame, i.e. camera and projection matrix
 	void UpdateFrameConstants(const Camera& rCamera, const Window& rWindow);
 	void UpdateProjectionMatrices(const Camera& rCamera, const Window& rWindow);
-	void RenderIntoMainWindow(Window& rWindow);
+	void RenderIntoMainWindow();
 
 	static glm::vec3 ConstructRayDirectionFromMousePosition(const Window& rWindow, const glm::mat4& rmat4PerspectiveProjection, const glm::mat4& rmat4Camera);
 	static GLuint LoadTextureFromFile(const char* sPath);

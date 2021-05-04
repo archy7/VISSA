@@ -257,10 +257,8 @@ void Renderer::SetInitialOpenGLState()
 	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis. This is here for now until I find a better place to put it
 }
 
-void Renderer::RenderIntoMainWindow(Window & rWindow)
+void Renderer::RenderIntoMainWindow()
 {
-	rWindow.SetAsCurrentRenderContext();
-
 	glAssert();
 
 	glClearColor(m_vec4fMainWindowClearColor.r, m_vec4fMainWindowClearColor.g, m_vec4fMainWindowClearColor.b, m_vec4fMainWindowClearColor.a);

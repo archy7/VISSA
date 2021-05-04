@@ -668,8 +668,6 @@ void BVHVisualization::RenderDataStructureObjects() const
 	// AABBs
 	if (m_bRenderObjectAABBs)
 	{
-		// render colour yellow for AABBs
-		glm::vec4 vec4AABBRenderColor(1.0f, 1.0f, 0.0f, 1.0f);
 		rCurrentShader.setVec4("color", m_vec4AABBColor);
 
 		for (const SceneObject& rCurrentSceneObject : m_tScene.m_vecObjects)
