@@ -212,7 +212,7 @@ void CollisionDetection::ConstructBoundingVolumesForScene(Scene& rScene)
 	{
 		if (rCurrentSceneObject.m_eType == SceneObject::eType::CUBE)
 		{
-			rCurrentSceneObject.m_tLocalSpaceAABB = ConstructAABBFromVertexData(Primitives::Cube::VertexData, sizeof(Primitives::Cube::IndexData) / sizeof(GLfloat));
+			rCurrentSceneObject.m_tLocalSpaceAABB = ConstructAABBFromVertexData(Primitives::Cube::VertexData, sizeof(Primitives::Cube::VertexData) / (sizeof(GLfloat) *  8u)); // 8 floats per vertex
 			//rCurrentSceneObject.m_tLocalSpaceBoundingSphere = ConstructBoundingSphereFromVertexData(Primitives::Cube::VertexData, sizeof(Primitives::Cube::IndexData) / sizeof(GLfloat));
 			rCurrentSceneObject.m_tLocalSpaceBoundingSphere = ConstructLocalSpaceBoundingSphereForCube(rCurrentSceneObject);
 
